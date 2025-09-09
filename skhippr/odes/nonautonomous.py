@@ -144,12 +144,12 @@ class Duffing(AbstractODE):
         return df_dom[:, np.newaxis, ...]
 
 
-class Quadratic(AbstractODE):
+class CubicQuadratic(AbstractODE):
     """
-    Non-autonomous Duffing oscillator as concrete subclass of :py:class:`~skhippr.odes.AbstractODE.AbstractODE`. ::
+    Non-autonomous oscillator with quadratic and cubic nonlinearity as concrete subclass of :py:class:`~skhippr.odes.AbstractODE.AbstractODE`. ::
 
         dx[0]/dt = x[1]
-        dx[1]/dt = -alpha * x[0] - delta * x[1] - beta * [0]**2 + F * cos(omega * t)
+        dx[1]/dt = -alpha * x[0] - delta * x[1] - beta * x[0]**2  - gamma*x[0]**3 + F * cos(omega * t)
 
     """
 
@@ -160,6 +160,7 @@ class Quadratic(AbstractODE):
         omega: float,
         alpha: float,
         beta: float,
+        gamma: float,
         F: float,
         delta: float,
     ):
@@ -168,6 +169,7 @@ class Quadratic(AbstractODE):
         self.x = x
         self.alpha = alpha
         self.beta = beta
+        self.gamma = gamma
         self.F = F
         self.omega = omega
         self.delta = delta
@@ -187,6 +189,7 @@ class Quadratic(AbstractODE):
             -self.alpha * x[0, ...]
             - self.delta * x[1, ...]
             - self.beta * x[0, ...] ** 2
+            - self.gamma * x[0, ...] ** 3
             + self.F * np.cos(self.omega * t)
         )
 
@@ -213,6 +216,8 @@ class Quadratic(AbstractODE):
                 return self.df_dalpha(t, x)
             case "beta":
                 return self.df_dbeta(t, x)
+            case "gamma":
+                return self.df_dgamma(t, x)
             case "delta":
                 return self.df_ddelta(t, x)
             case _:
@@ -229,7 +234,9 @@ class Quadratic(AbstractODE):
 
         df_dx = np.zeros((2, *x.shape), dtype=x.dtype)
         df_dx[0, 1, ...] = 1
-        df_dx[1, 0, ...] = -self.alpha - 2 * self.beta * x[0, ...]
+        df_dx[1, 0, ...] = (
+            -self.alpha - 2 * self.beta * x[0, ...] - 3 * self.gamma * x[0, ...] ** 2
+        )
         df_dx[1, 1, ...] = -self.delta
 
         return df_dx
@@ -251,6 +258,15 @@ class Quadratic(AbstractODE):
 
         df_dbe = np.zeros_like(x)
         df_dbe[1, ...] = -x[0, ...] ** 2
+        return df_dbe[:, np.newaxis, ...]
+
+    def df_dgamma(self, t=None, x=None):
+
+        if x is None:
+            x = self.x
+
+        df_dbe = np.zeros_like(x)
+        df_dbe[1, ...] = -x[0, ...] ** 3
         return df_dbe[:, np.newaxis, ...]
 
     def df_ddelta(self, t=None, x=None):
@@ -283,3 +299,27 @@ class Quadratic(AbstractODE):
         df_dom = np.zeros_like(x)
         df_dom[1, ...] = -self.F * t * np.sin(self.omega * t)
         return df_dom[:, np.newaxis, ...]
+
+
+class Quadratic(CubicQuadratic):
+    """
+    Non-autonomous nonlinear oscillator with quadratic nonlinearity. ::
+
+        dx[0]/dt = x[1]
+        dx[1]/dt = -alpha * x[0] - delta * x[1] - beta * [0]**2 + F * cos(omega * t)
+
+    """
+
+    def __init__(
+        self,
+        t: float,
+        x: np.ndarray,
+        omega: float,
+        alpha: float,
+        beta: float,
+        F: float,
+        delta: float,
+    ):
+        super().__init__(
+            t=t, x=x, omega=omega, alpha=alpha, beta=beta, gamma=0, F=F, delta=delta
+        )
