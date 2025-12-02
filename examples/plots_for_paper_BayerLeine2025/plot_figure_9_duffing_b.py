@@ -1,5 +1,3 @@
-import numpy as np
-
 """
 This script analyzes and visualizes decay of Fourier coefficients of the Jacobian matrix
 within the Harmonic Balance Method (HBM) framework, specifically for the Duffing oscillator system.
@@ -34,8 +32,8 @@ Dependencies:
 - skhippr (systems.nonautonomous, problems.hbm, stability.KoopmanHillProjection, Fourier)
 """
 
+import numpy as np
 import matplotlib.pyplot as plt
-from copy import copy
 
 from skhippr.solvers.newton import NewtonSolver
 from skhippr.odes.nonautonomous import Duffing
@@ -45,7 +43,7 @@ from skhippr.stability.KoopmanHillProjection import KoopmanHillProjection
 from skhippr.Fourier import Fourier
 
 
-def main(solver, ode, fourier: Fourier, x_init=None, idx_k=None):
+def main(solver, ode, fourier: Fourier, x_init=None, idx_k=None, decay_threshold=5e-15):
     """
     Finds the periodic solution of the Duffing oscillator, identifies exponential decay parameters (a, b),
     and generates plots for the solution and its spectral properties.
@@ -83,31 +81,30 @@ def main(solver, ode, fourier: Fourier, x_init=None, idx_k=None):
     ax_period = plot_period(hbm)
 
     # Identify exponential decay parameters
-    threshold = 5e-15
-    lines = hbm.exponential_decay_parameters(threshold)
+    lines = hbm.exponential_decay_parameters(decay_threshold)
 
     if idx_k is not None:
-        lines = lines[idx_k]
-    try:
-        lines[0][0]
-    except IndexError:
-        lines = [lines]
+        lines = np.atleast_2d(lines[idx_k, :])
 
     # Bar chart with *all* norms and (a, b) lines
     fig, ax = plt.subplots(ncols=1, nrows=1)
     J_norms_all, ks_all = determine_J_norms(hbm, threshold=0)
-    plot_bar(ks_all, J_norms_all, threshold, ax)
+    plot_bar(ks_all, J_norms_all, decay_threshold, ax)
     plot_lines(lines, ks_all, ax, logscale=True)
     ax.legend()
 
     # Solution of linear system (beta = 0) for reference
+    beta_old = ode.beta
     ode.beta = 0
     solver.solve_equation(hbm, "X")
     plot_period(hbm, ax=ax_period, linestyle="--", color="black")
     ax_period.legend()
     x_t = hbm.x_time()
 
-    return lines, x_t
+    ode.beta = beta_old
+    solver.solve_equation(hbm, "X")
+
+    return lines, x_t, hbm
 
 
 def determine_J_norms(hbm: HBMEquation, threshold: float = 1e-15):
@@ -177,9 +174,7 @@ def plot_bar(x_vals, y_vals, threshold: float = 0, ax=None):
     ax.set_ylim(ax.get_ylim())
 
 
-def plot_lines(
-    lines: list[tuple[float, float]], x_vals: np.ndarray, ax=None, logscale=True
-):
+def plot_lines(lines: np.ndarray, x_vals: np.ndarray, ax=None, logscale=True):
     """
     Plots a set of lines defined by (a, b) tuples over specified x values in a linar scale or logscale plot.
 
@@ -187,7 +182,7 @@ def plot_lines(
     All lines are plotted on the provided matplotlib axis.
 
     Args:
-        lines (list[tuple[float, float]]): List of (a, b) tuples defining the lines.
+        lines (np.array): 2-D numpy array with two columns defining the lines. lines[:, 0] contains values for ``a`` and lines[:, 1] contains the corresponding values for ``b``.
         x_vals (np.ndarray): Array of x values over which to plot the lines.
         ax (matplotlib.axes.Axes, optional): Matplotlib axis to plot on. If None, a new axis is created.
         logscale (bool, optional): If True, plot y(x) = a * exp(-b*x); otherwise, plot y(x) = a - b*x. Default is True.
@@ -197,8 +192,8 @@ def plot_lines(
     """
     if ax is None:
         _, ax = plt.subplots(1, 1)
+
     for k, (a, b) in enumerate(lines):
-        y_vals = a - b * x_vals
         if logscale:
             y_vals = a * np.exp(-b * x_vals)
         else:
@@ -244,6 +239,6 @@ if __name__ == "__main__":
 
     fourier = Fourier(N_HBM=45, L_DFT=5 * 45, n_dof=2, real_formulation=True)
     solver = NewtonSolver()
-    _, x2_init = main(solver, odes[0], fourier=fourier, idx_k=0)
-    main(solver, odes[1], fourier=fourier, idx_k=2, x_init=x2_init)
+    _, x2_init, _ = main(solver, odes[0], fourier=fourier, idx_k=0)
+    main(solver, odes[1], fourier=fourier, idx_k=6, x_init=x2_init)
     plt.show()

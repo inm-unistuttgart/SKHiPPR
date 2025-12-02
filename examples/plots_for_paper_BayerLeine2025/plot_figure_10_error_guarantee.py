@@ -32,6 +32,7 @@ Dependencies:
 
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
@@ -39,6 +40,8 @@ from skhippr.odes.nonautonomous import Duffing
 from skhippr.cycles.shooting import ShootingBVP
 from skhippr.cycles.hbm import HBMEquation
 from skhippr.stability.KoopmanHillProjection import KoopmanHillProjection
+
+import plot_figure_9_duffing_b
 
 
 def Phi_t_ref(
@@ -139,6 +142,7 @@ def errors_koopman_hill(ts, N_HBM, hbm_ref: HBMEquation, Phi_ref, params_decay=N
     # Error bound
     if params_decay is None:
         params_decay = hbm_ref.exponential_decay_parameters()
+    params_decay = np.array(params_decay)
     errors_bound = hbm.error_bound_fundamental_matrix(
         ts, params_decay[:, 0], params_decay[:, 1]
     )
@@ -181,8 +185,10 @@ def N_koopman_hill(ts, N_max, E_des, hbm_ref, Phi_ref, params_decay):
     # error bound
     N_bound = np.inf * np.ones_like(ts)
     for a, b in params_decay:
-        N_next = (np.abs(4 * a * ts) - np.log(E_des)) / (b - np.log(2))
-        N_bound = np.minimum(N_bound, N_next)
+        N_next = (
+            np.abs(4 * a * ts) + np.log1p(-np.exp(-np.abs(4 * a * ts))) - np.log(E_des)
+        ) / (b - np.log(2))
+        N_bound = np.ceil(np.minimum(N_bound, N_next))
 
     N_num = np.nan * np.ones_like(ts)
 
@@ -214,9 +220,13 @@ def plot_error_over_t(ts, N_HBM, hbm, Phi_ref, params_decay):
     T = 2 * np.pi / hbm.ode.omega
     e_num, e_guar = errors_koopman_hill(ts, N_HBM, hbm, Phi_ref, params_decay)
     fig, ax = plt.subplots(1, 1)
-    ax.plot(ts / T, e_guar, label="error bound")
-    ax.plot(ts / T, e_num, "--", label="actual error")
-    ax.set_yscale("log")
+    # Remove the 0 which is not plottable in log space
+    e_guar[0] = np.nan
+    e_num[0] = np.nan
+
+    ax.semilogy(ts / T, e_guar, label="error bound")
+    ax.semilogy(ts / T, e_num, "--", label="actual error")
+    # ax.set_yscale("log")
     ax.set_xlabel("t/T")
     ax.set_ylabel("E")
     ax.set_title(f"N={N_HBM}")
@@ -246,10 +256,14 @@ def plot_error_over_N(t, Ns_HBM, hbm_ref, Phi_ref, params_decay):
     es_num = np.array(es_num)
     es_guar = np.array(es_guar)
 
+    # Remove the 0 which is not plottable in log space
+    es_guar[0] = np.nan
+    es_num[0] = np.nan
+
     fig, ax = plt.subplots(1, 1)
-    ax.plot(Ns_HBM, es_guar, label=f"error bound")
-    ax.plot(Ns_HBM, es_num, "--", label="actual error")
-    ax.set_yscale("log")
+    ax.semilogy(Ns_HBM, es_guar, label=f"error bound")
+    ax.semilogy(Ns_HBM, es_num, "--", label="actual error")
+    # ax.set_yscale("log")
     ax.set_xlabel("N")
     ax.set_ylabel("E")
     ax.set_title(f"t/T = {t/T}")
@@ -269,12 +283,12 @@ def plot_N_over_t(ts, E_des, hbm_ref, Phi_ref, params_decay):
     Returns:
         None. Displays a matplotlib figure with the plot.
     """
-
+    T = 2 * np.pi / hbm_ref.omega
     N_num, N_bound = N_koopman_hill(ts, 60, E_des, hbm_ref, Phi_ref, params_decay)
 
     fig, ax = plt.subplots(1, 1)
-    ax.plot(ts, N_bound, label=f"N* (guaranteed)")
-    ax.plot(ts, N_num, "--", label="N*(actual)")
+    ax.plot(ts / T, N_bound, label=f"N* (guaranteed)")
+    ax.plot(ts / T, N_num, "--", label="N*(actual)")
     ax.set_yscale("log")
     ax.set_xlabel("t")
     ax.set_ylabel("N")
@@ -283,34 +297,45 @@ def plot_N_over_t(ts, E_des, hbm_ref, Phi_ref, params_decay):
 
 
 if __name__ == "__main__":
-    ode = Duffing(
-        t=0, x=np.array([0.2, 0]), alpha=0.5, beta=3, delta=0.05, F=0.1, omega=0.3
-    )
-    fourier_ref = Fourier(N_HBM=40, L_DFT=512, n_dof=2, real_formulation=True)
+    odes = [
+        Duffing(0, np.array([0, 0]), alpha=5, beta=0.1, delta=0.02, F=0.1, omega=5),
+        Duffing(0, np.array([0, 0]), alpha=0.5, beta=3, delta=0.02, F=0.1, omega=0.3),
+    ]
+    idx_k = [0, 6]
+
+    fourier_ref = Fourier(N_HBM=45, L_DFT=5 * 45, n_dof=2, real_formulation=True)
     solver = NewtonSolver()
 
-    ts = np.linspace(0, 2 * np.pi / ode.omega, 100, endpoint=True)
+    x_init = None
 
-    x_init, Phi_ref = Phi_t_ref(solver, ts, ode, fourier=fourier_ref)
+    for k, ode in enumerate(odes):
 
-    hbm = HBMEquation(
-        ode,
-        ode.omega,
-        fourier_ref,
-        fourier_ref.DFT(x_init),
-        stability_method=KoopmanHillProjection(fourier_ref),
-    )
+        ts = np.linspace(0, 2 * np.pi / ode.omega, 51, endpoint=True)
 
-    solver.solve_equation(hbm, unknown="X")
-    params_decay = hbm.exponential_decay_parameters()
+        _, Phi_ref = Phi_t_ref(solver, ts, ode, fourier=fourier_ref)
 
-    plot_error_over_t(ts, 8, hbm, Phi_ref, params_decay)
-    plot_error_over_N(
-        t=2 * np.pi / ode.omega,
-        Ns_HBM=np.arange(1, fourier_ref.N_HBM + 1),
-        hbm_ref=hbm,
-        Phi_ref=Phi_ref[:, :, -1],
-        params_decay=params_decay,
-    )
-    plot_N_over_t(ts, 1e-5, hbm, Phi_ref, params_decay)
+        params_decay, x_init, hbm = plot_figure_9_duffing_b.main(
+            solver, ode, fourier_ref, x_init, idx_k[k]
+        )
+        tikzplotlib.save(
+            f"examples/plots_for_paper_BayerLeine2025/decay_conf_{k+1}.tex"
+        )
+
+        # plot_error_over_t(ts, 8, hbm, Phi_ref, params_decay)
+        # tikzplotlib.save(
+        #     f"examples/plots_for_paper_BayerLeine2025/error_t_conf_{k+1}.tex"
+        # )
+        # plot_error_over_N(
+        #     t=2 * np.pi / ode.omega,
+        #     Ns_HBM=np.arange(1, fourier_ref.N_HBM + 1),
+        #     hbm_ref=hbm,
+        #     Phi_ref=Phi_ref[:, :, -1],
+        #     params_decay=params_decay,
+        # )
+        # tikzplotlib.save(
+        #     f"examples/plots_for_paper_BayerLeine2025/error_N_conf_{k+1}.tex"
+        # )
+        plot_N_over_t(ts, 1e-8, hbm, Phi_ref, params_decay)
+        tikzplotlib.save(f"examples/plots_for_paper_BayerLeine2025/N_t_conf_{k+1}.tex")
+
     plt.show()
