@@ -155,7 +155,7 @@
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="hbm.html">Periodic solutions and FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hbm.html">FFT and harmonic balance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
 </ul>
@@ -372,7 +372,7 @@ document.write(`
 <dd><p>Abstract base class for algebraic equations in the SKHiPPR framework.</p>
 <p>Must provide a residual. The residual may depend on arbitrarily many attributes of the object and must return a numpy array. The <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a> attempts to modify the object’s attributes such that the residual becomes zero.</p>
 <p>Subclasses may provide closed-form expressions for the derivatives of the residual with respect to the attributes. Otherwise, finite differences are used.</p>
-<p>The class also offers functionality for stability analysis if a <code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractStabilityMethod</span></code> object is passed.</p>
+<p>The class also offers functionality for stability analysis if a <a class="reference internal" href="stability.html#skhippr.stability.AbstractStabilityMethod.AbstractStabilityMethod" title="skhippr.stability.AbstractStabilityMethod.AbstractStabilityMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractStabilityMethod</span></code></a> object is passed.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.residual_function">
 <em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">residual_function</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.residual_function" title="Link to this definition">#</a></dt>
@@ -469,8 +469,8 @@ The stability is determined based on <code class="xref py py-func docutils liter
 <blockquote>
 <div><ul class="simple">
 <li><p><a class="reference internal" href="solvers.html#skhippr.solvers.continuation.BranchPoint" title="skhippr.solvers.continuation.BranchPoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">BranchPoint</span></code></a></p></li>
-<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></p></li>
-<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingSystem</span></code></p></li>
+<li><p><a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a></p></li>
+<li><p><a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingSystem" title="skhippr.cycles.shooting.ShootingSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingSystem</span></code></a></p></li>
 </ul>
 </div></blockquote>
 <dl class="py class">
@@ -532,8 +532,8 @@ The stability is determined based on <code class="xref py py-func docutils liter
 <li><p><a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a>,</p></li>
 <li><p><a class="reference internal" href="solvers.html#skhippr.solvers.continuation.ContinuationAnchor" title="skhippr.solvers.continuation.ContinuationAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContinuationAnchor</span></code></a>,</p></li>
 <li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractCycleEquation</span></code>,</p></li>
-<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code>,</p></li>
-<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingBVP</span></code> and <code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingPhaseAnchor</span></code></p></li>
+<li><p><a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMEquation" title="skhippr.cycles.hbm.HBMEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code></a> and <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMPhaseAnchor" title="skhippr.cycles.hbm.HBMPhaseAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingBVP" title="skhippr.cycles.shooting.ShootingBVP"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingBVP</span></code></a> and <a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingPhaseAnchor" title="skhippr.cycles.shooting.ShootingPhaseAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingPhaseAnchor</span></code></a></p></li>
 </ul>
 </div></blockquote>
 <p>Two concrete subclass for demonstration purposes encode radius and angle conditions on a circle.</p>

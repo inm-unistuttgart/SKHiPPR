@@ -43,7 +43,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'odes';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Periodic solutions and FFT" href="hbm.html" />
+    <link rel="next" title="FFT and harmonic balance" href="hbm.html" />
     <link rel="prev" title="Solvers" href="solvers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -155,7 +155,7 @@
 <li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">ODEs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="hbm.html">Periodic solutions and FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hbm.html">FFT and harmonic balance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
 </ul>
@@ -473,7 +473,7 @@ dx[1]/dt = -k/m * x[0] + Fs/m * 2/pi * arctan(epsilon * (x[1] - vdr)) / (1 + del
 </section>
 <section id="linear-time-periodic-odes">
 <h2>Linear time-periodic ODEs<a class="headerlink" href="#linear-time-periodic-odes" title="Link to this heading">#</a></h2>
-<p>To investigate the properties of the stability methods without influence of a periodic solution, the module <code class="docutils literal notranslate"><span class="pre">skhippr.odes.ltp</span></code> provides linear time-periodic ordinary differential equations with an equilibrium at zero. Hill stability methods are applicable by searching for the trivial periodic solution <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">=</span> <span class="pre">0</span></code> of the corresponding <code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code>.</p>
+<p>To investigate the properties of the stability methods without influence of a periodic solution, the module <code class="docutils literal notranslate"><span class="pre">skhippr.odes.ltp</span></code> provides linear time-periodic ordinary differential equations with an equilibrium at zero. Hill stability methods are applicable by searching for the trivial periodic solution <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">=</span> <span class="pre">0</span></code> of the corresponding <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMEquation" title="skhippr.cycles.hbm.HBMEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code></a>.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="skhippr.odes.ltp.HillODE">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.odes.ltp.</span></span><span class="sig-name descname"><span class="pre">HillODE</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_fcn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.odes.ltp.HillODE" title="Link to this definition">#</a></dt>
@@ -576,7 +576,7 @@ dx[1]/dt = -k/m * x[0] + Fs/m * 2/pi * arctan(epsilon * (x[1] - vdr)) / (1 + del
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Periodic solutions and FFT</p>
+        <p class="prev-next-title">FFT and harmonic balance</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
