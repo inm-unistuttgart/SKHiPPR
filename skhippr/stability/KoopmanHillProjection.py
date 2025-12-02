@@ -202,7 +202,7 @@ class KoopmanHillProjection(AbstractStabilityHBM):
             The computed error bound for the fundamental solution matrix.
 
         """
-        return (2 * np.exp(-b)) ** self.fourier.N_HBM * np.exp(4 * a * np.abs(t))
+        return (2 * np.exp(-b)) ** self.fourier.N_HBM * (np.exp(4 * a * np.abs(t)) - 1)
 
 
 class KoopmanHillSubharmonic(KoopmanHillProjection):
@@ -453,4 +453,6 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
             The computed error bound for the fundamental solution matrix.
 
         """
-        return (2 * np.exp(-b)) ** (2 * self.fourier.N_HBM) * np.exp(4 * a * np.abs(t))
+        return (2 * np.exp(-b)) ** (2 * self.fourier.N_HBM) * (
+            np.exp(4 * a * np.abs(t)) - 1
+        )

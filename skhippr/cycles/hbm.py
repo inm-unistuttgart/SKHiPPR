@@ -346,14 +346,18 @@ class HBMEquation(AbstractCycleEquation):
         # Ensure that ||J_k|| decays below threshold within available N_HBM range
         if norm_J > threshold:
             warnings.warn(
-                f"||J_k|| did not decay below threshold {threshold} within N_HBM={self.fourier.N_HBM}. Consider increasing N_HBM for accurate determination of exponential decay."
+                f"||J_k|| did not decay below threshold {threshold} within N_HBM={self.fourier.N_HBM}. Final norm is {norm_J}. Consider increasing N_HBM for accurate determination of exponential decay."
             )
 
         # Find enveloping lines: a' + b'*k >= log(norms)
         lines = find_linear_envelopes(ks, np.log(norms), 0.1 * threshold)
 
-        lines[:, 0] = np.exp(lines[:, 0])  # a = exp(a')
-        lines[:, 1] = -lines[:, 1]  # b = -b'
+        if lines.size == 0:
+            raise ValueError("No exponential decay could be fitted.")
+
+        if len(lines) > 0:
+            lines[:, 0] = np.exp(lines[:, 0])  # a = exp(a')
+            lines[:, 1] = -lines[:, 1]  # b = -b'
 
         return lines
 
@@ -546,13 +550,19 @@ def find_linear_envelopes(x_vals, y_vals, tolerance: float = 0) -> np.array:
     Returns
     -------
     np.ndarray
-        A numpy array with a in the first column and b in the second column,
+        A numpy array with ``a`` in the first column and ``b`` in the second column,
         where each pair defines an upperbounding line y(x) = a + b*x.
     """
 
     results = []
     y_vals = np.atleast_1d(y_vals)
     x_vals = np.atleast_1d(x_vals)
+
+    #  Ensure correct inputs - y_vals and x_vals must be of same length >= 2
+    if x_vals.shape != y_vals.shape or x_vals.shape[0] < 2:
+        raise ValueError(
+            f"x_vals (shape: {x_vals.shape}) and y_vals (shape: {y_vals.shape}) are expected to be equal and contain at least 2 data pairs"
+        )
 
     for l, (x_1, y_1) in enumerate(zip(x_vals, y_vals)):
         for x_2, y_2 in zip(x_vals[l + 1 :], y_vals[l + 1 :]):
@@ -566,4 +576,4 @@ def find_linear_envelopes(x_vals, y_vals, tolerance: float = 0) -> np.array:
                 continue
             results.append([a, b])
 
-    return np.array(results)
+    return np.atleast_2d(results)

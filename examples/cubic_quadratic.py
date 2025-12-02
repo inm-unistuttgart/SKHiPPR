@@ -5,6 +5,14 @@ This example uses an oscillator with quadratic and cubic nonlinearity, but ``ode
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.size"] = 12
+plt.rcParams["text.usetex"] = True
+cm = 1 / 2.54  # cm in inches
+plt.rcParams["figure.figsize"] = (7 * cm, 7 * cm)
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.Dark2.colors)
+
+
 # --- Fourier configuration ---
 from skhippr.Fourier import Fourier
 
@@ -50,9 +58,16 @@ def main():
     stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
     solver = NewtonSolver(verbose=True)
 
-    gamma = 0.03
+    gammas = np.linspace(0, 0.07, 15)
 
-    for beta in [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35]:
+    all_freqs_stable = []
+    all_freqs_unstbl = []
+    all_amps = []
+
+    beta = 0.35
+    for gamma in gammas:
+
+        # for beta in [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35]:
 
         # --- Instantiation of the ODE at initial point of branch ---
         ode = CubicQuadratic(
@@ -129,20 +144,71 @@ def main():
         amps = np.array([np.max(point.equations[0].x_time()[0, :]) for point in frc])
 
         # --- plot ---
-        plt.figure()
+        # plt.figure()
 
         freqs_stable = np.where(stable, freqs, np.nan)
         freqs_unstable = np.where(~stable, freqs, np.nan)
 
-        plt.plot(freqs_stable, amps, "r", label="stable")
-        plt.plot(freqs_unstable, amps, "b--", label="unstable")
+        all_freqs_stable.append(freqs_stable)
+        all_freqs_unstbl.append(freqs_unstable)
+        all_amps.append(amps)
 
-        plt.xlabel("$\\omega$")
-        plt.ylabel("$|x_1|$")
-        plt.legend()
-        plt.title(
-            f"FRC of nonlinear oscillator with stiffness ${ode.alpha}x + {ode.beta}x^2 + {ode.gamma}x^3$"
+        # plt.plot(freqs_stable, amps, "r", label="stable")
+        # plt.plot(freqs_unstable, amps, "b--", label="unstable")
+
+        # plt.xlabel("$\\omega$")
+        # plt.ylabel("$|x_1|$")
+        # plt.legend()
+        # plt.title(
+        #     f"FRC of nonlinear oscillator with stiffness ${ode.alpha}x + {ode.beta}x^2 + {ode.gamma}x^3$"
+        # )
+
+    fig_FM = plt.figure()
+    phis = np.linspace(0, 2 * np.pi, 250)
+
+    plt.plot(np.cos(phis), np.sin(phis), "k")
+
+    for point in frc:
+        if point.stable:
+            col = "b."
+        else:
+            col = "r."
+
+        plt.plot(np.real(point.eigenvalues), np.imag(point.eigenvalues), col)
+
+    plt.title("Floquet multipliers")
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+
+    for freqs, amps, gamma in zip(all_freqs_stable, all_amps, gammas):
+        ax.plot(
+            freqs,
+            gamma * np.ones_like(freqs),
+            amps,
+            "r",
+            label=f"stable",
         )
+
+    for freqs, amps, gamma in zip(all_freqs_unstbl, all_amps, gammas):
+        ax.plot(
+            freqs,
+            gamma * np.ones_like(freqs),
+            amps,
+            "b--",
+            label=f"unstable",
+        )
+
+    ax.set_xlabel(r"$\omega$")
+    ax.set_ylabel(r"$\gamma$")
+    ax.set_zlabel(r"$|x_1|$")
+    ax.set_title(
+        f"Frequency response curve \n  $ k(x) = {ode.alpha}x + {ode.beta}x + \\gamma x^2$"
+    )
+    # Only show unique labels
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
 
 
 if __name__ == "__main__":
