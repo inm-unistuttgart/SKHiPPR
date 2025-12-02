@@ -5,9 +5,7 @@ version = "2.0"
 author = "Fabia Bayer"
 author_email = "skhippr@inm.uni-stuttgart.de"
 url = "SKHiPPR <https://github.com/f-bayer/SKHiPPR>"
-description = (
-    "Sparse Koopman-Hill Projection for Periodic Solutions and Resonance Curves"
-)
+description = "Stability using Koopman-Hill Projection for Periodic Solutions and Resonance Curves"
 long_description = ""
 license = "LICENSE"
 
