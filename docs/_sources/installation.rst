@@ -8,7 +8,7 @@ To install SKHiPPR, perform the following steps:
 #. (optional) Create and activate a new virtual environment
 #. From the root folder of the SKHiPPr repository, install SKHiPPR using pip::
 
-    pip install skhippr
+    pip install .
 
 For insight on skhippr usage, check out the next sections of the documentation.
 
