@@ -14,7 +14,7 @@ def main():
 
     solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
 
-    m = 0.8
+    m = 1
     g = 9.81
     l = 1.0
     d = 0.05
