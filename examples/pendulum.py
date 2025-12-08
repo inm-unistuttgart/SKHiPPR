@@ -39,15 +39,15 @@ def main():
     solver.solve(sys_ode)
     print("Solved ODE. \n")
 
-    x_ode = sys_ode.equations[0].x_time()
+    x_ode = hbm_ode.x_time()
     phi = x_ode[0, :]
     phi_dot = x_ode[1, :]
-    x_dae = np.vstack(
+    x_dae_init = np.vstack(
         [
-            -l * np.cos(phi),
             l * np.sin(phi),
-            l * np.sin(phi) * phi_dot,
+            -l * np.cos(phi),
             l * np.cos(phi) * phi_dot,
+            l * np.sin(phi) * phi_dot,
             np.zeros_like(phi),
         ]
     )
@@ -58,13 +58,23 @@ def main():
         dae,
         omega,
         fourier=fourier,
-        initial_guess=fourier.DFT(x_dae),
+        initial_guess=fourier.DFT(x_dae_init),
     )
     sys_dae = EquationSystem(equations=[hbm_dae], unknowns="X")
 
     solver.solve(sys_dae)
+    print("Solved DAE. \n")
+
+    x_dae_solved = hbm_dae.x_time()
+    t = hbm_dae.fourier.time_samples(omega=hbm_dae.omega)
+
+    fig, axs = plt.subplots(4, 1)
+
+    for i in range(4):
+        axs[i].plot(t, x_dae_init[i, :])
+        axs[i].plot(t, x_dae_solved[i, :], "--")
 
 
 if __name__ == "__main__":
     main()
-    # plt.show()
+    plt.show()
