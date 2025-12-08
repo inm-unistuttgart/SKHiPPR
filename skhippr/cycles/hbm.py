@@ -474,6 +474,7 @@ class HBMEquationDAE(HBMEquation):
         derivative += self.omega_solution * (
             self.fourier.derivative_matrix - self.M @ self.fourier.derivative_matrix
         )
+        return derivative
 
     def error_bound_fundamental_matrix(self, t=None, _as=None, bs=None):
         raise NotImplementedError(

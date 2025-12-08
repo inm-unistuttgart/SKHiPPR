@@ -39,7 +39,9 @@ class PendulumDAE(AbstractDAE):
             - self.d / (self.l**2) * x[2, ...]
             + self.F * np.sin(self.omega * t + self.phi)
         )
-        f[3, ...] = 2 * x[1] * x[4] - self.m * self.g - self.d / (self.l**2) * x[3, ...]
+        f[3, ...] = (
+            2 * x[1] * x[4] - self.M[0, 0] * self.g - self.d / (self.l**2) * x[3, ...]
+        )
         f[4, ...] = x[0, ...] ** 2 + x[1, ...] ** 2 - self.l**2
 
         return f
@@ -144,7 +146,7 @@ class PendulumODE(AbstractODE):
         if x is None:
             x = self.x
 
-        df_dx = np.zeros((2, 2, *x.shape), dtype=x.dtype)
+        df_dx = np.zeros((2, 2, *x.shape[1:]), dtype=x.dtype)
         df_dx[0, 1, ...] = 1
         df_dx[1, 0, ...] = -self.g / self.l * np.cos(x[0, ...]) - (
             self.F / (self.m * self.l)
