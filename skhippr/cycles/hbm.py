@@ -4,7 +4,7 @@ import numpy as np
 
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.cycles.AbstractCycleEquation import AbstractCycleEquation
-from skhippr.odes.AbstractODE import AbstractODE
+from skhippr.odes.AbstractODE import AbstractODE, AbstractDAE
 from skhippr.Fourier import Fourier
 from skhippr.equations.EquationSystem import EquationSystem
 
@@ -419,6 +419,66 @@ class HBMEquation(AbstractCycleEquation):
             E_bound = np.minimum(E_bound, E_bound_next)
 
         return E_bound
+
+
+class HBMEquationDAE(HBMEquation):
+    """This subclass of :py:class:`~skhippr.cycles.hbm.HBMEquation` is specifically designed to handle DAEs.
+
+    It extends the differential part of the harmonic balance equations to account for the non-invertible matrix M.
+    Reference: Legrand2024 (TODO proper reference)
+    """
+
+    def __init__(
+        self,
+        dae: AbstractDAE,
+        omega: float,
+        fourier: Fourier,
+        initial_guess: np.ndarray = None,
+        period_k: float = 1,
+        stability_method=None,
+    ):
+        """
+        Initialize the HBM equations for DAEs.
+        """
+        super().__init__(
+            ode=dae,
+            omega=omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            period_k=period_k,
+            stability_method=stability_method,
+        )
+
+        self.M = np.kron(np.eye(2 * fourier.N_HBM + 1), dae.M)
+
+    def aft(self, X=None) -> np.ndarray:
+        """
+        Overwrite the HBM residual computation to account for the weight matrix M in DAEs.
+        """
+
+        R = super().aft(X)
+        deriv = self.fourier.derivative_coeffs(X, self.omega_solution)
+        # Remove the effect of direct differentiation and add the effect of M
+        R += deriv - self.M @ deriv
+
+        return R
+
+    def dR_domega(self, X=None):
+        return self.M @ super().dR_domega(X)
+
+    def dR_dX(self, X=None):
+        """
+        Overwrite the HBM Jacobian to account for the weight matrix M in DAEs.
+        """
+        derivative = super().dR_dX(X)
+        derivative += self.omega_solution * (
+            self.fourier.derivative_matrix - self.M @ self.fourier.derivative_matrix
+        )
+
+    def error_bound_fundamental_matrix(self, t=None, _as=None, bs=None):
+        raise NotImplementedError(
+            "Error bounds for the fundamental matrix not applicable to DAEs."
+        )
 
 
 class HBMSystem(EquationSystem):
