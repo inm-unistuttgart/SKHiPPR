@@ -63,7 +63,7 @@ def main():
         ]
     )
 
-    fourier_dae = Fourier(N_HBM=3, L_DFT=1000, n_dof=dae.n_dof)
+    fourier_dae = Fourier(N_HBM=4, L_DFT=1000, n_dof=dae.n_dof)
     hbm_dae = HBMEquationDAE(
         dae,
         omega,

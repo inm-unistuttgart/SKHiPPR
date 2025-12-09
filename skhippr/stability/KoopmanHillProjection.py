@@ -1,7 +1,6 @@
 from typing import override
 import numpy as np
-from scipy import sparse
-from scipy.linalg import expm, ordqz, solve_sylvester, solve_triangular
+from scipy.linalg import expm, schur, solve_triangular, lu_factor, lu_solve
 import warnings
 
 from skhippr.Fourier import Fourier
@@ -481,145 +480,53 @@ class KoopmanHillDAE(KoopmanHillProjection):
         raise NotImplementedError("Error bound not applicable for DAEs.")
 
 
-def drazin_of_pencil(M, H, a=1.0, tol_drazin=1e-6, cond_warn=1e12):
+def drazin(A, tol=0):
+    """Compute the Drazin inverse of a matrix A.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The input square matrix.
+    tol : float, optional
+        Tolerance for determining the rank (default is 0).
+
+    Returns
+    -------
+    np.ndarray
+        The Drazin inverse of the matrix A.
     """
-    Compute the Drazin inverse of P = (a*M - H)^{-1} @ M robustly.
-    Returns D = P^D (Drazin inverse of P).
-    Parameters:
-      M, H        : square (n x n) complex/real arrays
-      a           : scalar
-      tol_drazin  : optional absolute tolerance for separating nonzero eigenvalues;
-                    if None, a relative tolerance is computed automatically
-      reltol_factor: multiplicative factor for automatic tolerance
-      sylv_res_tol : tolerance for Sylvester residual monitoring
-      cond_warn    : threshold for issuing a conditioning warning
-    """
-    M = np.asarray(M)
-    H = np.asarray(H)
-    if M.shape[0] != M.shape[1] or M.shape != H.shape:
-        raise ValueError(
-            f"M and H must be square matrices of the same shape but M is {M.shape} and H is {H.shape}."
-        )
-    n = M.shape[0]
+    n = A.shape[0]
 
-    # QZ (ordered) decomposition: returns S, T, alpha, beta, Q, Z
-    M_triang, H_triang, alpha, beta, Q, Z = ordqz(
-        a * M,
-        H,
-        sort=lambda ar, br: np.abs(ar + 1j * br) > tol_drazin,
-        output="complex",
-    )
+    T, Z, n_cutoff = schur(A, output="complex", sort=lambda x: abs(x) > tol)
 
-    # robust eigenvalue computation with beta-guard
-    beta_abs_max = np.max(np.abs(beta))
-    eigs = np.empty_like(alpha, dtype=np.complex128)
-    eigs = alpha / beta
+    R = T[:n_cutoff, :n_cutoff]
+    N = T[n_cutoff:, n_cutoff:]
+    C = T[:n_cutoff, n_cutoff:]
 
-    # number of (generalized) eigenvalues with |eig| > tol_drazin -> index cutoff
-    n_cutoff = int(np.sum(np.abs(eigs) > tol_drazin))
-
-    # Build P in triangular form: P_triang = (S - T)^{-1} @ (S / a)
-    # S - T is upper triangular (from ordqz), so use solve_triangular
-    diff = M_triang - H_triang
-
-    # guard near-singularity of ST_diff
-    st_cond_est = (
-        np.linalg.cond(diff) if n <= 200 else None
-    )  # cond for large n can be expensive
-    if st_cond_est is not None and st_cond_est > cond_warn:
+    if np.linalg.norm(C, np.inf) > tol:
         warnings.warn(
-            f"S - T is ill-conditioned (cond ~ {st_cond_est:.2e}). Results may be inaccurate.",
-            RuntimeWarning,
+            "Drazin inverse computation: Non-zero coupling block detected. Results may be inaccurate."
         )
-    # solve triangular system; S_div_a keeps same dtype
-    S_div_a = M_triang / a
-    P_triang = solve_triangular(diff, S_div_a, lower=False)
 
-    # Partition blocks according to n_cutoff
-    if n_cutoff == 0 or n_cutoff == n:
-        raise ValueError("Matrix not well suited for Drazin inverse")
-        # All eigenvalues considered zero -> Drazin of P is zero matrix
-        return np.zeros_like(M, dtype=np.complex128)
+    if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
+        warnings.warn(
+            "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
+        )
 
-    R = P_triang[:n_cutoff, :n_cutoff]
-    C = P_triang[:n_cutoff, n_cutoff:]
-    N = P_triang[n_cutoff:, n_cutoff:]
+    if np.linalg.norm(Z @ Z.T.conj() - np.eye(n), np.inf) > tol:
+        warnings.warn(
+            "Drazin inverse computation: Schur vectors are not unitary. Results may be inaccurate."
+        )
 
-    # Solve Sylvester R W + W N = -C for W if needed (small C short-circuit)
-    if np.linalg.norm(C, ord=np.inf) <= tol_drazin:
-        W = np.zeros_like(C)
-    else:
-        # Use scipy.linalg.solve_sylvester: solves A X + X B = C
-        W = solve_sylvester(R, -N, -C)
-        # check residual
-        res = R @ W - W @ N + C
-        res_norm = np.linalg.norm(res, ord=np.inf)
-        if res_norm > tol_drazin:
-            warnings.warn(
-                f"Sylvester solve residual is large (||res||_inf={res_norm:.3e}, rel={rel:.3e}). Consider adjusting tol_drazin.",
-                RuntimeWarning,
-            )
-
-    # Build W_large = [[I_k, W], [0, I_{n-k}]] (unit upper block)
-    W_large = np.eye(n, dtype=P_triang.dtype)
-    W_large[:n_cutoff, n_cutoff:] = W
-
-    # If R is triangular (common), use solve_triangular; else fallback
-    inv_R = solve_triangular(R, np.eye(n_cutoff), lower=False)
-
-    D_triang = np.zeros_like(P_triang)
-    D_triang[:n_cutoff, :n_cutoff] = inv_R
-
-    # Compose U = Z @ W_large
-    U = Z @ W_large
-
-    U_inv = solve_triangular(W_large, Z.T.conj())
-
-    # Final Drazin: D = U @ D_triang @ U^{-1}
-    D = U @ D_triang @ U_inv
-
-    # # ensure result has appropriate dtype (real if inputs real and imaginary tiny)
-    # if not np.iscomplexobj(M) and np.max(np.abs(D.imag)) <= 100 * eps * norm_scale:
-    #     D = D.real
-
-    return D
-
-
-def drazin(M, hill_matrix, a, tol_drazin):
-    """Compute (a*M - hill_matrix).D @ M where .D denotes the drazin inverse."""
-
-    def sort(alpha, beta):
-        return np.abs(alpha + 1j * beta) > tol_drazin
-
-    M_triang, H_triang, alpha, beta, Q, Z = ordqz(
-        a * M, hill_matrix, sort=sort, output="complex"
+    drazin_schur = np.zeros_like(T)
+    drazin_schur[:n_cutoff, :n_cutoff] = solve_triangular(
+        R, np.eye(n_cutoff), lower=False
     )
-    eigs = alpha / beta
 
-    n_cutoff = np.sum(np.abs(eigs) > tol_drazin)
-
-    pencil = M_triang - H_triang
-    P_triang = np.linalg.solve(pencil, M_triang / a)
-
-    R = P_triang[:n_cutoff, :n_cutoff]
-    N = P_triang[n_cutoff:, n_cutoff:]
-    C = P_triang[:n_cutoff, n_cutoff:]
-
-    if np.max(np.abs(C)) > tol_drazin:
-        W = solve_sylvester(R, -N, -C)
-    else:
-        W = np.zeros_like(C)
-
-    W_large = np.eye(M.shape[0], dtype=W.dtype)
-    W_large[:n_cutoff, n_cutoff:] = W
-
-    drazin_triang = np.zeros_like(P_triang)
-    drazin_triang[:n_cutoff, :n_cutoff] = np.linalg.inv(P_triang[:n_cutoff, :n_cutoff])
-
-    return Z @ W_large @ drazin_triang @ np.linalg.solve(W_large, Z.T.conj())
+    return Z @ drazin_schur @ Z.T.conj()
 
 
-def generalized_exponential(M, hill_matrix, t, tol_drazin):
+def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
     """Compute the generalized matrix exponential for DAEs based on the Drazin inverse.
     This yields the fundamental solution matrix for the LTI DAE
 
@@ -637,16 +544,20 @@ def generalized_exponential(M, hill_matrix, t, tol_drazin):
     success = False
     for a in a_vals:
         pencil = a * M - hill_matrix
-        if np.linalg.cond(pencil) < 1e10:
+        if np.linalg.cond(pencil) < tol_cond:
             success = True
             break
     if not success:
         raise RuntimeError(
-            "Could not find suitable scaling factor 'a' for Drazin inverse."
+            f"Could not find suitable scaling factor 'a' for Drazin inverse with condition < {tol_cond}."
         )
 
-    pencil_M_inv = drazin_of_pencil(M, hill_matrix, a, tol_drazin)
-    P_0 = pencil_M_inv @ np.linalg.solve(pencil, M)
-    exp = expm(pencil_M_inv @ np.linalg.solve(pencil, hill_matrix) * t)
+    pencil_lu = lu_factor(a * M - hill_matrix)
+    pencil_H = lu_solve(pencil_lu, hill_matrix)
+    pencil_M = lu_solve(pencil_lu, M)
+    pencil_drazin = drazin(pencil_M, tol_drazin)
+
+    P_0 = pencil_drazin @ pencil_M
+    exp = expm(pencil_drazin @ pencil_H * t)
 
     return exp @ P_0, P_0, a
