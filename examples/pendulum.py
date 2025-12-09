@@ -70,7 +70,7 @@ def main():
         fourier=fourier_dae,
         initial_guess=fourier_dae.DFT(x_dae_init),
         stability_method=KoopmanHillDAE(
-            fourier_dae, tol=0, autonomous=False, tol_drazin=1e-4
+            fourier_dae, tol=0, autonomous=False, tol_drazin=1e-5
         ),
     )
     sys_dae = EquationSystem(

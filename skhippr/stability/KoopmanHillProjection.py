@@ -1,6 +1,13 @@
 from typing import override
 import numpy as np
-from scipy.linalg import expm, schur, solve_triangular, lu_factor, lu_solve
+from scipy.linalg import (
+    expm,
+    schur,
+    solve_triangular,
+    lu_factor,
+    lu_solve,
+    solve_sylvester,
+)
 import warnings
 
 from skhippr.Fourier import Fourier
@@ -503,10 +510,19 @@ def drazin(A, tol=0):
     N = T[n_cutoff:, n_cutoff:]
     C = T[:n_cutoff, n_cutoff:]
 
+    W = np.eye(n, dtype=complex)
+
     if np.linalg.norm(C, np.inf) > tol:
         warnings.warn(
             "Drazin inverse computation: Non-zero coupling block detected. Results may be inaccurate."
         )
+
+        W_nz = solve_sylvester(R, -N, -C)
+        W[:n_cutoff, n_cutoff:] = W_nz
+
+        T_blkdiag = solve_triangular(W, T @ W, lower=False)
+        assert np.linalg.norm(T_blkdiag[:n_cutoff, n_cutoff:], np.inf) < tol
+        pass
 
     if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
         warnings.warn(
@@ -523,7 +539,7 @@ def drazin(A, tol=0):
         R, np.eye(n_cutoff), lower=False
     )
 
-    return Z @ drazin_schur @ Z.T.conj()
+    return Z @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
 
 
 def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
@@ -555,7 +571,7 @@ def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
     pencil_lu = lu_factor(a * M - hill_matrix)
     pencil_H = lu_solve(pencil_lu, hill_matrix)
     pencil_M = lu_solve(pencil_lu, M)
-    pencil_drazin = drazin(pencil_M, tol_drazin)
+    pencil_drazin, ratio = drazin(pencil_M, tol_drazin)
 
     P_0 = pencil_drazin @ pencil_M
     exp = expm(pencil_drazin @ pencil_H * t)
