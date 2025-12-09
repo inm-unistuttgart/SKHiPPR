@@ -9,6 +9,11 @@ from skhippr.solvers.newton import NewtonSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillSubharmonic,
+    KoopmanHillDAE,
+)
+
 
 def main():
 
@@ -29,13 +34,19 @@ def main():
     dae = PendulumDAE(m, d, g, l, F, omega, phi)
 
     # HBM systems
+    fourier_ode = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=ode.n_dof)
     hbm_ode = HBMEquation(
         ode,
         omega,
-        fourier=Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=ode.n_dof),
-        initial_guess=np.zeros(ode.n_dof * (2 * N_HBM + 1)),
+        fourier=fourier_ode,
+        initial_guess=np.zeros(ode.n_dof * (2 * fourier_ode.N_HBM + 1)),
+        stability_method=KoopmanHillSubharmonic(
+            fourier_ode, tol=1e-4, autonomous=False
+        ),
     )
-    sys_ode = EquationSystem(equations=[hbm_ode], unknowns="X")
+    sys_ode = EquationSystem(
+        equations=[hbm_ode], unknowns="X", equation_determining_stability=hbm_ode
+    )
     solver.solve(sys_ode)
     print("Solved ODE. \n")
 
@@ -52,15 +63,19 @@ def main():
         ]
     )
 
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof)
-
+    fourier_dae = Fourier(N_HBM=3, L_DFT=1000, n_dof=dae.n_dof)
     hbm_dae = HBMEquationDAE(
         dae,
         omega,
-        fourier=fourier,
-        initial_guess=fourier.DFT(x_dae_init),
+        fourier=fourier_dae,
+        initial_guess=fourier_dae.DFT(x_dae_init),
+        stability_method=KoopmanHillDAE(
+            fourier_dae, tol=0, autonomous=False, tol_drazin=1e-4
+        ),
     )
-    sys_dae = EquationSystem(equations=[hbm_dae], unknowns="X")
+    sys_dae = EquationSystem(
+        equations=[hbm_dae], unknowns="X", equation_determining_stability=hbm_dae
+    )
 
     solver.solve(sys_dae)
     print("Solved DAE. \n")
@@ -73,6 +88,16 @@ def main():
     for i in range(4):
         axs[i].plot(t, x_dae_init[i, :])
         axs[i].plot(t, x_dae_solved[i, :], "--")
+
+    axs[0].set_title("Pendulum ODE (solid) vs. DAE (dashed)")
+
+    fig_FM, ax = plt.subplots(nrows=1, ncols=1)
+    phis = np.linspace(0, 2 * np.pi, 250)
+    ax.plot(np.cos(phis), np.sin(phis), "gray", label="Unit circle")
+    ax.plot(np.real(hbm_ode.eigenvalues), np.imag(hbm_ode.eigenvalues), "x")
+    ax.plot(np.real(hbm_dae.eigenvalues), np.imag(hbm_dae.eigenvalues), "+")
+    ax.set_aspect("equal", "box")
+    ax.set_title(f"Floquet multipliers pendulum N_HBM = {hbm_dae.fourier.N_HBM}")
 
 
 if __name__ == "__main__":
