@@ -71,7 +71,7 @@ def main():
     )
 
     fourier_dae = Fourier(
-        N_HBM=3, L_DFT=2000, n_dof=dae_good.n_dof, real_formulation=False
+        N_HBM=15, L_DFT=2000, n_dof=dae_good.n_dof, real_formulation=False
     )
     hbm_dae_good = HBMEquationDAE(
         dae_good,
@@ -92,7 +92,7 @@ def main():
     print("Solved DAE. \n")
 
     fourier_dae = Fourier(
-        N_HBM=4, L_DFT=2000, n_dof=dae_good.n_dof, real_formulation=False
+        N_HBM=15, L_DFT=2000, n_dof=dae_good.n_dof, real_formulation=False
     )
     hbm_dae_bad = HBMEquationDAE(
         dae_bad,
