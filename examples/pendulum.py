@@ -209,10 +209,10 @@ def plot_frc():
 
     axs[0].set_title("Pendulum ODE FRC")
     axs[0].set_xlabel("omega")
-    axs[0].set_ylabel("\varphi max")
+    axs[0].set_ylabel("phi max")
     axs[1].set_title("Pendulum DAE FRC")
-    axs[1].set_title("omega")
-    axs[1].set_title("y max")
+    axs[1].set_xlabel("omega")
+    axs[1].set_ylabel("y max")
 
 
 if __name__ == "__main__":
