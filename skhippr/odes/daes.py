@@ -14,7 +14,7 @@ class PendulumDAE(AbstractDAE):
 
     def __init__(self, m, d, g, l, F, omega, phi, stability_method=None):
 
-        M = np.diag([m, m, m, m, 0])
+        M = np.diag([1, 1, m, m, 0])
         super().__init__(M=M, autonomous=False, stability_method=stability_method)
         self.d = d
         self.g = g
@@ -40,7 +40,7 @@ class PendulumDAE(AbstractDAE):
             + self.F * np.sin(self.omega * t + self.phi)
         )
         f[3, ...] = (
-            2 * x[1] * x[4] - self.M[0, 0] * self.g - self.d / (self.l**2) * x[3, ...]
+            2 * x[1] * x[4] - self.M[2, 2] * self.g - self.d / (self.l**2) * x[3, ...]
         )
         f[4, ...] = x[0, ...] ** 2 + x[1, ...] ** 2 - self.l**2
 
