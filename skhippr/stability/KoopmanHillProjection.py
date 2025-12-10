@@ -520,10 +520,6 @@ def drazin(A, tol=0):
         W_nz = solve_sylvester(R, -N, -C)
         W[:n_cutoff, n_cutoff:] = W_nz
 
-        T_blkdiag = solve_triangular(W, T @ W, lower=False)
-        assert np.linalg.norm(T_blkdiag[:n_cutoff, n_cutoff:], np.inf) < tol
-        pass
-
     if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
         warnings.warn(
             "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
@@ -539,7 +535,7 @@ def drazin(A, tol=0):
         R, np.eye(n_cutoff), lower=False
     )
 
-    return Z @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
+    return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
 
 
 def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
@@ -574,6 +570,6 @@ def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
     pencil_drazin, ratio = drazin(pencil_M, tol_drazin)
 
     P_0 = pencil_drazin @ pencil_M
-    exp = expm(pencil_drazin @ pencil_H * t)
+    exp = expm((pencil_drazin @ pencil_H) * t)
 
     return exp @ P_0, P_0, a
