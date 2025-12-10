@@ -20,7 +20,7 @@ class PendulumDAE(AbstractDAE):
         self.g = g
         self.l = l
         self.F = F
-        self.omega = (omega,)
+        self.omega = omega
         self.phi = phi
 
     @override
