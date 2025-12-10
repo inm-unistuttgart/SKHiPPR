@@ -181,4 +181,4 @@ class AbstractDAE(AbstractODE):
     def __init__(self, M: np.ndarray, autonomous: bool, stability_method=None):
         n_dof = M.shape[0]
         super().__init__(autonomous, n_dof, stability_method)
-        self.M = M
+        self.M_small = M

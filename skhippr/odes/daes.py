@@ -40,7 +40,9 @@ class PendulumDAE(AbstractDAE):
             + self.F * np.sin(self.omega * t + self.phi)
         )
         f[3, ...] = (
-            2 * x[1] * x[4] - self.M[2, 2] * self.g - self.d / (self.l**2) * x[3, ...]
+            2 * x[1] * x[4]
+            - self.M_small[2, 2] * self.g
+            - self.d / (self.l**2) * x[3, ...]
         )
         f[4, ...] = x[0, ...] ** 2 + x[1, ...] ** 2 - self.l**2
 

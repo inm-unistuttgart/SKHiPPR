@@ -449,7 +449,7 @@ class HBMEquationDAE(HBMEquation):
             stability_method=stability_method,
         )
 
-        self.M = np.kron(np.eye(2 * fourier.N_HBM + 1), dae.M)
+        self.M = np.kron(np.eye(2 * fourier.N_HBM + 1), dae.M_small)
 
     def aft(self, X=None) -> np.ndarray:
         """
