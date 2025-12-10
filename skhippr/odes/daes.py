@@ -156,3 +156,202 @@ class PendulumODE(AbstractODE):
         df_dx[1, 1, ...] = -self.d / (self.m * self.l**2)
 
         return df_dx
+
+
+class FrictionOscillator(AbstractDAE):
+    """Oscillator chain with n_blocks blocks, of which the last one is in frictional contact with the ground."""
+
+    def __init__(
+        self,
+        stiffnesses,
+        dampings,
+        masses,
+        g,
+        mu,
+        forcing_amplitudes,
+        forcing_phases,
+        prox_parameter=1,
+        stability_method=None,
+    ):
+
+        stiffnesses = np.atleast_1d(stiffnesses)
+        dampings = np.atleast_1d(dampings)
+        masses = np.atleast_1d(masses)
+        forcing_amplitudes = np.atleast_1d(forcing_amplitudes)
+        forcing_phases = np.atleast_1d(forcing_phases)
+
+        M_small = np.diag(np.hstack((np.ones(len(masses)), masses, 0)))
+
+        if len(masses) != len(stiffnesses):
+            raise ValueError(
+                f"Length of masses ({len(masses)}) must match length of stiffnesses ({len(stiffnesses)})."
+            )
+
+        if len(dampings) != len(stiffnesses):
+            raise ValueError(
+                f"Length of dampings ({len(dampings)}) must match length of stiffnesses ({len(stiffnesses)})."
+            )
+
+        if len(forcing_amplitudes) != len(stiffnesses):
+            raise ValueError(
+                f"Length of forcing amplitudes ({len(forcing_amplitudes)}) must match length of stiffnesses ({len(stiffnesses)})."
+            )
+
+        if len(forcing_phases) != len(stiffnesses):
+            raise ValueError(
+                f"Length of forcing phases ({len(forcing_phases)}) must match length of stiffnesses ({len(stiffnesses)})."
+            )
+
+        super().__init__(M_small, False, stability_method)
+        self.stiffnesses = stiffnesses
+        self.dampings = dampings
+        self.forcing_amplitudes = forcing_amplitudes
+        self.forcing_phases = forcing_phases
+        self.mu = mu
+        self.prox_parameter = prox_parameter
+
+        self.x = np.zeros((2 * len(masses) + 1))
+
+        stiffnesses = np.append(stiffnesses, 0)
+        dampings = np.append(dampings, 0)
+
+        self.K = np.empty_like(M_small)
+        self.D = np.empty_like(M_small)
+        for i in range(len(masses)):
+
+            self.K[i, i] = stiffnesses[i + 1] + stiffnesses[i]
+            if i > 0:
+                self.K[i, i - 1] = -stiffnesses[i]
+            if i < len(masses) - 1:
+                self.K[i, i + 1] = -stiffnesses[i + 1]
+
+            self.D[i, i] = dampings[i + 1] + dampings[i]
+            if i > 0:
+                self.D[i, i - 1] = -dampings[i]
+            if i < len(masses) - 1:
+                self.D[i, i + 1] = -dampings[i + 1]
+
+        self.jacobian_ode = np.block(
+            [[np.zeros_like(self.K), np.eye(len(masses))], [-self.K, -self.D]]
+        )
+
+        self.lam_crit = self.mu * self.masses[-1] * g
+
+        @property
+        def q(self):
+            return self.x[: len(self.stiffnesses), ...]
+
+        @q.setter
+        def q(self, value):
+            self.x[: len(self.stiffnesses), ...] = value
+
+        @property
+        def q_dot(self):
+            return self.x[len(self.stiffnesses) : -1, ...]
+
+        @q_dot.setter
+        def q_dot(self, value):
+            self.x[len(self.stiffnesses) : -1, ...] = value
+
+        @property
+        def lam(self):
+            return np.atleast_1d(self.x[-1, ...])
+
+        @lam.setter
+        def lam(self, value):
+            self.x[-1, ...] = value
+
+    def forcing(self, t=None):
+        if t is None:
+            t = self.t
+        F = np.zeros((len(self.stiffnesses), *np.atleast_1d(t).shape), dtype=t.dtype)
+        for i in range(len(self.stiffnesses)):
+            F[len(self.stiffnesses) + i, ...] = self.forcing_amplitudes[i] * np.sin(
+                t + self.forcing_phases[i]
+            )
+
+        F[-1] += self.lam
+        return F
+
+    def constraint(self, t=None, x=None) -> np.ndarray:
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        g = (
+            self.q_dot[-1, ...]
+            + np.min(
+                0,
+                self.prox_parameter * (self.lam + self.lam_crit) - self.q_dot[-1, ...],
+            )
+            + np.max(
+                0,
+                self.prox_parameter * (self.lam - self.lam_crit) - self.q_dot[-1, ...],
+            )
+        )
+        return g
+
+    @override
+    def dynamics(self, t=None, x=None) -> np.ndarray:
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        f = np.zeros_like(x)
+        f[:-1, ...] = self.jacobian_ode @ x[:-1, ...] + self.forcing(t)
+        f[-1, ...] = self.constraint(t, x)
+
+        return f
+
+    @override
+    def closed_form_derivative(self, variable, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+
+        self.check_dimensions(t, x)
+
+        match variable:
+            case "x":
+                return self.df_dx(t, x)
+            case _:
+                raise NotImplementedError(
+                    f"Derivative w.r.t {variable} not implemented in closed form."
+                )
+
+    def df_dx(self, t=None, x=None) -> np.ndarray:
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+
+        n = len(self.stiffnesses)
+        df_dx = np.zeros((2 * n + 1, 2 * n + 1, *x.shape[1:]), dtype=x.dtype)
+        df_dx[: 2 * n, : 2 * n, ...] = self.jacobian_ode
+
+        df_dx[-2, -1, ...] = 1
+
+        # Derivative of constraint equation
+        dg_dqdot = np.zeros_like(self.lam)
+        dg_dqdot[
+            self.prox_parameter + self.lam_crit
+            > np.abs(self.q_dot[-1] - self.prox_parameter * self.lam),
+            ...,
+        ] = 1
+
+        dg_dlam = np.zeros_like(self.lam)
+        dg_dlam[
+            self.prox_parameter + self.lam_crit
+            < np.abs(self.q_dot[-1] - self.prox_parameter * self.lam),
+            ...,
+        ] = self.prox_parameter
+
+        df_dx[-1, -1, ...] = dg_dlam
+        df_dx[-1, -2, ...] = dg_dqdot
+
+        return df_dx
