@@ -215,8 +215,8 @@ class FrictionOscillator(AbstractDAE):
         stiffnesses = np.append(stiffnesses, 0)
         dampings = np.append(dampings, 0)
 
-        self.K = np.empty_like(M_small)
-        self.D = np.empty_like(M_small)
+        self.K = np.zeros((len(masses), len(masses)))
+        self.D = np.zeros(self.K.shape)
         for i in range(len(masses)):
 
             self.K[i, i] = stiffnesses[i + 1] + stiffnesses[i]
@@ -235,36 +235,36 @@ class FrictionOscillator(AbstractDAE):
             [[np.zeros_like(self.K), np.eye(len(masses))], [-self.K, -self.D]]
         )
 
-        self.lam_crit = self.mu * self.masses[-1] * g
+        self.lam_crit = self.mu * masses[-1] * g
 
-        @property
-        def q(self):
-            return self.x[: len(self.stiffnesses), ...]
+    @property
+    def q(self):
+        return self.x[: len(self.stiffnesses), ...]
 
-        @q.setter
-        def q(self, value):
-            self.x[: len(self.stiffnesses), ...] = value
+    @q.setter
+    def q(self, value):
+        self.x[: len(self.stiffnesses), ...] = value
 
-        @property
-        def q_dot(self):
-            return self.x[len(self.stiffnesses) : -1, ...]
+    @property
+    def q_dot(self):
+        return self.x[len(self.stiffnesses) : -1, ...]
 
-        @q_dot.setter
-        def q_dot(self, value):
-            self.x[len(self.stiffnesses) : -1, ...] = value
+    @q_dot.setter
+    def q_dot(self, value):
+        self.x[len(self.stiffnesses) : -1, ...] = value
 
-        @property
-        def lam(self):
-            return np.atleast_1d(self.x[-1, ...])
+    @property
+    def lam(self):
+        return np.atleast_1d(self.x[-1, ...])
 
-        @lam.setter
-        def lam(self, value):
-            self.x[-1, ...] = value
+    @lam.setter
+    def lam(self, value):
+        self.x[-1, ...] = value
 
     def forcing(self, t=None):
         if t is None:
             t = self.t
-        F = np.zeros((len(self.stiffnesses), *np.atleast_1d(t).shape), dtype=t.dtype)
+        F = np.zeros((self.n_dof, *np.atleast_1d(t).shape))
         for i in range(len(self.stiffnesses)):
             F[len(self.stiffnesses) + i, ...] = self.forcing_amplitudes[i] * np.sin(
                 t + self.forcing_phases[i]
@@ -281,14 +281,14 @@ class FrictionOscillator(AbstractDAE):
         self.check_dimensions(t, x)
 
         g = (
-            self.q_dot[-1, ...]
-            + np.min(
+            x[-2, ...]
+            + np.minimum(
                 0,
-                self.prox_parameter * (self.lam + self.lam_crit) - self.q_dot[-1, ...],
+                self.prox_parameter * (x[-1, ...] + self.lam_crit) - x[-2, ...],
             )
-            + np.max(
+            + np.maximum(
                 0,
-                self.prox_parameter * (self.lam - self.lam_crit) - self.q_dot[-1, ...],
+                self.prox_parameter * (x[-1, ...] + self.lam_crit) - x[-2, ...],
             )
         )
         return g
@@ -302,8 +302,9 @@ class FrictionOscillator(AbstractDAE):
         self.check_dimensions(t, x)
 
         f = np.zeros_like(x)
-        f[:-1, ...] = self.jacobian_ode @ x[:-1, ...] + self.forcing(t)
+        f[:-1, ...] = self.jacobian_ode @ x[:-1, ...]
         f[-1, ...] = self.constraint(t, x)
+        f += self.forcing(t)
 
         return f
 

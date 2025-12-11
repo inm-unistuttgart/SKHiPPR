@@ -27,7 +27,7 @@ def plot_frc():
     masses = [1, 1]
     g = 9.81
     stiffnesses = [1, 1]
-    dampings = [1, 1]
+    dampings = [0.05, 0.05]
     forcings = [0, 0.5]
     omega = 1.15
     phases = [0, 0]
@@ -51,13 +51,14 @@ def plot_frc():
 
     fourier = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True)
 
-    hbm = HBMEquation(
+    hbm = HBMEquationDAE(
         dae,
         omega,
         fourier=fourier,
-        initial_guess=np.zeros(dae.n_dof * (2 * fourier.N_HBM + 1))
-        + 1e-3 * np.random.rand(dae.n_dof * (2 * fourier.N_HBM + 1)),
-        stability_method=KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False),
+        initial_guess=np.random.rand(dae.n_dof * (2 * fourier.N_HBM + 1)),
+        stability_method=KoopmanHillDAE(
+            fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
+        ),
     )
 
     solver.solve_equation(hbm, unknown="X")
