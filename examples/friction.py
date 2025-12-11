@@ -9,7 +9,7 @@ from examples.duffing_3d import visualize_solution
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 from skhippr.Fourier import Fourier
-from skhippr.solvers.newton import ScipyFsolveSolver, NewtonSolver
+from skhippr.solvers.newton import ScipyFsolveSolver, NewtonSolver, ScipyRootSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -22,8 +22,8 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_solution():
 
-    solver = ScipyFsolveSolver(
-        tolerance=1e-6, max_iterations=1000, verbose=True, use_fprime=True
+    solver = ScipyRootSolver(
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
     )
 
     # BA Schütz case 1 (p. 44)
@@ -50,7 +50,7 @@ def plot_solution():
     prox_parameter = 10
 
     # warm-start from smoothed oscillator
-    Ns_HBM = [25]
+    Ns_HBM = [30]
     L_DFT = 1000
 
     dae_smooth = SmoothedFrictionOscillator(
@@ -162,8 +162,8 @@ def plot_solution():
 
 def plot_frc():
 
-    solver = ScipyFsolveSolver(
-        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
+    solver = ScipyRootSolver(
+        tolerance=1e-7, max_iterations=100, verbose=True, use_fprime=True, method="lm"
     )
 
     # BA Schütz case 2 (p. 50)
@@ -239,7 +239,7 @@ def plot_frc():
             continuation_parameter="omega",
             stepsize=0.01,
             stepsize_range=[0.001, 1],
-            num_steps=1000,
+            num_steps=10,
             verbose=True,
         ):
             if branch_point.stable:
