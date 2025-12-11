@@ -170,8 +170,10 @@ class ScipyFsolveSolver(NewtonSolver):
             fprime=fprime,
             full_output=True,
             xtol=self.tolerance,
-            maxfev=self.max_iterations - self.num_iter,
+            maxfev=self.max_iterations,
         )
+
+        self.num_iter = infodict.get("nfev")
 
         if flag == 1:
             self.converged = True
@@ -182,7 +184,7 @@ class ScipyFsolveSolver(NewtonSolver):
         if self.verbose:
             if equation_system.solved:
                 print(
-                    f"fsolve converged successfully with {infodict.get('nfev')} function calls and {infodict.get('njev')} jacobian calls."
+                    f"fsolve converged successfully with {infodict.get('nfev', 0)} function calls and {infodict.get('njev', 0)} jacobian calls."
                 )
             else:
                 print(f"fsolve did not converge! \n {flag}: {msg}")

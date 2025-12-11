@@ -124,7 +124,7 @@ def plot_single_solution():
 def plot_frc():
 
     solver = ScipyFsolveSolver(
-        tolerance=1e-8, max_iterations=50, verbose=False, use_fprime=True
+        tolerance=1e-8, max_iterations=1000, verbose=False, use_fprime=True
     )
 
     m = 1
