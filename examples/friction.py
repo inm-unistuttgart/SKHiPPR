@@ -170,8 +170,8 @@ def plot_frc():
     g = 10
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
-    forcings = [20, 10]
-    omega = 0.5
+    forcings = [20, 0]
+    omega = 0.1
     phases = [0.5 * np.pi, 0]
     mu = 0.9
     smoothing = 10
@@ -201,7 +201,7 @@ def plot_frc():
     )
 
     fourier = Fourier(
-        N_HBM=30, L_DFT=1000, n_dof=dae_smooth.n_dof, real_formulation=True
+        N_HBM=60, L_DFT=2000, n_dof=dae_smooth.n_dof, real_formulation=True
     )
 
     fig, axs = plt.subplots(1, 2)
@@ -219,9 +219,9 @@ def plot_frc():
             omega,
             fourier=fourier,
             initial_guess=initial_guess,
-            stability_method=None,  # KoopmanHillDAE(
-            # fourier_dae, tol=1e-4, autonomous=False, tol_drazin=1e-6
-            # ),
+            stability_method=KoopmanHillDAE(
+                fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
+            ),
         )
 
         sys = EquationSystem(
