@@ -9,7 +9,7 @@ warnings.filterwarnings("error", category=np.exceptions.ComplexWarning)
 
 from skhippr.odes.daes import PendulumDAE, PendulumODE
 from skhippr.Fourier import Fourier
-from skhippr.solvers.newton import NewtonSolver
+from skhippr.solvers.newton import NewtonSolver, ScipyFsolveSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -22,7 +22,10 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_single_solution():
 
-    solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
+    # solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
+    solver = ScipyFsolveSolver(
+        tolerance=1e-8, max_iterations=50, verbose=True, use_fprime=True
+    )
 
     m = 1
     g = 9.81
@@ -70,7 +73,7 @@ def plot_single_solution():
         ]
     )
 
-    fourier_dae = Fourier(N_HBM=15, L_DFT=2000, n_dof=dae.n_dof, real_formulation=False)
+    fourier_dae = Fourier(N_HBM=15, L_DFT=2000, n_dof=dae.n_dof, real_formulation=True)
     hbm_dae = HBMEquationDAE(
         dae,
         omega,
@@ -216,6 +219,6 @@ def plot_frc():
 
 
 if __name__ == "__main__":
-    # plot_single_solution()
-    plot_frc()
+    plot_single_solution()
+    # plot_frc()
     plt.show()

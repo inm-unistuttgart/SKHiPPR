@@ -148,11 +148,11 @@ class ScipyFsolveSolver(NewtonSolver):
         super().__init__(tolerance, max_iterations, verbose)
         self.use_fprime = use_fprime
 
-    def func(x, equation_system: EquationSystem):
+    def func(self, x, equation_system: EquationSystem):
         equation_system.vector_of_unknowns = x
-        return equation_system.residual(update=True)
+        return equation_system.residual_function(update=True)
 
-    def fprime(x, equation_system: EquationSystem):
+    def fprime(self, x, equation_system: EquationSystem):
         equation_system.vector_of_unknowns = x
         return equation_system.jacobian(update=True)
 
@@ -175,14 +175,14 @@ class ScipyFsolveSolver(NewtonSolver):
 
         if flag == 1:
             self.converged = True
-            equation_system.solved = True
             equation_system.x = x
+            equation_system.solved = True
             equation_system.determine_stability(update=True)
 
         if self.verbose:
             if equation_system.solved:
                 print(
-                    f"fsolve converged successfully with {infodict.nfev} function calls and {infodict.njev} jacobian calls."
+                    f"fsolve converged successfully with {infodict['nfev']} function calls and {infodict['njev']} jacobian calls."
                 )
             else:
                 print(f"fsolve did not converge! \n {flag}: {msg}")
