@@ -180,9 +180,9 @@ def plot_frc():
         omega,
         fourier=fourier_dae,
         initial_guess=fourier_dae.DFT(x_dae_init),
-        stability_method=KoopmanHillDAE(
-            fourier_dae, tol=1e-4, autonomous=False, tol_drazin=1e-6
-        ),
+        stability_method=None,  # KoopmanHillDAE(
+        # fourier_dae, tol=1e-4, autonomous=False, tol_drazin=1e-6
+        # ),
     )
 
     fig, axs = plt.subplots(1, 2)
