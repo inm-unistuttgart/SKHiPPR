@@ -4,7 +4,7 @@ from typing import override
 
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.equations.EquationSystem import EquationSystem
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, root
 
 
 class NewtonSolver:
@@ -188,3 +188,56 @@ class ScipyFsolveSolver(NewtonSolver):
                 )
             else:
                 print(f"fsolve did not converge! \n {flag}: {msg}")
+
+
+class ScipyRootSolver(NewtonSolver):
+    def __init__(
+        self,
+        tolerance=1e-8,
+        max_iterations=20,
+        verbose=False,
+        use_fprime=True,
+        method="hybr",
+    ):
+        super().__init__(tolerance, max_iterations, verbose)
+        self.use_fprime = use_fprime
+        self.method = method
+        self.equation_system = None
+
+    def func(self, x):
+        self.equation_system.vector_of_unknowns = x
+        f = self.equation_system.residual_function(update=True)
+
+        if not self.use_fprime:
+            return f
+        else:
+            dfdx = self.equation_system.jacobian(update=True)
+            return f, dfdx
+
+    @override
+    def solve(self, equation_system: EquationSystem):
+        self.equation_system = equation_system
+
+        sol = root(
+            fun=self.func,
+            x0=equation_system.vector_of_unknowns,
+            method=self.method,
+            jac=True,
+            tol=self.tolerance,
+        )
+
+        self.num_iter = sol.nfev
+
+        if sol.success == 1:
+            self.converged = True
+            equation_system.vector_of_unknowns = sol.x
+            equation_system.solved = True
+            equation_system.determine_stability(update=True)
+
+        if self.verbose:
+            if equation_system.solved:
+                print(
+                    f"fsolve converged successfully with {sol.nfev} function calls and {sol.njev} jacobian calls. Residual {np.linalg.norm(sol.fun)}"
+                )
+            else:
+                print(f"fsolve did not converge! \n {sol.message}")
