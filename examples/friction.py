@@ -9,7 +9,7 @@ from examples.duffing_3d import visualize_solution
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 from skhippr.Fourier import Fourier
-from skhippr.solvers.newton import ScipyFsolveSolver
+from skhippr.solvers.newton import ScipyFsolveSolver, NewtonSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -23,7 +23,7 @@ from skhippr.stability.KoopmanHillProjection import (
 def plot_solution():
 
     solver = ScipyFsolveSolver(
-        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
+        tolerance=1e-6, max_iterations=1000, verbose=True, use_fprime=True
     )
 
     # BA Schütz case 1 (p. 44)
@@ -32,9 +32,10 @@ def plot_solution():
     # stiffnesses = [1, 1]
     # dampings = [0.02, 0.02]
     # forcings = [20, 50]
-    # omega = 1
+    # omega = 2 * np.pi
     # phases = [-0.5 * np.pi, np.pi]
     # mu = 4
+    # smoothing = 10
 
     # BA Schütz case 2 (p. 50)
     masses = [1, 1]
@@ -42,14 +43,14 @@ def plot_solution():
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
     forcings = [20, 10]
-    omega = 0.5  # 2 * np.pi
+    omega = 2 * np.pi
     phases = [0.5 * np.pi, 0]
     mu = 0.9
-    smoothing = 10
-    prox_parameter = 1
+    smoothing = 40
+    prox_parameter = 10
 
     # warm-start from smoothed oscillator
-    Ns_HBM = [30]
+    Ns_HBM = [25]
     L_DFT = 1000
 
     dae_smooth = SmoothedFrictionOscillator(
@@ -260,6 +261,6 @@ def plot_frc():
 
 
 if __name__ == "__main__":
-    # plot_solution()
-    plot_frc()
+    plot_solution()
+    # plot_frc()
     plt.show()
