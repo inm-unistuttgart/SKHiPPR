@@ -29,11 +29,11 @@ def plot_frc():
     masses = [1, 1]
     g = 9.81
     stiffnesses = [1, 1]
-    dampings = [0.05, 0.05]
-    forcings = [0, 0.5]
+    dampings = [0.5, 0.5]
+    forcings = [0.5, 0]
     omega = 1.15
     phases = [0, 0]
-    mu = 3
+    mu = 10000
 
     prox_parameter = 1
 
@@ -51,6 +51,8 @@ def plot_frc():
         prox_parameter=prox_parameter,
     )
 
+    print(dae.lam_crit)
+
     fourier = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True)
 
     hbm = HBMEquationDAE(
@@ -64,10 +66,28 @@ def plot_frc():
     )
 
     solver.solve_equation(hbm, unknown="X")
-    sys = EquationSystem([hbm], ["X"], hbm)
-    visualize_solution(sys)
 
-    fix, axs = plt.subplots(hbm.n_dof, 1)
+    _, axs = plt.subplots(2, 2)
+    x_time = hbm.x_time()
+    fourier = hbm.fourier
+
+    for i in range(2):
+        axs[i][0].plot(x_time[i, :], x_time[i + 2, :], "-")
+        axs[i][0].set_title(f"Phase plot of x_[{i}]")
+        axs[i][0].set_ylabel(f"dx_[{i}]")
+        axs[i][0].set_xlabel(f"x_[{i}]")
+
+    floquet_multipliers = hbm.eigenvalues
+    axs[0][1].plot(np.real(floquet_multipliers), np.imag(floquet_multipliers), "x")
+    axs[0][1].set_title("Floquet multipliers")
+    axs[0][1].plot(
+        np.cos(fourier.time_samples_normalized),
+        np.sin(fourier.time_samples_normalized),
+        "k",
+    )
+    axs[0][1].axis("equal")
+
+    _, axs = plt.subplots(hbm.n_dof, 1)
     x_time = hbm.x_time()
     for i in range(hbm.n_dof):
         axs[i].plot(hbm.fourier.time_samples(hbm.omega), x_time[i, :])
