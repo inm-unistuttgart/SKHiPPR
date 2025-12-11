@@ -23,7 +23,7 @@ from skhippr.stability.KoopmanHillProjection import (
 def plot_frc():
 
     solver = ScipyFsolveSolver(
-        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=False
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
     )
 
     masses = [1, 1]
@@ -33,7 +33,7 @@ def plot_frc():
     forcings = [0.5, 0]
     omega = 1.15
     phases = [0, 0]
-    mu = 10000
+    mu = 100000  # always stick
 
     prox_parameter = 1
 

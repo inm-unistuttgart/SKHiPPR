@@ -264,13 +264,11 @@ class FrictionOscillator(AbstractDAE):
     def forcing(self, t=None):
         if t is None:
             t = self.t
-        F = np.zeros((self.n_dof, *np.atleast_1d(t).shape))
+        F = np.zeros((self.n_dof - 1, *np.atleast_1d(t).shape))
         for i in range(len(self.stiffnesses)):
             F[len(self.stiffnesses) + i, ...] = self.forcing_amplitudes[i] * np.sin(
                 t + self.forcing_phases[i]
             )
-
-        F[-1] += self.lam
         return F
 
     def constraint(self, t=None, x=None) -> np.ndarray:
@@ -302,9 +300,11 @@ class FrictionOscillator(AbstractDAE):
         self.check_dimensions(t, x)
 
         f = np.zeros_like(x)
-        f[:-1, ...] = self.jacobian_ode @ x[:-1, ...]
+        f[:-1, ...] = self.jacobian_ode @ x[:-1, ...] + self.forcing(t)
+
+        # friction effects
+        f[-2, ...] += x[-1, ...]
         f[-1, ...] = self.constraint(t, x)
-        f += self.forcing(t)
 
         return f
 
@@ -341,14 +341,14 @@ class FrictionOscillator(AbstractDAE):
         dg_dqdot = np.zeros_like(self.lam)
         dg_dqdot[
             self.prox_parameter + self.lam_crit
-            > np.abs(self.q_dot[-1] - self.prox_parameter * self.lam),
+            > np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
             ...,
         ] = 1
 
         dg_dlam = np.zeros_like(self.lam)
         dg_dlam[
             self.prox_parameter + self.lam_crit
-            < np.abs(self.q_dot[-1] - self.prox_parameter * self.lam),
+            < np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
             ...,
         ] = self.prox_parameter
 
