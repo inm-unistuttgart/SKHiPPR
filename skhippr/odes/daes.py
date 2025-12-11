@@ -291,6 +291,30 @@ class FrictionOscillator(AbstractDAE):
         )
         return g
 
+    def deriv_constraint(self, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        # Derivative of constraint equation
+        dg_dqdot = np.zeros_like(self.lam)
+        dg_dqdot[
+            self.prox_parameter + self.lam_crit
+            > np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
+            ...,
+        ] = 1
+
+        dg_dlam = np.zeros_like(self.lam)
+        dg_dlam[
+            self.prox_parameter + self.lam_crit
+            < np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
+            ...,
+        ] = self.prox_parameter
+
+        return dg_dqdot, dg_dlam
+
     @override
     def dynamics(self, t=None, x=None) -> np.ndarray:
         if t is None:
@@ -338,21 +362,61 @@ class FrictionOscillator(AbstractDAE):
         df_dx[-2, -1, ...] = 1
 
         # Derivative of constraint equation
-        dg_dqdot = np.zeros_like(self.lam)
-        dg_dqdot[
-            self.prox_parameter + self.lam_crit
-            > np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
-            ...,
-        ] = 1
-
-        dg_dlam = np.zeros_like(self.lam)
-        dg_dlam[
-            self.prox_parameter + self.lam_crit
-            < np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
-            ...,
-        ] = self.prox_parameter
-
+        dg_dqdot, dg_dlam = self.deriv_constraint(t, x)
         df_dx[-1, -1, ...] = dg_dlam
         df_dx[-1, -2, ...] = dg_dqdot
 
         return df_dx
+
+
+class SmoothedFrictionOscillator(FrictionOscillator):
+    def __init__(
+        self,
+        stiffnesses,
+        dampings,
+        masses,
+        g,
+        mu,
+        forcing_amplitudes,
+        forcing_phases,
+        smoothing=20,
+        prox_parameter=1,
+        stability_method=None,
+    ):
+        super().__init__(
+            stiffnesses=stiffnesses,
+            dampings=dampings,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcing_amplitudes,
+            forcing_phases=forcing_phases,
+            prox_parameter=prox_parameter,
+            stability_method=stability_method,
+        )
+        self.smoothing = smoothing
+
+    @override
+    def constraint(self, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        g = x[-1, ...] + self.lam_crit * np.tanh(self.smoothing * x[-2, ...])
+        return g
+
+    @override
+    def deriv_constraint(self, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        dg_dqdot = (
+            self.smoothing * self.lam_crit / (np.cosh(self.smoothing * x[-2, ...]) ** 2)
+        )
+        dg_dlam = np.ones_like(dg_dqdot)
+        return dg_dqdot, dg_dlam
