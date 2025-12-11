@@ -33,7 +33,7 @@ def plot_frc():
     forcings = [0.5, 0]
     omega = 1.15
     phases = [0, 0]
-    mu = 100000  # always stick
+    mu = 10000  # always stick
 
     prox_parameter = 1
 

@@ -267,7 +267,7 @@ class FrictionOscillator(AbstractDAE):
         F = np.zeros((self.n_dof - 1, *np.atleast_1d(t).shape))
         for i in range(len(self.stiffnesses)):
             F[len(self.stiffnesses) + i, ...] = self.forcing_amplitudes[i] * np.sin(
-                t + self.forcing_phases[i]
+                self.omega * t + self.forcing_phases[i]
             )
         return F
 
@@ -286,7 +286,7 @@ class FrictionOscillator(AbstractDAE):
             )
             + np.maximum(
                 0,
-                self.prox_parameter * (x[-1, ...] + self.lam_crit) - x[-2, ...],
+                self.prox_parameter * (x[-1, ...] - self.lam_crit) - x[-2, ...],
             )
         )
         return g
