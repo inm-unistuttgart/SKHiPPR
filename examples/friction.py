@@ -42,14 +42,14 @@ def plot_solution():
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
     forcings = [20, 10]
-    omega = 2 * np.pi
+    omega = 0.5  # 2 * np.pi
     phases = [0.5 * np.pi, 0]
     mu = 0.9
-    smoothing = 40
+    smoothing = 10
     prox_parameter = 1
 
     # warm-start from smoothed oscillator
-    Ns_HBM = [10, 20, 25, 30]
+    Ns_HBM = [30]
     L_DFT = 1000
 
     dae_smooth = SmoothedFrictionOscillator(
@@ -158,41 +158,108 @@ def plot_solution():
                 axs[i].plot(hbm.fourier.time_samples(hbm.omega), x_time[i, :])
             axs[0].set_title(f"Friction oscillator N_HBM = {N_HBM}, alpha = {alpha}")
 
-    # fig, ax = plt.subplots(1, 1)
-    # sys = EquationSystem(
-    #     equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
-    # )
 
-    # for branch_point in pseudo_arclength_continuator(
-    #     initial_system=sys,
-    #     solver=solver,
-    #     continuation_parameter="omega",
-    #     stepsize=0.01,
-    #     stepsize_range=[0.001, 0.1],
-    #     num_steps=2000,
-    #     verbose=True,
-    # ):
-    #     if branch_point.stable:
-    #         color = "r"
-    #     else:
-    #         color = "b"
-    #     axs[idx].plot(
-    #         branch_point.omega,
-    #         np.max(np.abs(branch_point.equations[0].x_time()[0, :])),
-    #         f"{color}.",
-    #     )
+def plot_frc():
 
-    #     if branch_point.omega > 4:
-    #         break
+    solver = ScipyFsolveSolver(
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
+    )
 
-    # axs[0].set_title("Pendulum ODE FRC")
-    # axs[0].set_xlabel("omega")
-    # axs[0].set_ylabel("phi max")
-    # axs[1].set_title("Pendulum DAE FRC")
-    # axs[1].set_xlabel("omega")
-    # axs[1].set_ylabel("y max")
+    # BA Schütz case 2 (p. 50)
+    masses = [1, 1]
+    g = 10
+    stiffnesses = [1, 1]
+    dampings = [0.02, 0.02]
+    forcings = [20, 10]
+    omega = 0.5
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    smoothing = 10
+    prox_parameter = 1
+
+    # Systems
+    dae_smooth = SmoothedFrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        smoothing=smoothing,
+    )
+
+    dae_nonsmooth = FrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        prox_parameter=prox_parameter,
+    )
+
+    fourier = Fourier(
+        N_HBM=30, L_DFT=1000, n_dof=dae_smooth.n_dof, real_formulation=True
+    )
+
+    fig, axs = plt.subplots(1, 2)
+    alphas = [smoothing, "nonsmooth"]
+
+    for k, dae in enumerate([dae_smooth, dae_nonsmooth]):
+
+        if k == 0:
+            initial_guess = 0.1 * np.random.rand(dae.n_dof * (2 * fourier.N_HBM + 1))
+        else:
+            initial_guess = hbm.X
+
+        hbm = HBMEquationDAE(
+            dae,
+            omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            stability_method=None,  # KoopmanHillDAE(
+            # fourier_dae, tol=1e-4, autonomous=False, tol_drazin=1e-6
+            # ),
+        )
+
+        sys = EquationSystem(
+            equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
+        )
+
+        solver.verbose = True
+        solver.solve(sys)
+        solver.verbose = False
+
+        for branch_point in pseudo_arclength_continuator(
+            initial_system=sys,
+            solver=solver,
+            continuation_parameter="omega",
+            stepsize=0.01,
+            stepsize_range=[0.001, 1],
+            num_steps=1000,
+            verbose=True,
+        ):
+            if branch_point.stable:
+                color = "r"
+            else:
+                color = "b"
+            axs[k].plot(
+                branch_point.omega,
+                np.max(np.abs(branch_point.equations[0].x_time()[0, :])),
+                f"{color}.",
+            )
+
+            if branch_point.omega > 1:
+                break
+
+        axs[k].set_title(f"Friction oscillator FRC smoothing = {alphas[k]}")
+        axs[k].set_xlabel("omega")
+        axs[k].set_ylabel("|x[0]| max")
 
 
 if __name__ == "__main__":
-    plot_solution()
+    # plot_solution()
+    plot_frc()
     plt.show()
