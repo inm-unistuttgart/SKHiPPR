@@ -20,35 +20,36 @@ from skhippr.stability.KoopmanHillProjection import (
 )
 
 
-def plot_frc():
+def plot_solution():
 
     solver = ScipyFsolveSolver(
         tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
     )
 
     # BA Schütz case 1 (p. 44)
-    # masses = [1, 1]
-    # g = 10
-    # stiffnesses = [1, 1]
-    # dampings = [0.02, 0.02]
-    # forcings = [20, 50]
-    # omega = 1
-    # phases = [-0.5 * np.pi, np.pi]
-    # mu = 4
-
-    # BA Schütz case 2 (p. 50)
     masses = [1, 1]
     g = 10
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
-    forcings = [20, 10]
+    forcings = [20, 50]
     omega = 1
-    phases = [-0.5 * np.pi, 0]
-    mu = 0.9
+    phases = [-0.5 * np.pi, np.pi]
+    mu = 4
+
+    # BA Schütz case 2 (p. 50)
+    # masses = [1, 1]
+    # g = 10
+    # stiffnesses = [1, 1]
+    # dampings = [0.02, 0.02]
+    # forcings = [20, 10]
+    # omega = 1
+    # phases = [-0.5 * np.pi, 0]
+    # mu = 0.9
 
     prox_parameter = 1
 
-    N_HBM = 30
+    # warm-start because N = 60 is not solved with random initial guess
+    Ns_HBM = [10, 30, 50, 70]
 
     # Systems
     dae = FrictionOscillator(
@@ -64,46 +65,83 @@ def plot_frc():
 
     print(dae.lam_crit)
 
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True)
+    initial_guess = (np.random.rand(dae.n_dof * (2 * Ns_HBM[0] + 1)),)
 
-    hbm = HBMEquationDAE(
-        dae,
-        omega,
-        fourier=fourier,
-        initial_guess=np.random.rand(dae.n_dof * (2 * fourier.N_HBM + 1)),
-        stability_method=KoopmanHillDAE(
-            fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
-        ),
-    )
-    try:
-        solver.solve_equation(hbm, unknown="X")
-    except RuntimeError as R:
-        print(R)
+    for k, N_HBM in enumerate(Ns_HBM):
 
-    _, axs = plt.subplots(2, 2)
-    x_time = hbm.x_time()
-    fourier = hbm.fourier
+        if k == 0:
+            initial_guess = 0.1 * np.random.rand(dae.n_dof * (2 * Ns_HBM[0] + 1))
+        else:
+            initial_guess = np.zeros(dae.n_dof * (2 * N_HBM + 1))
 
-    for i in range(2):
-        axs[i][0].plot(x_time[i, :], x_time[i + 2, :], "-")
-        axs[i][0].set_title(f"Phase plot of x_[{i}]")
-        axs[i][0].set_ylabel(f"dx_[{i}]")
-        axs[i][0].set_xlabel(f"x_[{i}]")
+            idx_cos_end = dae.n_dof * (Ns_HBM[k - 1] + 1)
+            idx_sin_start = dae.n_dof * (Ns_HBM[k] + 1)
+            idx_sin_end = dae.n_dof * (Ns_HBM[k] + 1 + Ns_HBM[k - 1])
+            initial_guess[:idx_cos_end] = hbm.X[:idx_cos_end]
+            initial_guess[idx_sin_start:idx_sin_end] = hbm.X[idx_cos_end:]
 
-    floquet_multipliers = hbm.eigenvalues
-    axs[0][1].plot(np.real(floquet_multipliers), np.imag(floquet_multipliers), "x")
-    axs[0][1].set_title("Floquet multipliers")
-    axs[0][1].plot(
-        np.cos(fourier.time_samples_normalized),
-        np.sin(fourier.time_samples_normalized),
-        "k",
-    )
-    axs[0][1].axis("equal")
+        fourier = Fourier(
+            N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True
+        )
 
-    _, axs = plt.subplots(hbm.n_dof, 1)
-    x_time = hbm.x_time()
-    for i in range(hbm.n_dof):
-        axs[i].plot(hbm.fourier.time_samples(hbm.omega), x_time[i, :])
+        hbm = HBMEquationDAE(
+            dae,
+            omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            stability_method=KoopmanHillDAE(
+                fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
+            ),
+        )
+
+        print(
+            f"N = {N_HBM}: -- Residual before solving: {np.linalg.norm(hbm.residual(update=True), np.inf)}"
+        )
+
+        # plt.figure()
+        # initial_res = hbm.residual(update=False)
+        # initial_res = np.reshape(initial_res, (dae.n_dof, -1), order="F")
+        # plt.imshow(initial_res)
+        # plt.colorbar()
+        # plt.title(f"Initial residual N_HBM = {N_HBM}")
+        # plt.xlabel("harmonic")
+        # plt.ylabel("state")
+
+        try:
+            solver.solve_equation(hbm, unknown="X")
+        except RuntimeError as R:
+            print(R)
+
+        print(
+            f"N = {N_HBM}: -- Residual after solving: {np.linalg.norm(hbm.residual(update=True), np.inf)}"
+        )
+
+        _, axs = plt.subplots(2, 2)
+        x_time = hbm.x_time()
+        fourier = hbm.fourier
+
+        for i in range(2):
+            axs[i][0].plot(x_time[i, :], x_time[i + 2, :], "-")
+            axs[i][0].set_title(f"Phase plot of x_[{i}]")
+            axs[i][0].set_ylabel(f"dx_[{i}]")
+            axs[i][0].set_xlabel(f"x_[{i}]")
+
+        floquet_multipliers = hbm.eigenvalues
+        axs[0][1].plot(np.real(floquet_multipliers), np.imag(floquet_multipliers), "x")
+        axs[0][1].set_title("Floquet multipliers")
+        axs[0][1].plot(
+            np.cos(fourier.time_samples_normalized),
+            np.sin(fourier.time_samples_normalized),
+            "k",
+        )
+        axs[0][1].axis("equal")
+        axs[0][0].set_title(f"nonsmooth oscillator N_HBM = {N_HBM}")
+
+        _, axs = plt.subplots(hbm.n_dof, 1)
+        x_time = hbm.x_time()
+        for i in range(hbm.n_dof):
+            axs[i].plot(hbm.fourier.time_samples(hbm.omega), x_time[i, :])
+        axs[0].set_title(f"nonsmooth oscillator N_HBM = {N_HBM}")
 
     # fig, ax = plt.subplots(1, 1)
     # sys = EquationSystem(
@@ -141,5 +179,5 @@ def plot_frc():
 
 
 if __name__ == "__main__":
-    plot_frc()
+    plot_solution()
     plt.show()
