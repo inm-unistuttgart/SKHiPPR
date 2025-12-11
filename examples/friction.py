@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 
-warnings.filterwarnings("error", category=np.exceptions.ComplexWarning)
+from examples.duffing_3d import visualize_solution
 
 
 from skhippr.odes.daes import FrictionOscillator
@@ -33,7 +33,7 @@ def plot_frc():
     forcings = [0, 0.5]
     omega = 1.15
     phases = [0, 0]
-    mu = 0.1
+    mu = 3
 
     prox_parameter = 1
 
@@ -64,6 +64,13 @@ def plot_frc():
     )
 
     solver.solve_equation(hbm, unknown="X")
+    sys = EquationSystem([hbm], ["X"], hbm)
+    visualize_solution(sys)
+
+    fix, axs = plt.subplots(hbm.n_dof, 1)
+    x_time = hbm.x_time()
+    for i in range(hbm.n_dof):
+        axs[i].plot(hbm.fourier.time_samples(hbm.omega), x_time[i, :])
 
     # fig, ax = plt.subplots(1, 1)
     # sys = EquationSystem(
