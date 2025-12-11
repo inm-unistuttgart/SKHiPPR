@@ -22,9 +22,9 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_single_solution():
 
-    # solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
+    solver_newton = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
     solver = ScipyFsolveSolver(
-        tolerance=1e-8, max_iterations=50, verbose=True, use_fprime=True
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
     )
 
     m = 1
@@ -83,6 +83,7 @@ def plot_single_solution():
             fourier_dae, tol=0, autonomous=False, tol_drazin=1e-5
         ),
     )
+    print(f"Residual before solve: {np.max(np.abs(hbm_dae.residual(update=True)))}")
     sys_dae = EquationSystem(
         equations=[hbm_dae],
         unknowns="X",
@@ -90,6 +91,7 @@ def plot_single_solution():
     )
 
     solver.solve(sys_dae)
+    print(f"Residual after solve: {np.max(np.abs(hbm_dae.residual(update=False)))}")
     print("Solved DAE. \n")
 
     x_dae_solved = hbm_dae.x_time()
@@ -121,7 +123,9 @@ def plot_single_solution():
 
 def plot_frc():
 
-    solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=False)
+    solver = ScipyFsolveSolver(
+        tolerance=1e-8, max_iterations=50, verbose=False, use_fprime=True
+    )
 
     m = 1
     g = 9.81
@@ -220,5 +224,5 @@ def plot_frc():
 
 if __name__ == "__main__":
     plot_single_solution()
-    # plot_frc()
+    plot_frc()
     plt.show()
