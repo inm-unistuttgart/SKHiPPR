@@ -26,18 +26,29 @@ def plot_frc():
         tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True
     )
 
+    # BA Schütz case 1 (p. 44)
+    # masses = [1, 1]
+    # g = 10
+    # stiffnesses = [1, 1]
+    # dampings = [0.02, 0.02]
+    # forcings = [20, 50]
+    # omega = 1
+    # phases = [-0.5 * np.pi, np.pi]
+    # mu = 4
+
+    # BA Schütz case 2 (p. 50)
     masses = [1, 1]
-    g = 9.81
+    g = 10
     stiffnesses = [1, 1]
-    dampings = [0.5, 0.5]
-    forcings = [0.5, 0]
-    omega = 1.15
-    phases = [0, 0]
-    mu = 10000  # always stick
+    dampings = [0.02, 0.02]
+    forcings = [20, 10]
+    omega = 1
+    phases = [-0.5 * np.pi, 0]
+    mu = 0.9
 
     prox_parameter = 1
 
-    N_HBM = 35
+    N_HBM = 30
 
     # Systems
     dae = FrictionOscillator(
@@ -64,8 +75,10 @@ def plot_frc():
             fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
         ),
     )
-
-    solver.solve_equation(hbm, unknown="X")
+    try:
+        solver.solve_equation(hbm, unknown="X")
+    except RuntimeError as R:
+        print(R)
 
     _, axs = plt.subplots(2, 2)
     x_time = hbm.x_time()
