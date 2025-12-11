@@ -45,7 +45,7 @@ def plot_solution():
     omega = 2 * np.pi
     phases = [0.5 * np.pi, 0]
     mu = 0.9
-    smoothing = 0
+    smoothing = 20
 
     prox_parameter = 1
 
