@@ -175,14 +175,14 @@ class ScipyFsolveSolver(NewtonSolver):
 
         if flag == 1:
             self.converged = True
-            equation_system.x = x
+            equation_system.vector_of_unknowns = x
             equation_system.solved = True
             equation_system.determine_stability(update=True)
 
         if self.verbose:
             if equation_system.solved:
                 print(
-                    f"fsolve converged successfully with {infodict['nfev']} function calls and {infodict['njev']} jacobian calls."
+                    f"fsolve converged successfully with {infodict.get('nfev')} function calls and {infodict.get('njev')} jacobian calls."
                 )
             else:
                 print(f"fsolve did not converge! \n {flag}: {msg}")
