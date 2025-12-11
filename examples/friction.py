@@ -9,7 +9,7 @@ warnings.filterwarnings("error", category=np.exceptions.ComplexWarning)
 
 from skhippr.odes.daes import FrictionOscillator
 from skhippr.Fourier import Fourier
-from skhippr.solvers.newton import NewtonSolver
+from skhippr.solvers.newton import ScipyFsolveSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -22,7 +22,9 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_frc():
 
-    solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
+    solver = ScipyFsolveSolver(
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=False
+    )
 
     masses = [1, 1]
     g = 9.81
