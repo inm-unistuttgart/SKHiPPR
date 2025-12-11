@@ -7,7 +7,7 @@ import warnings
 from examples.duffing_3d import visualize_solution
 
 
-from skhippr.odes.daes import FrictionOscillator
+from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import ScipyFsolveSolver
 from skhippr.equations.EquationSystem import EquationSystem
@@ -27,41 +27,54 @@ def plot_solution():
     )
 
     # BA Schütz case 1 (p. 44)
-    masses = [1, 1]
-    g = 10
-    stiffnesses = [1, 1]
-    dampings = [0.02, 0.02]
-    forcings = [20, 50]
-    omega = 1
-    phases = [-0.5 * np.pi, np.pi]
-    mu = 4
-
-    # BA Schütz case 2 (p. 50)
     # masses = [1, 1]
     # g = 10
     # stiffnesses = [1, 1]
     # dampings = [0.02, 0.02]
-    # forcings = [20, 10]
+    # forcings = [20, 50]
     # omega = 1
-    # phases = [-0.5 * np.pi, 0]
-    # mu = 0.9
+    # phases = [-0.5 * np.pi, np.pi]
+    # mu = 4
+
+    # BA Schütz case 2 (p. 50)
+    masses = [1, 1]
+    g = 10
+    stiffnesses = [1, 1]
+    dampings = [0.02, 0.02]
+    forcings = [20, 10]
+    omega = 2 * np.pi
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    smoothing = 0
 
     prox_parameter = 1
 
     # warm-start because N = 60 is not solved with random initial guess
-    Ns_HBM = [10, 30, 50, 70]
+    Ns_HBM = [30]
 
-    # Systems
-    dae = FrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        prox_parameter=prox_parameter,
-    )
+    if not smoothing:
+        # Systems
+        dae = FrictionOscillator(
+            stiffnesses=stiffnesses,
+            dampings=dampings,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcings,
+            forcing_phases=phases,
+            prox_parameter=prox_parameter,
+        )
+    else:
+        dae = SmoothedFrictionOscillator(
+            stiffnesses=stiffnesses,
+            dampings=dampings,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcings,
+            forcing_phases=phases,
+            smoothing=smoothing,
+        )
 
     print(dae.lam_crit)
 
@@ -81,7 +94,7 @@ def plot_solution():
             initial_guess[idx_sin_start:idx_sin_end] = hbm.X[idx_cos_end:]
 
         fourier = Fourier(
-            N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True
+            N_HBM=N_HBM, L_DFT=100, n_dof=dae.n_dof, real_formulation=True
         )
 
         hbm = HBMEquationDAE(
