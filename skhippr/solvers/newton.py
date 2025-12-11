@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import override
 
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.equations.EquationSystem import EquationSystem
+from scipy.optimize import fsolve
 
 
 class NewtonSolver:
@@ -137,3 +139,50 @@ class NewtonSolver:
             equation_system.determine_stability(update=True)
         elif self.verbose:
             print(f" Did not converge after {self.num_iter} iterations")
+
+
+class ScipyFsolveSolver(NewtonSolver):
+    def __init__(
+        self, tolerance=1e-8, max_iterations=20, verbose=False, use_fprime=True
+    ):
+        super().__init__(tolerance, max_iterations, verbose)
+        self.use_fprime = use_fprime
+
+    def func(x, equation_system: EquationSystem):
+        equation_system.vector_of_unknowns = x
+        return equation_system.residual(update=True)
+
+    def fprime(x, equation_system: EquationSystem):
+        equation_system.vector_of_unknowns = x
+        return equation_system.jacobian(update=True)
+
+    @override
+    def solve(self, equation_system: EquationSystem):
+        if self.use_fprime:
+            fprime = self.fprime
+        else:
+            fprime = None
+
+        x, infodict, flag, msg = fsolve(
+            func=self.func,
+            x0=equation_system.vector_of_unknowns,
+            args=equation_system,
+            fprime=fprime,
+            full_output=True,
+            xtol=self.tolerance,
+            maxfev=self.max_iterations - self.num_iter,
+        )
+
+        if flag == 1:
+            self.converged = True
+            equation_system.solved = True
+            equation_system.x = x
+            equation_system.determine_stability(update=True)
+
+        if self.verbose:
+            if equation_system.solved:
+                print(
+                    f"fsolve converged successfully with {infodict.nfev} function calls and {infodict.njev} jacobian calls."
+                )
+            else:
+                print(f"fsolve did not converge! \n {flag}: {msg}")
