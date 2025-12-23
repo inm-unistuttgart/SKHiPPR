@@ -4,8 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 
-from examples.duffing_3d import visualize_solution
-
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 from skhippr.Fourier import Fourier
@@ -237,8 +235,8 @@ def plot_frc():
             initial_system=sys,
             solver=solver,
             continuation_parameter="omega",
-            stepsize=0.01,
-            stepsize_range=[0.001, 1],
+            stepsize=0.1,
+            stepsize_range=[0.001, 2],
             num_steps=10,
             verbose=True,
         ):
@@ -262,5 +260,5 @@ def plot_frc():
 
 if __name__ == "__main__":
     plot_solution()
-    # plot_frc()
+    plot_frc()
     plt.show()
