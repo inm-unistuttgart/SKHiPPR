@@ -13,6 +13,7 @@ from skhippr.Fourier import Fourier
 # HBM and stability
 from skhippr.cycles.hbm import HBMSystem
 from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
+from skhippr.stability.ClassicalHill import HillContinuity, ClassicalHill
 
 # Solution procedure
 from skhippr.solvers.newton import NewtonSolver
@@ -47,6 +48,8 @@ def main():
     nu_range = (ode.nu, 10)
     newton_solver.verbose = False
 
+    FE_prev = None
+
     for branch_point in pseudo_arclength_continuator(
         initial_system=hbm_system,
         solver=newton_solver,
@@ -58,6 +61,7 @@ def main():
         verbose=True,
     ):
         branch.append(branch_point)
+
         if not nu_range[0] <= branch_point.nu <= nu_range[1]:
             break
 
@@ -76,7 +80,13 @@ def setup_hbm_system(ode: AbstractODE, solver: NewtonSolver = None):
 
     omega_0 = 1
     fourier = Fourier(N_HBM=45, L_DFT=1000, n_dof=ode.n_dof, real_formulation=True)
-    stability_method = KoopmanHillSubharmonic(fourier=fourier, tol=1e-4)
+    stability_method = HillContinuity(fourier=fourier, tol=1e-4, autonomous=True)
+    # stability_method = KoopmanHillSubharmonic(
+    #     fourier=fourier, tol=1e-4, autonomous=True
+    # )
+    stability_method = ClassicalHill(
+        fourier=fourier, sorting_method="imaginary", tol=1e-4, autonomous=True
+    )
     X0 = generate_initial_condition(fourier, omega_0)
 
     hbm_system = HBMSystem(ode, omega_0, fourier, X0, stability_method=stability_method)
