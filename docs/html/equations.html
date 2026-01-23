@@ -1,0 +1,694 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Formalizing equations and equation systems &#8212; SKHiPPR 2.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=789eb5fd"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'equations';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Solvers" href="solvers.html" />
+    <link rel="prev" title="Usage – Classes and functions" href="api.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SKHiPPR 2.0 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Formalizing equations and equation systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hbm.html">FFT and harmonic balance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/equations.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Formalizing equations and equation systems</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algebraic-equations">Algebraic equations</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation"><code class="docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.residual_function"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.closed_form_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.finite_difference_derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.finite_difference_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.determine_stability"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.determine_stability()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.stability_criterion"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.stability_criterion()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#equation-systems">Equation systems</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem"><code class="docutils literal notranslate"><span class="pre">EquationSystem</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.well_posed"><code class="docutils literal notranslate"><span class="pre">EquationSystem.well_posed</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.vector_of_unknowns"><code class="docutils literal notranslate"><span class="pre">EquationSystem.vector_of_unknowns</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.stable"><code class="docutils literal notranslate"><span class="pre">EquationSystem.stable</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.eigenvalues"><code class="docutils literal notranslate"><span class="pre">EquationSystem.eigenvalues</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.residual_function"><code class="docutils literal notranslate"><span class="pre">EquationSystem.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.jacobian"><code class="docutils literal notranslate"><span class="pre">EquationSystem.jacobian()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.duplicate"><code class="docutils literal notranslate"><span class="pre">EquationSystem.duplicate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#concrete-subclasses-of-abstractequation">Concrete subclasses of <code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.Circle.CircleEquation"><code class="docutils literal notranslate"><span class="pre">CircleEquation</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.Circle.AngleEquation"><code class="docutils literal notranslate"><span class="pre">AngleEquation</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="formalizing-equations-and-equation-systems">
+<h1><a class="toc-backref" href="#id1" role="doc-backlink">Formalizing equations and equation systems</a><a class="headerlink" href="#formalizing-equations-and-equation-systems" title="Link to this heading">#</a></h1>
+<nav class="contents" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#formalizing-equations-and-equation-systems" id="id1">Formalizing equations and equation systems</a></p>
+<ul>
+<li><p><a class="reference internal" href="#algebraic-equations" id="id2">Algebraic equations</a></p></li>
+<li><p><a class="reference internal" href="#equation-systems" id="id3">Equation systems</a></p></li>
+<li><p><a class="reference internal" href="#concrete-subclasses-of-abstractequation" id="id4">Concrete subclasses of <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a></a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="algebraic-equations">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">Algebraic equations</a><a class="headerlink" href="#algebraic-equations" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.equations.AbstractEquation.</span></span><span class="sig-name descname"><span class="pre">AbstractEquation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stability_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="Link to this definition">#</a></dt>
+<dd><p>Abstract base class for algebraic equations in the SKHiPPR framework.</p>
+<p>Must provide a residual. The residual may depend on arbitrarily many attributes of the object and must return a numpy array. The <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a> attempts to modify the object’s attributes such that the residual becomes zero.</p>
+<p>Subclasses may provide closed-form expressions for the derivatives of the residual with respect to the attributes. Otherwise, finite differences are used.</p>
+<p>The class also offers functionality for stability analysis if a <a class="reference internal" href="stability.html#skhippr.stability.AbstractStabilityMethod.AbstractStabilityMethod" title="skhippr.stability.AbstractStabilityMethod.AbstractStabilityMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractStabilityMethod</span></code></a> object is passed.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.residual_function">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">residual_function</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.residual_function" title="Link to this definition">#</a></dt>
+<dd><p>Compute the residual function based on attributes of the object. This method must be implemented in subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.derivative">
+<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_fd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.derivative" title="Link to this definition">#</a></dt>
+<dd><p>Compute the derivative of the residual with respect to a given variable.
+This method should be called whenever a derivative is desired.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">update</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>, a previously computed derivative is returned if available. Otherwise, the derivative is computed anew and is cached for future use.</p>
+<p>If closed-form derivatives are available, they are used. Otherwise, if <code class="xref py py-func docutils literal notranslate"><span class="pre">closed_form_derivative()</span></code> raises a <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">finite_difference_derivative()</span></code> is used to compute the derivative.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variable</strong> (<em>str</em>) – The name of the variable (attribute) with respect to which the derivative is computed.</p></li>
+<li><p><strong>update</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, updates the cached derivative with the newly computed value. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>h_fd</strong> (<em>float</em><em>, </em><em>optional</em>) – Step size for finite difference approximation. Default is <code class="docutils literal notranslate"><span class="pre">1e-4</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The partial derivative of  the residual with respect to the specified variable.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.closed_form_derivative">
+<span class="sig-name descname"><span class="pre">closed_form_derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.closed_form_derivative" title="Link to this definition">#</a></dt>
+<dd><p>Compute the closed-form derivative of the residual with respect to a given variable.  To be implemented in subclasses. Must raise a <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> if closed-form derivative is nonzero and not available analytically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The closed-form derivative of the residual with respect to the specified variable as a2-D numpy array. Must be 2-D even if the variable or the residual is a scalar.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>NotImplementedError</strong> – If the derivative is not available in closed form and should be determined using finite differences.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.finite_difference_derivative">
+<span class="sig-name descname"><span class="pre">finite_difference_derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.finite_difference_derivative" title="Link to this definition">#</a></dt>
+<dd><p>Compute the finite difference derivative of the residual with respect to a given variable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variable</strong> (<em>str</em>) – The name of the variable (attribute) with respect to which the derivative is computed.</p></li>
+<li><p><strong>h_step</strong> (<em>float</em><em>, </em><em>optional</em>) – Step size for finite difference approximation. Default is <code class="docutils literal notranslate"><span class="pre">1e-4</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The finite difference derivative of the residual with respect to the specified variable as a 2-D numpy array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.determine_stability">
+<span class="sig-name descname"><span class="pre">determine_stability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">update</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.determine_stability" title="Link to this definition">#</a></dt>
+<dd><p>Determine the stability of the equation using the stability method.</p>
+<p>If the stability method is not set, an <code class="docutils literal notranslate"><span class="pre">AttributeError</span></code> is raised.
+If <code class="docutils literal notranslate"><span class="pre">update</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the eigenvalues are computed using the stability method. Otherwise, the cached values is used.
+The stability is determined based on <code class="xref py py-func docutils literal notranslate"><span class="pre">stability_criterion()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>update</strong> (<em>bool</em><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, updates the eigenvalues and stability status. Default is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.AbstractEquation.AbstractEquation.stability_criterion">
+<span class="sig-name descname"><span class="pre">stability_criterion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eigenvalues</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.AbstractEquation.AbstractEquation.stability_criterion" title="Link to this definition">#</a></dt>
+<dd><p>Determine stability based on stability-defining eigenvalues computed by the stability method.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="equation-systems">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Equation systems</a><a class="headerlink" href="#equation-systems" title="Link to this heading">#</a></h2>
+<p>Equation systems collect a set of <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> objects, together with their unknowns. Notable subclasses of <a class="reference internal" href="#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> are documented elsewhere:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="solvers.html#skhippr.solvers.continuation.BranchPoint" title="skhippr.solvers.continuation.BranchPoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">BranchPoint</span></code></a></p></li>
+<li><p><a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a></p></li>
+<li><p><a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingSystem" title="skhippr.cycles.shooting.ShootingSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingSystem</span></code></a></p></li>
+</ul>
+</div></blockquote>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.equations.EquationSystem.</span></span><span class="sig-name descname"><span class="pre">EquationSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">equations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><span class="pre">AbstractEquation</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unknowns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">equation_determining_stability</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><span class="pre">AbstractEquation</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem" title="Link to this definition">#</a></dt>
+<dd><p>Encodes (one or multiple) <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> objects, together with a matching set of <code class="docutils literal notranslate"><span class="pre">unknowns</span></code> (names of attributes of one or more <code class="docutils literal notranslate"><span class="pre">equations</span></code>), to be solved by the <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a>.</p>
+<p>All unknowns are attributes of the <a class="reference internal" href="#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> and of all its collected <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> objects. If the unknown is updated in the <a class="reference internal" href="#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a>, it is also updated in all equations.</p>
+<p>One of the equations can be chosen to determine the stability of the system. This is done by passing an equation as <code class="docutils literal notranslate"><span class="pre">equation_determining_stability</span></code> to the constructor. If no such equation is given, no stability analysis is performed.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.well_posed">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">well_posed</span></span><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.well_posed" title="Link to this definition">#</a></dt>
+<dd><p>Checks if the system of equations is well-posed, i.e., if the total number of equations matches the total number of unknowns.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.vector_of_unknowns">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">vector_of_unknowns</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.vector_of_unknowns" title="Link to this definition">#</a></dt>
+<dd><p>All individual unknowns, stacked into a single 1-D numpy array in the order given by <code class="docutils literal notranslate"><span class="pre">self.unknowns</span></code>. This property can also be set to update all unknowns in the system.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.stable">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">stable</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.stable" title="Link to this definition">#</a></dt>
+<dd><p>Stability of the equation system, determined by the equation given in <code class="docutils literal notranslate"><span class="pre">self.equation_determining_stability</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.eigenvalues">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">eigenvalues</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></em><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.eigenvalues" title="Link to this definition">#</a></dt>
+<dd><p>Eigenvalues governing the stability of the equation system, determined by the equation given in <code class="docutils literal notranslate"><span class="pre">self.equation_determining_stability</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.residual_function">
+<span class="sig-name descname"><span class="pre">residual_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">update</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.residual_function" title="Link to this definition">#</a></dt>
+<dd><p>Assembles one overall residual (1-D numpy array) by stacking the residuals of <code class="docutils literal notranslate"><span class="pre">self.equations</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.jacobian">
+<span class="sig-name descname"><span class="pre">jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">update</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_fd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.jacobian" title="Link to this definition">#</a></dt>
+<dd><p>Assemble the derivative of the overall residual w.r.t  all the unknowns (2-D numpy array), with the ordering given by the ordering of <code class="docutils literal notranslate"><span class="pre">self.equations</span></code> and <code class="docutils literal notranslate"><span class="pre">self.unknowns</span></code>, respectively.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.equations.EquationSystem.EquationSystem.duplicate">
+<span class="sig-name descname"><span class="pre">duplicate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><span class="pre">EquationSystem</span></a></span></span><a class="headerlink" href="#skhippr.equations.EquationSystem.EquationSystem.duplicate" title="Link to this definition">#</a></dt>
+<dd><p>Creates a copy of the EquationSystem, with all equations and the equation determining stability shallow-copied to avoid accidental changes to the original equations.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="concrete-subclasses-of-abstractequation">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Concrete subclasses of <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a></a><a class="headerlink" href="#concrete-subclasses-of-abstractequation" title="Link to this heading">#</a></h2>
+<p>The following subclasses of <a class="reference internal" href="#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> are documented elsewhere:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="solvers.html#skhippr.solvers.continuation.ContinuationAnchor" title="skhippr.solvers.continuation.ContinuationAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContinuationAnchor</span></code></a>,</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractCycleEquation</span></code>,</p></li>
+<li><p><a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMEquation" title="skhippr.cycles.hbm.HBMEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code></a> and <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMPhaseAnchor" title="skhippr.cycles.hbm.HBMPhaseAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingBVP" title="skhippr.cycles.shooting.ShootingBVP"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingBVP</span></code></a> and <a class="reference internal" href="shooting.html#skhippr.cycles.shooting.ShootingPhaseAnchor" title="skhippr.cycles.shooting.ShootingPhaseAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ShootingPhaseAnchor</span></code></a></p></li>
+</ul>
+</div></blockquote>
+<p>Two concrete subclass for demonstration purposes encode radius and angle conditions on a circle.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.equations.Circle.CircleEquation">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.equations.Circle.</span></span><span class="sig-name descname"><span class="pre">CircleEquation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.Circle.CircleEquation" title="Link to this definition">#</a></dt>
+<dd><p>Has attributes <code class="docutils literal notranslate"><span class="pre">y</span></code> and <code class="docutils literal notranslate"><span class="pre">radius</span></code>.
+The residual function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="o">**</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>is zero when the point <code class="docutils literal notranslate"><span class="pre">y</span></code> lies on the circle with radius <code class="docutils literal notranslate"><span class="pre">radius</span></code>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.equations.Circle.AngleEquation">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.equations.Circle.</span></span><span class="sig-name descname"><span class="pre">AngleEquation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.equations.Circle.AngleEquation" title="Link to this definition">#</a></dt>
+<dd><p>Has attributes <code class="docutils literal notranslate"><span class="pre">y</span></code> and <code class="docutils literal notranslate"><span class="pre">theta</span></code>. If <code class="docutils literal notranslate"><span class="pre">y</span></code> encloses the angle <code class="docutils literal notranslate"><span class="pre">theta</span></code> with the positive x axis, then .
+the residual function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">theta</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>vanishes.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="api.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Usage – Classes and functions</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="solvers.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Solvers</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#algebraic-equations">Algebraic equations</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation"><code class="docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.residual_function"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.closed_form_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.finite_difference_derivative"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.finite_difference_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.determine_stability"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.determine_stability()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.AbstractEquation.AbstractEquation.stability_criterion"><code class="docutils literal notranslate"><span class="pre">AbstractEquation.stability_criterion()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#equation-systems">Equation systems</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem"><code class="docutils literal notranslate"><span class="pre">EquationSystem</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.well_posed"><code class="docutils literal notranslate"><span class="pre">EquationSystem.well_posed</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.vector_of_unknowns"><code class="docutils literal notranslate"><span class="pre">EquationSystem.vector_of_unknowns</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.stable"><code class="docutils literal notranslate"><span class="pre">EquationSystem.stable</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.eigenvalues"><code class="docutils literal notranslate"><span class="pre">EquationSystem.eigenvalues</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.residual_function"><code class="docutils literal notranslate"><span class="pre">EquationSystem.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.jacobian"><code class="docutils literal notranslate"><span class="pre">EquationSystem.jacobian()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.EquationSystem.EquationSystem.duplicate"><code class="docutils literal notranslate"><span class="pre">EquationSystem.duplicate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#concrete-subclasses-of-abstractequation">Concrete subclasses of <code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.Circle.CircleEquation"><code class="docutils literal notranslate"><span class="pre">CircleEquation</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.equations.Circle.AngleEquation"><code class="docutils literal notranslate"><span class="pre">AngleEquation</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Fabia Bayer
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Fabia Bayer.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

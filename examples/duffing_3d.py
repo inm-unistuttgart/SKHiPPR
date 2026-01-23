@@ -26,6 +26,13 @@ from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoint
 from skhippr.solvers.newton import NewtonSolver
 
+# --- Visualization ---
+from skhippr.visualization.cycles import (
+    plot_floquet_multipliers,
+    plot_floquet_exponents,
+    plot_phase
+)
+
 
 def main():
     """
@@ -300,16 +307,14 @@ def visualize_solution(system: HBMSystem):
     -------
         None
     """
-    _, axs = plt.subplots(nrows=1, ncols=2)
-    x_time = system.equations[0].x_time()
-    fourier = system.equations[0].fourier
-    axs[0].plot(x_time[0, :], x_time[1, :])
+
+    _, axs = plt.subplots(nrows=1, ncols=3)
+    axs[0] = plot_phase(hbm = system, ax = axs[0])
     axs[0].set_title("Phase plot of solution")
     axs[0].set_ylabel("x_1")
     axs[0].set_xlabel("x_0")
-
-    floquet_multipliers = system.eigenvalues
-    axs[1].plot(np.real(floquet_multipliers), np.imag(floquet_multipliers), "x")
+    fourier = system.equations[0].fourier
+    axs[1] = plot_floquet_multipliers(hbm = system, ax = axs[1])
     axs[1].set_title("Floquet multipliers")
     axs[1].plot(
         np.cos(fourier.time_samples_normalized),
@@ -317,7 +322,8 @@ def visualize_solution(system: HBMSystem):
         "k",
     )
     axs[1].axis("equal")
-
+    axs[2] = plot_floquet_exponents(hbm = system, ax = axs[2])
+    axs[2].set_title("Floquet exponents")
 
 if __name__ == "__main__":
     main()

@@ -152,7 +152,7 @@
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Core API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
@@ -161,6 +161,7 @@
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
 </ul>
 
@@ -354,7 +355,7 @@ document.write(`
 <li><p><a class="reference internal" href="stability.html#skhippr.stability.SinglePass.SinglePassRK" title="skhippr.stability.SinglePass.SinglePassRK"><code class="xref py py-class docutils literal notranslate"><span class="pre">SinglePassRK</span></code></a> (numerical integration using single-pass fixed-step explicit Runge-Kutta methods, cf. Peletan et al. (2013), <a class="reference external" href="https://doi.org/10.1007/s11071-012-0744-0">https://doi.org/10.1007/s11071-012-0744-0</a>)</p></li>
 </ul>
 <p>The modular framework enables easy addition of new problem formulations and comparison of stability methods.</p>
-<p>To install SKHiPPR locally on your machine, take a look at the <a class="reference internal" href="installation.html"><span class="doc">installation guide</span></a>. To get started, check out the <a class="reference internal" href="examples.html"><span class="doc">Examples</span></a> or the <a class="reference internal" href="api.html"><span class="doc">Usage – Classes and functions</span></a> section.</p>
+<p>To install SKHiPPR locally on your machine, take a look at the <a class="reference internal" href="installation.html"><span class="doc">installation guide</span></a>. To get started, check out the <a class="reference internal" href="examples.html"><span class="doc">Examples</span></a> or the <a class="reference internal" href="api.html"><span class="doc">Core API</span></a> section.</p>
 <section id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
@@ -364,6 +365,8 @@ document.write(`
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#module-examples.truss">examples.truss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#examples-duffing-visualization">examples.duffing_visualization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#module-examples.circle">examples.circle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#module-examples.duffing">examples.duffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="examples.html#module-examples.vanderpol_animation">examples.vanderpol_animation</a></li>
@@ -371,13 +374,18 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="examples.html#numerical-convergence-studies">numerical convergence studies</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Usage – Classes and functions</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Core API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="hbm.html">FFT and harmonic balance</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="visualization.html#module-skhippr.visualization.equilibria">visualization.equilibria</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualization.html#module-skhippr.visualization.cycles">visualization.cycles</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a><ul>
