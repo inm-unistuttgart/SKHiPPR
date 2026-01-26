@@ -106,7 +106,7 @@ def attempt_to_solve_equation_for_y(equ, solver):
 
 
 def attempt_to_solve_system_for_y(equ_sys, solver):
-    """Attempt to solve the equation system consisting of one or mroe equations for the array unknown y."""
+    """Attempt to solve the equation system consisting of one or more equations for the array unknown y."""
     try:
         solver.solve(equ_sys)
         print(f"Solved the equation system successfully.")
