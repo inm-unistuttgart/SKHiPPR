@@ -1,0 +1,647 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examples &#8212; SKHiPPR 2.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=789eb5fd"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage – Classes and functions" href="api.html" />
+    <link rel="prev" title="Installation guide" href="installation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SKHiPPR 2.0 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Examples</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hbm.html">FFT and harmonic balance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/examples.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Examples</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.circle">examples.circle</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.circle.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.duffing">examples.duffing</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.vanderpol_animation">examples.vanderpol_animation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.vanderpol_animation.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.duffing_3d">examples.duffing_3d</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing_3d.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numerical-convergence-studies">numerical convergence studies</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.convergence.demo_mathieu_N_convergence">examples.convergence.demo_mathieu_N_convergence</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.convergence.demo_mathieu_N_convergence.analyze_N_mathieu"><code class="docutils literal notranslate"><span class="pre">analyze_N_mathieu()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.convergence.demo_mathieu_N_convergence.analyze_smoothness_effects"><code class="docutils literal notranslate"><span class="pre">analyze_smoothness_effects()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.convergence.demo_meissner_aliasing">examples.convergence.demo_meissner_aliasing</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="examples">
+<h1><a class="toc-backref" href="#id1" role="doc-backlink">Examples</a><a class="headerlink" href="#examples" title="Link to this heading">#</a></h1>
+<p>The following examples illustrate SKHiPPR capabilities and usage. All files are runnable as Python scripts and are explained by exhaustive in-line commenting.</p>
+<nav class="contents" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#examples" id="id1">Examples</a></p>
+<ul>
+<li><p><a class="reference internal" href="#module-examples.circle" id="id2">examples.circle</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.duffing" id="id3">examples.duffing</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.vanderpol_animation" id="id4">examples.vanderpol_animation</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.duffing_3d" id="id5">examples.duffing_3d</a></p></li>
+<li><p><a class="reference internal" href="#numerical-convergence-studies" id="id6">numerical convergence studies</a></p>
+<ul>
+<li><p><a class="reference internal" href="#module-examples.convergence.demo_mathieu_N_convergence" id="id7">examples.convergence.demo_mathieu_N_convergence</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.convergence.demo_meissner_aliasing" id="id8">examples.convergence.demo_meissner_aliasing</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="module-examples.circle">
+<span id="examples-circle"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">examples.circle</a><a class="headerlink" href="#module-examples.circle" title="Link to this heading">#</a></h2>
+<p>Demonstrates the complete the pseudo-arclength continuation workflow on a nonlinear equation.</p>
+<ul class="simple">
+<li><p>Use of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Circle</span></code> class as a concrete subclass of <a class="reference internal" href="equations.html#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> for a problem formulation.</p></li>
+<li><p>Illustrates how (one or multiple) multiple <a class="reference internal" href="equations.html#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> objects are collected into an <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a></p></li>
+<li><p>Continuation of a solution branch emerging from the <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> with and without an explicit continuation parameter.</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.circle.main">
+<span class="sig-prename descclassname"><span class="pre">examples.circle.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.circle.main" title="Link to this definition">#</a></dt>
+<dd><p>Runs a demonstration of pseudo-arclength continuation for solving a nonlinear problem
+using Newton’s method on the circle equation.
+The process includes:</p>
+<ol class="arabic simple">
+<li><p>Instantiating a <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a> with the solver configuration</p></li>
+<li><p>Instantiating a <code class="xref py py-class docutils literal notranslate"><span class="pre">Circle</span></code> object which contains the residual</p></li>
+<li><p>Demonstrating that the <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a> can immediately solve the <code class="xref py py-class docutils literal notranslate"><span class="pre">Circle</span></code> for the scalar unknown <code class="docutils literal notranslate"><span class="pre">radius</span></code>, but not for the array unknown <code class="docutils literal notranslate"><span class="pre">y</span></code></p></li>
+<li><p>Constructing an <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> for the unknown <code class="docutils literal notranslate"><span class="pre">y</span></code> and using the <code class="xref py py-func docutils literal notranslate"><span class="pre">pseudo_arclength_continuator()</span></code> to iterate along the solution branch.</p></li>
+<li><p>Constructing another <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> by appending a second <a class="reference internal" href="equations.html#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> subclass and solving it directly for <code class="docutils literal notranslate"><span class="pre">y</span></code>.</p></li>
+<li><p>Using the <code class="xref py py-func docutils literal notranslate"><span class="pre">pseudo_arclength_continuator()</span></code> to iterate along the solution branch with the extended <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> and the explicit continuation parameter <code class="docutils literal notranslate"><span class="pre">theta</span></code></p></li>
+<li><p>Plotting the results.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-examples.duffing">
+<span id="examples-duffing"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">examples.duffing</a><a class="headerlink" href="#module-examples.duffing" title="Link to this heading">#</a></h2>
+<p>Demonstration / Template for creating a simple frequency response curve of a non-autonomous dynamical system with HBM.
+This example uses a Duffing oscillator, but <code class="docutils literal notranslate"><span class="pre">ode</span></code> can be instantiated as any non-autonomous <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a>.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.duffing.main">
+<span class="sig-prename descclassname"><span class="pre">examples.duffing.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.duffing.main" title="Link to this definition">#</a></dt>
+<dd><p>Demonstration for creating a simple frequency response curve of a non-autonomous dynamical system with HBM.</p>
+<p>This function performs the following steps:</p>
+<ol class="arabic simple">
+<li><p>Creation of <a class="reference internal" href="hbm.html#module-skhippr.Fourier" title="skhippr.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code></a>, <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a>, and <code class="xref py py-class docutils literal notranslate"><span class="pre">KoopmanHillSubharmonic</span></code> objects to collect method parameters.</p></li>
+<li><p>Instantiation of a <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a> (here: <a class="reference internal" href="odes.html#skhippr.odes.nonautonomous.Duffing" title="skhippr.odes.nonautonomous.Duffing"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duffing</span></code></a>) object which contains the ODE.</p></li>
+<li><p>Setup of an initial guess</p></li>
+<li><p>Setup and solution of the <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMEquation" title="skhippr.cycles.hbm.HBMEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code></a>, which formalizes the Harmonic Balance equations.</p></li>
+<li><p>Creation of an <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> containing only the HBM equations as input to the continuation method.</p></li>
+<li><p>Continuation of the frequency response curve using <code class="xref py py-func docutils literal notranslate"><span class="pre">pseudo_arclength_continuator()</span></code> and collecting the branch points</p></li>
+<li><p>Analyzing and plotting the branch points</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-examples.vanderpol_animation">
+<span id="examples-vanderpol-animation"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">examples.vanderpol_animation</a><a class="headerlink" href="#module-examples.vanderpol_animation" title="Link to this heading">#</a></h2>
+<p>Van der Pol oscillator: continuation w.r.t. nu and animation of the resulting phase portrait.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.vanderpol_animation.main">
+<span class="sig-prename descclassname"><span class="pre">examples.vanderpol_animation.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.vanderpol_animation.main" title="Link to this definition">#</a></dt>
+<dd><p>Demonstration of the continuation of the Van der Pol oscillator w.r.t. nu and animation of the resulting phase portrait.
+This function performs the following steps:</p>
+<ol class="arabic simple">
+<li><p>Setup of the <a class="reference internal" href="odes.html#skhippr.odes.autonomous.Vanderpol" title="skhippr.odes.autonomous.Vanderpol"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vanderpol</span></code></a> ODE</p></li>
+<li><p>Setup of a <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a> object with the <a class="reference internal" href="odes.html#skhippr.odes.autonomous.Vanderpol" title="skhippr.odes.autonomous.Vanderpol"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vanderpol</span></code></a> ode and a <a class="reference internal" href="hbm.html#skhippr.Fourier.Fourier" title="skhippr.Fourier.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code></a> object, encoding both the HBM equations and the phase anchor.</p></li>
+<li><p>Continuation of the HBM system w.r.t. nu using the <a class="reference internal" href="solvers.html#skhippr.solvers.continuation.pseudo_arclength_continuator" title="skhippr.solvers.continuation.pseudo_arclength_continuator"><code class="xref py py-func docutils literal notranslate"><span class="pre">pseudo_arclength_continuator()</span></code></a> and a <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver" title="skhippr.solvers.newton.NewtonSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonSolver</span></code></a></p></li>
+<li><p>Analysis of the resulting branch of solutions, extracting time series, amplitudes, Floquet multipliers, and stability</p></li>
+<li><p>Visualization of the results, including an animation of the phase portrait and Floquet multipliers, as well as plots of amplitude and frequency w.r.t. nu</p></li>
+</ol>
+</dd></dl>
+
+</section>
+<section id="module-examples.duffing_3d">
+<span id="examples-duffing-3d"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">examples.duffing_3d</a><a class="headerlink" href="#module-examples.duffing_3d" title="Link to this heading">#</a></h2>
+<p>Analyze oscillations of the Duffing oscillator using SKHiPPR by performing
+continuation along both excitation frequency and excitation amplitude.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.duffing_3d.main">
+<span class="sig-prename descclassname"><span class="pre">examples.duffing_3d.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.duffing_3d.main" title="Link to this definition">#</a></dt>
+<dd><p>Runs a demonstration for analyzing the Duffing oscillator with HBM, to illustrate SKHiPPR usage.</p>
+<p>This function performs the following steps:</p>
+<ol class="arabic">
+<li><p>Parameter setup.</p></li>
+<li><p>Creation of a <a class="reference internal" href="hbm.html#module-skhippr.Fourier" title="skhippr.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code></a> object to collect FFT parameters.</p></li>
+<li><p>Creation of a <a class="reference internal" href="stability.html#skhippr.stability.KoopmanHillProjection.KoopmanHillProjection" title="skhippr.stability.KoopmanHillProjection.KoopmanHillProjection"><code class="xref py py-class docutils literal notranslate"><span class="pre">KoopmanHillProjection</span></code></a> object which defines the stability method. Other <code class="xref py py-class docutils literal notranslate"><span class="pre">_StabilityHBM</span></code> subclasses can interchangeably be used, such as:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="stability.html#skhippr.stability.KoopmanHillProjection.KoopmanHillSubharmonic" title="skhippr.stability.KoopmanHillProjection.KoopmanHillSubharmonic"><code class="xref py py-class docutils literal notranslate"><span class="pre">KoopmanHillSubharmonic</span></code></a></p></li>
+<li><p><a class="reference internal" href="stability.html#skhippr.stability.ClassicalHill.ClassicalHill" title="skhippr.stability.ClassicalHill.ClassicalHill"><code class="xref py py-class docutils literal notranslate"><span class="pre">ClassicalHill</span></code></a></p></li>
+<li><p><a class="reference internal" href="stability.html#skhippr.stability.SinglePass.SinglePassRK" title="skhippr.stability.SinglePass.SinglePassRK"><code class="xref py py-class docutils literal notranslate"><span class="pre">SinglePassRK</span></code></a></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Setup and solution of the initial <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a>.</p></li>
+<li><p>Visualization of the initial solution and its stability properties.</p></li>
+<li><p>Continuation of the first force response curve.</p></li>
+<li><p>Generation of frequency response curves starting from points on the previous force response.</p></li>
+<li><p>Generation of additional force responses starting from points on the frequency response curve.</p></li>
+<li><p>3D plotting of all computed response curves, including stability information.</p></li>
+</ol>
+</dd></dl>
+
+</section>
+<section id="numerical-convergence-studies">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">numerical convergence studies</a><a class="headerlink" href="#numerical-convergence-studies" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">examples.convergence</span></code> package provides two examples which illustrate the convergence properties of the Koopman-Hill stability method.</p>
+<section id="module-examples.convergence.demo_mathieu_N_convergence">
+<span id="examples-convergence-demo-mathieu-n-convergence"></span><h3><a class="toc-backref" href="#id7" role="doc-backlink">examples.convergence.demo_mathieu_N_convergence</a><a class="headerlink" href="#module-examples.convergence.demo_mathieu_N_convergence" title="Link to this heading">#</a></h3>
+<p>Demonstration of convergence of Koopman-Hill projection method for the Mathieu equation.</p>
+<p>This script analyzes the convergence of the Koopman-Hill projection stability method applied to the <a class="reference internal" href="odes.html#skhippr.odes.ltp.MathieuODE" title="skhippr.odes.ltp.MathieuODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">MathieuODE</span></code></a> and <a class="reference internal" href="odes.html#skhippr.odes.ltp.SmoothedMeissner" title="skhippr.odes.ltp.SmoothedMeissner"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothedMeissner</span></code></a> equations around their  equilibrium at zero.</p>
+<p>The convergence is studied by increasing the number of harmonics (N_HBM) in the Harmonic Balance Method (HBM) and comparing the resulting monodromy matrix to a reference solution obtained via the shooting method.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.convergence.demo_mathieu_N_convergence.analyze_N_mathieu">
+<span class="sig-prename descclassname"><span class="pre">examples.convergence.demo_mathieu_N_convergence.</span></span><span class="sig-name descname"><span class="pre">analyze_N_mathieu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#examples.convergence.demo_mathieu_N_convergence.analyze_N_mathieu" title="Link to this definition">#</a></dt>
+<dd><p>Analyze the convergence of the Koopman-Hill projection method for the Mathieu equation. Optionally, results can be saved to a csv file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.convergence.demo_mathieu_N_convergence.analyze_smoothness_effects">
+<span class="sig-prename descclassname"><span class="pre">examples.convergence.demo_mathieu_N_convergence.</span></span><span class="sig-name descname"><span class="pre">analyze_smoothness_effects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">csv_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#examples.convergence.demo_mathieu_N_convergence.analyze_smoothness_effects" title="Link to this definition">#</a></dt>
+<dd><p>Analyze and visualize the effects of the smoothing parameter on the convergence of a Hill-type system.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">smoothing</span></code> ==1, the <a class="reference internal" href="odes.html#skhippr.odes.ltp.SmoothedMeissner" title="skhippr.odes.ltp.SmoothedMeissner"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothedMeissner</span></code></a> ODE coincides with Mathieu’s equation and for <code class="docutils literal notranslate"><span class="pre">smoothing</span></code> ==0 with the Meissner equation.
+This function iterates over a range of smoothing parameter values, runs a convergence analysis for each,
+and plots the corresponding excitation and the convergence behavior. Optionally, results can be saved to a CSV file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>N_max</strong> (<em>int</em><em>, </em><em>optional</em>) – Maximum number of harmonics to consider in the convergence analysis (default is 30).</p></li>
+<li><p><strong>csv_path</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Path to a CSV file where results will be saved. If None, results are not saved (default is None).</p></li>
+<li><p><strong>smoothing</strong> (<em>array-like</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Sequence of smoothing parameter values to analyze. If None, a default sequence from 1 to 0 is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-examples.convergence.demo_meissner_aliasing">
+<span id="examples-convergence-demo-meissner-aliasing"></span><h3><a class="toc-backref" href="#id8" role="doc-backlink">examples.convergence.demo_meissner_aliasing</a><a class="headerlink" href="#module-examples.convergence.demo_meissner_aliasing" title="Link to this heading">#</a></h3>
+<p>This script demonstrates the effect of aliasing error on the accuracy of the Koopman-Hill projection (KHP) for the Meissner equation by varying the Discrete Fourier Transform (DFT) length. It compares the accuracy of computed Floquet multipliers for different DFT lengths and visualizes the results.</p>
+<p>Run the script directly to generate plots and optionally save results to a CSV file. The main function <code class="xref py py-func docutils literal notranslate"><span class="pre">analyze_N_meissner_aliasing()</span></code> is called with example parameters to showcase the influence of aliasing on prediction accuracy.</p>
+<ul class="simple">
+<li><p>The Meissner equation’s Fourier coefficients decay as <code class="docutils literal notranslate"><span class="pre">O(1/|k|)</span></code>, with every even coefficient being zero and odd ones alternating in sign.</p></li>
+<li><p>Aliasing errors affect the accuracy of the computed Floquet multipliers.</p></li>
+<li><p>Knowledge about the sign of the (true) Fourier coefficients can significantly improve the results: In the case of Meissner choosing a DFT length that is divisible by 2 but not by 4</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="installation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Installation guide</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Usage – Classes and functions</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.circle">examples.circle</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.circle.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.duffing">examples.duffing</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.vanderpol_animation">examples.vanderpol_animation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.vanderpol_animation.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.duffing_3d">examples.duffing_3d</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing_3d.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numerical-convergence-studies">numerical convergence studies</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.convergence.demo_mathieu_N_convergence">examples.convergence.demo_mathieu_N_convergence</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.convergence.demo_mathieu_N_convergence.analyze_N_mathieu"><code class="docutils literal notranslate"><span class="pre">analyze_N_mathieu()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.convergence.demo_mathieu_N_convergence.analyze_smoothness_effects"><code class="docutils literal notranslate"><span class="pre">analyze_smoothness_effects()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.convergence.demo_meissner_aliasing">examples.convergence.demo_meissner_aliasing</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Fabia Bayer
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Fabia Bayer.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

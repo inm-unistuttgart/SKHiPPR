@@ -43,7 +43,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'examples';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Usage – Classes and functions" href="api.html" />
+    <link rel="next" title="Core API" href="api.html" />
     <link rel="prev" title="Installation guide" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -151,7 +151,7 @@
         <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Examples</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Core API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
@@ -160,6 +160,7 @@
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
 </ul>
 
@@ -309,6 +310,14 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.truss">examples.truss</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.truss.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples-duffing-visualization">examples.duffing_visualization</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing_visualization.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.circle">examples.circle</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.circle.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 </ul>
@@ -353,22 +362,65 @@ document.write(`
 <ul class="simple">
 <li><p><a class="reference internal" href="#examples" id="id1">Examples</a></p>
 <ul>
-<li><p><a class="reference internal" href="#module-examples.circle" id="id2">examples.circle</a></p></li>
-<li><p><a class="reference internal" href="#module-examples.duffing" id="id3">examples.duffing</a></p></li>
-<li><p><a class="reference internal" href="#module-examples.vanderpol_animation" id="id4">examples.vanderpol_animation</a></p></li>
-<li><p><a class="reference internal" href="#module-examples.duffing_3d" id="id5">examples.duffing_3d</a></p></li>
-<li><p><a class="reference internal" href="#numerical-convergence-studies" id="id6">numerical convergence studies</a></p>
+<li><p><a class="reference internal" href="#module-examples.truss" id="id2">examples.truss</a></p></li>
+<li><p><a class="reference internal" href="#examples-duffing-visualization" id="id3">examples.duffing_visualization</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.circle" id="id4">examples.circle</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.duffing" id="id5">examples.duffing</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.vanderpol_animation" id="id6">examples.vanderpol_animation</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.duffing_3d" id="id7">examples.duffing_3d</a></p></li>
+<li><p><a class="reference internal" href="#numerical-convergence-studies" id="id8">numerical convergence studies</a></p>
 <ul>
-<li><p><a class="reference internal" href="#module-examples.convergence.demo_mathieu_N_convergence" id="id7">examples.convergence.demo_mathieu_N_convergence</a></p></li>
-<li><p><a class="reference internal" href="#module-examples.convergence.demo_meissner_aliasing" id="id8">examples.convergence.demo_meissner_aliasing</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.convergence.demo_mathieu_N_convergence" id="id9">examples.convergence.demo_mathieu_N_convergence</a></p></li>
+<li><p><a class="reference internal" href="#module-examples.convergence.demo_meissner_aliasing" id="id10">examples.convergence.demo_meissner_aliasing</a></p></li>
 </ul>
 </li>
 </ul>
 </li>
 </ul>
 </nav>
+<section id="module-examples.truss">
+<span id="examples-truss"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">examples.truss</a><a class="headerlink" href="#module-examples.truss" title="Link to this heading">#</a></h2>
+<p>Find and plot the equilibrium of the Truss system using SKHiPPR.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.truss.main">
+<span class="sig-prename descclassname"><span class="pre">examples.truss.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.truss.main" title="Link to this definition">#</a></dt>
+<dd><p>Demonstrates solving an equation for an equilibrium and visualizes the equilibrium as well as its eigenvalues using SKHiPPR visualization methods.</p>
+<p>This function instantiates a <a class="reference internal" href="odes.html#skhippr.odes.autonomous.Truss" title="skhippr.odes.autonomous.Truss"><code class="xref py py-class docutils literal notranslate"><span class="pre">Truss</span></code></a> object as a subclass of <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a> and solves it with either <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver.solve_equation" title="skhippr.solvers.newton.NewtonSolver.solve_equation"><code class="xref py py-func docutils literal notranslate"><span class="pre">skhippr.solvers.newton.NewtonSolver.solve_equation()</span></code></a> or with <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver.solve" title="skhippr.solvers.newton.NewtonSolver.solve"><code class="xref py py-func docutils literal notranslate"><span class="pre">skhippr.solvers.newton.NewtonSolver.solve()</span></code></a> after embedding it into an <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a>.</p>
+<p>It generates 2 figures:</p>
+<ol class="arabic simple">
+<li><p>A plot of the ode equilibrium</p></li>
+<li><p>A plot of the equilibrium eigenvalues visualizing its stability.</p></li>
+</ol>
+</dd></dl>
+
+</section>
+<section id="examples-duffing-visualization">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">examples.duffing_visualization</a><a class="headerlink" href="#examples-duffing-visualization" title="Link to this heading">#</a></h2>
+<p id="module-examples.duffing_visualization">Find and visualize a periodic solution of the Duffing oscillator using SKHiPPR.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="examples.duffing_visualization.main">
+<span class="sig-prename descclassname"><span class="pre">examples.duffing_visualization.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#examples.duffing_visualization.main" title="Link to this definition">#</a></dt>
+<dd><p>Demonstrates solving an ordinary differential equation for a periodic solution using HBM and visualizes properties of the solved <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a> using SKHiPPR.</p>
+<p>This function does the following:</p>
+<ol class="arabic simple">
+<li><p>instantiate a <a class="reference internal" href="hbm.html#skhippr.cycles.hbm.HBMSystem" title="skhippr.cycles.hbm.HBMSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code></a> from a <a class="reference internal" href="odes.html#skhippr.odes.nonautonomous.Duffing" title="skhippr.odes.nonautonomous.Duffing"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duffing</span></code></a> object</p></li>
+<li><p>solve it using <a class="reference internal" href="solvers.html#skhippr.solvers.newton.NewtonSolver.solve" title="skhippr.solvers.newton.NewtonSolver.solve"><code class="xref py py-func docutils literal notranslate"><span class="pre">skhippr.solvers.newton.NewtonSolver.solve()</span></code></a></p></li>
+<li><p>visualize solution properties.</p></li>
+</ol>
+<p>It generates multiple figures:</p>
+<ol class="arabic simple">
+<li><p>A phase plot of the periodic solution</p></li>
+<li><p>A phase plot of the periodic solution with additional keyword arguments</p></li>
+<li><p>A plot of the Floquet multipliers in the complex plane, along with the unit circle for reference</p></li>
+<li><p>A plot of the Floquet exponents in the complex plane</p></li>
+<li><p>A plot of the time series over a non-integer amount of periods</p></li>
+<li><p>A figure containing three of the plots as subplots.</p></li>
+</ol>
+</dd></dl>
+
+</section>
 <section id="module-examples.circle">
-<span id="examples-circle"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">examples.circle</a><a class="headerlink" href="#module-examples.circle" title="Link to this heading">#</a></h2>
+<span id="examples-circle"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">examples.circle</a><a class="headerlink" href="#module-examples.circle" title="Link to this heading">#</a></h2>
 <p>Demonstrates the complete the pseudo-arclength continuation workflow on a nonlinear equation.</p>
 <ul class="simple">
 <li><p>Use of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Circle</span></code> class as a concrete subclass of <a class="reference internal" href="equations.html#skhippr.equations.AbstractEquation.AbstractEquation" title="skhippr.equations.AbstractEquation.AbstractEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code></a> for a problem formulation.</p></li>
@@ -399,7 +451,7 @@ The process includes:</p>
 
 </section>
 <section id="module-examples.duffing">
-<span id="examples-duffing"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">examples.duffing</a><a class="headerlink" href="#module-examples.duffing" title="Link to this heading">#</a></h2>
+<span id="examples-duffing"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">examples.duffing</a><a class="headerlink" href="#module-examples.duffing" title="Link to this heading">#</a></h2>
 <p>Demonstration / Template for creating a simple frequency response curve of a non-autonomous dynamical system with HBM.
 This example uses a Duffing oscillator, but <code class="docutils literal notranslate"><span class="pre">ode</span></code> can be instantiated as any non-autonomous <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a>.</p>
 <dl class="py function">
@@ -425,7 +477,7 @@ This example uses a Duffing oscillator, but <code class="docutils literal notran
 
 </section>
 <section id="module-examples.vanderpol_animation">
-<span id="examples-vanderpol-animation"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">examples.vanderpol_animation</a><a class="headerlink" href="#module-examples.vanderpol_animation" title="Link to this heading">#</a></h2>
+<span id="examples-vanderpol-animation"></span><h2><a class="toc-backref" href="#id6" role="doc-backlink">examples.vanderpol_animation</a><a class="headerlink" href="#module-examples.vanderpol_animation" title="Link to this heading">#</a></h2>
 <p>Van der Pol oscillator: continuation w.r.t. nu and animation of the resulting phase portrait.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="examples.vanderpol_animation.main">
@@ -443,7 +495,7 @@ This function performs the following steps:</p>
 
 </section>
 <section id="module-examples.duffing_3d">
-<span id="examples-duffing-3d"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">examples.duffing_3d</a><a class="headerlink" href="#module-examples.duffing_3d" title="Link to this heading">#</a></h2>
+<span id="examples-duffing-3d"></span><h2><a class="toc-backref" href="#id7" role="doc-backlink">examples.duffing_3d</a><a class="headerlink" href="#module-examples.duffing_3d" title="Link to this heading">#</a></h2>
 <p>Analyze oscillations of the Duffing oscillator using SKHiPPR by performing
 continuation along both excitation frequency and excitation amplitude.</p>
 <dl class="py function">
@@ -474,10 +526,10 @@ continuation along both excitation frequency and excitation amplitude.</p>
 
 </section>
 <section id="numerical-convergence-studies">
-<h2><a class="toc-backref" href="#id6" role="doc-backlink">numerical convergence studies</a><a class="headerlink" href="#numerical-convergence-studies" title="Link to this heading">#</a></h2>
+<h2><a class="toc-backref" href="#id8" role="doc-backlink">numerical convergence studies</a><a class="headerlink" href="#numerical-convergence-studies" title="Link to this heading">#</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">examples.convergence</span></code> package provides two examples which illustrate the convergence properties of the Koopman-Hill stability method.</p>
 <section id="module-examples.convergence.demo_mathieu_N_convergence">
-<span id="examples-convergence-demo-mathieu-n-convergence"></span><h3><a class="toc-backref" href="#id7" role="doc-backlink">examples.convergence.demo_mathieu_N_convergence</a><a class="headerlink" href="#module-examples.convergence.demo_mathieu_N_convergence" title="Link to this heading">#</a></h3>
+<span id="examples-convergence-demo-mathieu-n-convergence"></span><h3><a class="toc-backref" href="#id9" role="doc-backlink">examples.convergence.demo_mathieu_N_convergence</a><a class="headerlink" href="#module-examples.convergence.demo_mathieu_N_convergence" title="Link to this heading">#</a></h3>
 <p>Demonstration of convergence of Koopman-Hill projection method for the Mathieu equation.</p>
 <p>This script analyzes the convergence of the Koopman-Hill projection stability method applied to the <a class="reference internal" href="odes.html#skhippr.odes.ltp.MathieuODE" title="skhippr.odes.ltp.MathieuODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">MathieuODE</span></code></a> and <a class="reference internal" href="odes.html#skhippr.odes.ltp.SmoothedMeissner" title="skhippr.odes.ltp.SmoothedMeissner"><code class="xref py py-class docutils literal notranslate"><span class="pre">SmoothedMeissner</span></code></a> equations around their  equilibrium at zero.</p>
 <p>The convergence is studied by increasing the number of harmonics (N_HBM) in the Harmonic Balance Method (HBM) and comparing the resulting monodromy matrix to a reference solution obtained via the shooting method.</p>
@@ -507,7 +559,7 @@ and plots the corresponding excitation and the convergence behavior. Optionally,
 
 </section>
 <section id="module-examples.convergence.demo_meissner_aliasing">
-<span id="examples-convergence-demo-meissner-aliasing"></span><h3><a class="toc-backref" href="#id8" role="doc-backlink">examples.convergence.demo_meissner_aliasing</a><a class="headerlink" href="#module-examples.convergence.demo_meissner_aliasing" title="Link to this heading">#</a></h3>
+<span id="examples-convergence-demo-meissner-aliasing"></span><h3><a class="toc-backref" href="#id10" role="doc-backlink">examples.convergence.demo_meissner_aliasing</a><a class="headerlink" href="#module-examples.convergence.demo_meissner_aliasing" title="Link to this heading">#</a></h3>
 <p>This script demonstrates the effect of aliasing error on the accuracy of the Koopman-Hill projection (KHP) for the Meissner equation by varying the Discrete Fourier Transform (DFT) length. It compares the accuracy of computed Floquet multipliers for different DFT lengths and visualizes the results.</p>
 <p>Run the script directly to generate plots and optionally save results to a CSV file. The main function <code class="xref py py-func docutils literal notranslate"><span class="pre">analyze_N_meissner_aliasing()</span></code> is called with example parameters to showcase the influence of aliasing on prediction accuracy.</p>
 <ul class="simple">
@@ -544,7 +596,7 @@ and plots the corresponding excitation and the convergence behavior. Optionally,
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Usage – Classes and functions</p>
+        <p class="prev-next-title">Core API</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -564,6 +616,14 @@ and plots the corresponding excitation and the convergence behavior. Optionally,
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.truss">examples.truss</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.truss.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples-duffing-visualization">examples.duffing_visualization</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.duffing_visualization.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-examples.circle">examples.circle</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#examples.circle.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
 </ul>

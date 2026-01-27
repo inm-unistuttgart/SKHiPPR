@@ -5,6 +5,18 @@ The following examples illustrate SKHiPPR capabilities and usage. All files are 
 
 .. contents:: 
 
+examples.truss
+---------------------
+
+.. automodule:: examples.truss
+    :members: main
+
+examples.duffing_visualization
+---------------------
+
+.. automodule:: examples.duffing_visualization
+    :members: main
+
 examples.circle
 ---------------------------------------
 
