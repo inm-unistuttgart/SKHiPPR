@@ -26,6 +26,13 @@ from skhippr.solvers.continuation import BranchPoint
 
 from skhippr.visualization.cycles import plot_phase
 
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.size"] = 12
+plt.rcParams["text.usetex"] = True
+cm = 1 / 2.54  # cm in inches
+plt.rcParams["figure.figsize"] = (7 * cm, 7 * cm)
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=plt.cm.Dark2.colors)
+
 
 def main():
     """Demonstration of the continuation of the Van der Pol oscillator w.r.t. nu and animation of the resulting phase portrait.
@@ -175,5 +182,6 @@ def animate_phase_portrait_and_FMs(nus, xs_time, floquet_multipliers):
 
 
 if __name__ == "__main__":
-    animation = main()
+    # animation = main()
+    main()
     plt.show()
