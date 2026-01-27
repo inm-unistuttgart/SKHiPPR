@@ -220,7 +220,7 @@ def _get_equation_helper(hbm: HBMEquation | HBMSystem):
     """
     if isinstance(hbm, HBMEquation):
         return hbm
-    if isinstance(hbm, HBMSystem) and hasattr(hbm, "equations"):
+    if hasattr(hbm, "equations"):
         for equation in hbm.equations:
             if isinstance(equation, HBMEquation):
                 return equation

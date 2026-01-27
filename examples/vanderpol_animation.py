@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+import tikzplotlib
 
 # ODE
 from skhippr.odes.autonomous import Vanderpol
@@ -22,6 +23,8 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.solvers.continuation import BranchPoint
+
+from skhippr.visualization.cycles import plot_phase
 
 
 def main():
@@ -44,7 +47,7 @@ def main():
 
     # continuation
     branch: list[BranchPoint] = []
-    nu_range = (ode.nu, 10)
+    nu_range = (ode.nu, 5)
     newton_solver.verbose = False
 
     for branch_point in pseudo_arclength_continuator(
@@ -69,7 +72,21 @@ def main():
     plot_with_stability(nus, amplitudes, stable, "$\\nu$", "$|x_1|$")
     plot_with_stability(nus, omegas, stable, "$\\nu$", "$\\omega$")
 
+    plot_phases(branch)
+
     return animation
+
+
+def plot_phases(branch):
+
+    ax = None
+    for k, bp in enumerate(branch):
+        ratio = k / len(branch)
+        col = (ratio, 0.2, 1 - ratio)
+        ax = plot_phase(hbm=bp, ax=ax, idx=[0, 1], color=col)
+    ax.set_title("Van der Pol oscillator")
+
+    tikzplotlib.save("plots/vanderpol")
 
 
 def setup_hbm_system(ode: AbstractODE, solver: NewtonSolver = None):
