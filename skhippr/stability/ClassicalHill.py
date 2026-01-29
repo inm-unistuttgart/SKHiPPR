@@ -191,3 +191,44 @@ class ClassicalHill(AbstractStabilityHBM):
             unweighted_sum += norm
 
         return np.abs(weighted_sum / unweighted_sum)
+
+
+class HillContinuity(ClassicalHill):
+    def __init__(self, fourier, tol=0, autonomous=False):
+        super().__init__(fourier, "imaginary", tol, autonomous)
+        self.FE_prev = None
+
+    @override
+    def hill_EVP(self, hbm, visualize=False):
+        if self.FE_prev is None:
+            self.FE_prev, eigenvectors = super().hill_EVP(hbm, visualize)
+            print("Used imag.")
+            return self.FE_prev, eigenvectors
+        else:
+            # WIP implementation, could be much more efficient
+            hill_matrix = hbm.hill_matrix()
+            FE_all, eigenvectors_all = np.linalg.eig(hill_matrix)
+            # Replace sorting criterion
+            indices = []
+            for alpha in self.FE_prev:
+                idx_good = np.argmin(np.abs(FE_all - alpha))
+                indices.append(idx_good)
+            # Rest as before
+            floquet_exponents = FE_all[indices[: self.fourier.n_dof]]
+            self.FE_prev = floquet_exponents
+            eigenvectors = eigenvectors_all[:, indices[: self.fourier.n_dof]]
+            # TODO handle case for negative real floquet multipliers
+            if visualize:
+                eig_all = np.linalg.eig(hill_matrix)[0]
+                plt.plot(np.real(eig_all), np.imag(eig_all), "kx")
+                plt.plot(
+                    np.real(floquet_exponents),
+                    np.imag(floquet_exponents),
+                    "o",
+                    mfc="none",
+                    mec="r",
+                )
+                plt.xlabel("Real part")
+                plt.ylabel("Imaginary part")
+                plt.show()
+            return floquet_exponents, eigenvectors

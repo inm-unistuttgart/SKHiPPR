@@ -14,6 +14,7 @@ from skhippr.Fourier import Fourier
 # HBM and stability
 from skhippr.cycles.hbm import HBMSystem
 from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
+from skhippr.stability.ClassicalHill import HillContinuity, ClassicalHill
 
 # Solution procedure
 from skhippr.solvers.newton import NewtonSolver
@@ -57,6 +58,8 @@ def main():
     nu_range = (ode.nu, 6)
     newton_solver.verbose = False
 
+    FE_prev = None
+
     for branch_point in pseudo_arclength_continuator(
         initial_system=hbm_system,
         solver=newton_solver,
@@ -68,6 +71,7 @@ def main():
         verbose=True,
     ):
         branch.append(branch_point)
+
         if not nu_range[0] <= branch_point.nu <= nu_range[1]:
             break
 

@@ -13,7 +13,7 @@ from skhippr.equations.AbstractEquation import AbstractEquation
 
 # still an abstract class
 class AbstractODE(AbstractEquation):
-    """Abstract base class for first-order differential equations. The equilibrium problem can immediately solved bypassing the ODE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`. If no stability method is provided during instantiation, the default :py:class:`~skhippr.stability.StabilityEquilibrium` is used for the equilibrium problem.
+    """Abstract base class for first-order differential equations. The equilibrium problem can immediately solved by passing the ODE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`. If no stability method is provided during instantiation, the default :py:class:`~skhippr.stability.StabilityEquilibrium` is used for the equilibrium problem.
 
     Attributes:
     -----------
@@ -153,6 +153,35 @@ class AbstractODE(AbstractEquation):
         """Requires subclasses to implement a closed-form derivative with optional arguments ``t`` and ``x``."""
 
         return super().closed_form_derivative(variable)
+
+
+class AbstractDAE(AbstractODE):
+    """Abstract base class for differential-algebraic equations (DAEs). DAEs consist of differential equations coupled with algebraic constraint equations. The DAE is formulated in the form
+
+        M*x_dot = f(t, x)
+
+    with a non-invertible, constant matrix M.
+    The equilibrium problem can immediately solved by passing the DAE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`.
+
+    Attributes:
+    -----------
+
+    autonomous : bool
+        Whether the DAE is autonomous (does not depend on time).
+    n_dof : int
+        Number of degrees of freedom of the DAE.
+    n_constraints : int
+        Number of algebraic constraints in the DAE.
+    x : np.ndarray
+        State vector.
+    t : float
+        Time variable.
+    """
+
+    def __init__(self, M: np.ndarray, autonomous: bool, stability_method=None):
+        n_dof = M.shape[0]
+        super().__init__(autonomous, n_dof, stability_method)
+        self.M_small = M
 
 
 class SecondOrderODE(AbstractODE):
