@@ -472,7 +472,7 @@ class HBMEquationDAE(HBMEquation):
         else:
             M_samples = np.zeros((self.ode.n_dof, self.ode.n_dof, self.fourier.L_DFT))
             for k, (t, x) in enumerate(
-                zip(self.fourier.time_samples(self.omega_solution), self.x_time())
+                zip(self.fourier.time_samples(self.omega_solution), self.x_time().T)
             ):
                 M_samples[:, :, k] = self.ode.M_small(t, x)
             return self.fourier.matrix_DFT(M_samples)

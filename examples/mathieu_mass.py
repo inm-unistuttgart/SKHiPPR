@@ -46,19 +46,19 @@ def main():
     solver.solve_equation(hbm_inv, "X")
     plot_phase(hbm_inv, ax=ax, label="inverted mass", linestyle=":")
 
-    # ode_mass = MathieuWithMass(
-    #     t=0,
-    #     x=np.zeros((2, fourier.L_DFT)),
-    #     a=a,
-    #     b=b,
-    #     omega=omega,
-    #     damping=damping,
-    #     forcing=forcing,
-    # )
-    # hbm_mass = HBMEquationDAE(ode_mass, ode_mass.omega, fourier, initial_guess=hbm.X)
+    ode_mass = MathieuWithMass(
+        t=0,
+        x=np.zeros((2, fourier.L_DFT)),
+        a=a,
+        b=b,
+        omega=omega,
+        damping=damping,
+        forcing=forcing,
+    )
+    hbm_mass = HBMEquationDAE(ode_mass, ode_mass.omega, fourier, initial_guess=hbm.X)
 
-    # solver.solve_equation(hbm_mass, "X")
-    # plot_phase(hbm_mass, ax=ax, label="with mass", linestyle="--")
+    solver.solve_equation(hbm_mass, "X")
+    plot_phase(hbm_mass, ax=ax, label="with mass", linestyle="--")
     ax.legend()
 
 
