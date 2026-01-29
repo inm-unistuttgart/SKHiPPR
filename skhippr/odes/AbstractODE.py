@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 from typing import override
+from collections.abc import Callable
 import numpy as np
 from copy import copy
 import warnings
@@ -160,7 +161,7 @@ class AbstractDAE(AbstractODE):
 
         M*x_dot = f(t, x)
 
-    with a non-invertible, constant matrix M.
+    with a non-invertible matrix M.
     The equilibrium problem can immediately solved by passing the DAE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`.
 
     Attributes:
@@ -178,10 +179,25 @@ class AbstractDAE(AbstractODE):
         Time variable.
     """
 
-    def __init__(self, M: np.ndarray, autonomous: bool, stability_method=None):
-        n_dof = M.shape[0]
+    def __init__(
+        self,
+        n_dof,
+        autonomous: bool,
+        stability_method=None,
+        M_is_constant=False,
+    ):
+
         super().__init__(autonomous, n_dof, stability_method)
-        self.M_small = M
+        self.M_is_constant = M_is_constant
+
+    @abstractmethod
+    def M_small(self, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+
+        return np.eye(self.n_dof)
 
 
 class SecondOrderODE(AbstractODE):

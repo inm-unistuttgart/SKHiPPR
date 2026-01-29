@@ -441,7 +441,7 @@ class HBMEquation(AbstractCycleEquation):
 class HBMEquationDAE(HBMEquation):
     """This subclass of :py:class:`~skhippr.cycles.hbm.HBMEquation` is specifically designed to handle DAEs.
 
-    It extends the differential part of the harmonic balance equations to account for the non-invertible matrix M.
+    It extends the differential part of the harmonic balance equations to account for the possibly non-invertible matrix M.
     Reference: Legrand2024 (TODO proper reference)
     """
 
@@ -466,7 +466,16 @@ class HBMEquationDAE(HBMEquation):
             stability_method=stability_method,
         )
 
-        self.M = np.kron(np.eye(2 * fourier.N_HBM + 1), dae.M_small)
+    def M(self):
+        if self.ode.M_is_constant:
+            return np.kron(np.eye(2 * self.fourier.N_HBM + 1), self.ode.M_small())
+        else:
+            M_samples = np.zeros((self.ode.n_dof, self.ode.n_dof, self.fourier.L_DFT))
+            for k, (t, x) in enumerate(
+                zip(self.fourier.time_samples(self.omega_solution), self.x_time())
+            ):
+                M_samples[:, :, k] = self.ode.M_small(t, x)
+            return self.fourier.matrix_DFT(M_samples)
 
     def aft(self, X=None) -> np.ndarray:
         """
@@ -476,12 +485,12 @@ class HBMEquationDAE(HBMEquation):
         R = super().aft(X)
         deriv = self.fourier.derivative_coeffs(X, self.omega_solution)
         # Remove the effect of direct differentiation and add the effect of M
-        R += deriv - self.M @ deriv
+        R += deriv - self.M() @ deriv
 
         return R
 
     def dR_domega(self, X=None):
-        return self.M @ super().dR_domega(X)
+        return self.M() @ super().dR_domega(X)
 
     def dR_dX(self, X=None):
         """
@@ -489,7 +498,7 @@ class HBMEquationDAE(HBMEquation):
         """
         derivative = super().dR_dX(X)
         derivative += self.omega_solution * (
-            self.fourier.derivative_matrix - self.M @ self.fourier.derivative_matrix
+            self.fourier.derivative_matrix - self.M() @ self.fourier.derivative_matrix
         )
         return derivative
 
