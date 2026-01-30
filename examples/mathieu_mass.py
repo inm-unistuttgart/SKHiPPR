@@ -10,6 +10,7 @@ from skhippr.solvers.newton import NewtonSolver
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,
     KoopmanHillDAE,
+    KoopmanHillSubharmonic,
 )
 
 from skhippr.visualization.cycles import (
@@ -30,7 +31,7 @@ def main():
     params = dict(omega=1.0, damping=0.05, forcing=1)
     g_fun = lambda t: 1 / (1 + 0.9 * np.cos(t))
     fourier_ref = Fourier(N_HBM=150, L_DFT=1024, n_dof=2, real_formulation=True)
-    fourier = fourier_ref.__replace__(N_HBM=140)
+    fourier = fourier_ref.__replace__(N_HBM=10)
     x0 = np.zeros((2, fourier.L_DFT))
 
     # ---- ODEs ----
@@ -39,11 +40,14 @@ def main():
     ode_mass = HillWithMass(t=0, x=x0, g_fun=g_fun, **params)
 
     # ---- Solutions ----
-    hbm_ref = solve_hbm(equ=ode, fourier=fourier_ref)
+    hbm_ref = solve_hbm(equ=ode, fourier=fourier_ref, subh=False)
     axes = plot_everything(hbm=hbm_ref, label="ref")
 
     hbm_dir = solve_hbm(equ=ode, fourier=fourier)
     axes = plot_everything(hbm_dir, hbm_ref, axes, label="no mass", linestyle="--")
+
+    hbm_subh = solve_hbm(equ=ode, fourier=fourier, subh=True)
+    axes = plot_everything(hbm_subh, hbm_ref, axes, label="subh", linestyle=":")
 
     hbm_inv = solve_hbm(equ=ode_inv, fourier=fourier)
     plot_everything(hbm=hbm_inv, hbm_ref=hbm_ref, axes=axes, label="inv", linestyle=":")
@@ -204,8 +208,12 @@ def solve_hbm(
     equ,
     fourier,
     dae=False,
+    subh=False,
 ):
     if dae:
+        if subh:
+            raise ValueError("Subharmonic not implemented for DAE.")
+
         hbm = HBMEquationDAE(
             dae=equ,
             omega=equ.omega,
@@ -213,11 +221,16 @@ def solve_hbm(
             stability_method=KoopmanHillDAE(fourier),
         )
     else:
+        if subh:
+            stability_method = KoopmanHillSubharmonic(fourier)
+        else:
+            stability_method = KoopmanHillProjection(fourier)
+
         hbm = HBMEquation(
             ode=equ,
             omega=equ.omega,
             fourier=fourier,
-            stability_method=KoopmanHillProjection(fourier),
+            stability_method=stability_method,
         )
 
     solver = NewtonSolver(verbose=True)

@@ -476,11 +476,14 @@ class KoopmanHillDAE(KoopmanHillProjection):
         hill_matrix = hbm.hill_matrix()
         t = t_over_period * 2 * np.pi / hbm.omega
 
-        funda_mat = (
-            C
-            @ generalized_exponential(hbm.M(), hill_matrix, t, self.tol_drazin)[0]
-            @ self.W
-        )
+        if hbm.ode.invertible:
+            funda_mat = C @ expm(np.linalg.solve(hbm.M(), hill_matrix) * t) @ self.W
+        else:
+            funda_mat = (
+                C
+                @ generalized_exponential(hbm.M(), hill_matrix, t, self.tol_drazin)[0]
+                @ self.W
+            )
 
         return funda_mat
 

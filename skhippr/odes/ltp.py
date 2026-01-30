@@ -202,7 +202,9 @@ class HillWithMass(AbstractDAE):
 
     def __init__(self, t, x, g_fun, omega=1, damping=0, forcing: float = 0.0):
 
-        super().__init__(n_dof=2, autonomous=False, M_is_constant=False)
+        super().__init__(
+            n_dof=2, autonomous=False, M_is_constant=False, invertible=True
+        )
         self.t = t
         self.x = x
         self.omega = omega

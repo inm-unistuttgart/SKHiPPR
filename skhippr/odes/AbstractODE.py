@@ -185,10 +185,12 @@ class AbstractDAE(AbstractODE):
         autonomous: bool,
         stability_method=None,
         M_is_constant=False,
+        invertible: bool = False,
     ):
 
         super().__init__(autonomous, n_dof, stability_method)
         self.M_is_constant = M_is_constant
+        self.invertible = invertible
 
     @abstractmethod
     def M_small(self, t=None, x=None):
