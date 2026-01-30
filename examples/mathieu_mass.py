@@ -16,7 +16,6 @@ from skhippr.stability.KoopmanHillProjection import (
 from skhippr.visualization.cycles import (
     plot_phase,
     plot_period,
-    plot_floquet_exponents,
     plot_floquet_multipliers,
 )
 
@@ -28,106 +27,47 @@ warnings.filterwarnings("error", category=ComplexWarning)
 
 
 def main():
+    # ---- Parameters ----
+    params = dict(a=1, b=0.9, omega=1.0, damping=0.05, forcing=1)
+    fourier_ref = Fourier(N_HBM=30, L_DFT=1024, n_dof=2, real_formulation=True)
+    fourier = fourier_ref.__replace__(N_HBM=3)
+    x0 = np.zeros((2, fourier.L_DFT))
 
-    # Init
+    # ---- ODEs ----
+    ode = MathieuODE(t=0, x=x0, **params)
+    ode_inv = MathieuWithMassInverted(t=0, x=x0, **params)
+    ode_mass = MathieuWithMass(t=0, x=x0, **params)
 
-    a = 1
-    b = 0.9
-    omega = 1.0
-    damping = 0.05
-    forcing = 1
+    # ---- Solutions ----
+    hbm_ref = solve_hbm(equ=ode, fourier=fourier_ref)
+    axes = plot_everything(hbm=hbm_ref, label="ref")
 
-    N_HBM = 3
-    N_ref = 30
-    L_DFT = 1024
+    hbm_dir = solve_hbm(equ=ode, fourier=fourier)
+    axes = plot_everything(hbm_dir, hbm_ref, axes, label="no mass", linestyle="--")
 
-    solver = NewtonSolver(verbose=True)
-    fourier_ref = Fourier(N_HBM=N_ref, L_DFT=L_DFT, n_dof=2, real_formulation=True)
-    fourier = fourier_ref.__replace__(N_HBM=N_HBM)
+    hbm_inv = solve_hbm(equ=ode_inv, fourier=fourier)
+    plot_everything(hbm=hbm_inv, hbm_ref=hbm_ref, axes=axes, label="inv", linestyle=":")
 
-    ode = MathieuODE(
-        t=0,
-        x=np.zeros((2, fourier_ref.L_DFT)),
-        a=a,
-        b=b,
-        omega=omega,
-        damping=damping,
-        forcing=forcing,
-    )
-
-    # Reference solution
-    hbm_ref, axes = hbm_and_plot(
-        equ=ode, fourier=fourier_ref, solver=solver, label="ref"
-    )
-
-    # solution without mass matrix at small N_HBM
-    hbm_dir, axes = hbm_and_plot(
-        equ=ode,
-        fourier=fourier,
-        solver=solver,
-        axes=axes,
-        hbm_ref=hbm_ref,
-        linestyle="--",
-        label="no mass",
-    )
-
-    # solution with inverted mass matrix
-    ode_inv = MathieuWithMassInverted(
-        t=0,
-        x=np.zeros((2, fourier.L_DFT)),
-        a=a,
-        b=b,
-        omega=omega,
-        damping=damping,
-        forcing=forcing,
-    )
-    hbm_inv, axes = hbm_and_plot(
-        equ=ode_inv,
-        fourier=fourier,
-        solver=solver,
-        axes=axes,
-        hbm_ref=hbm_ref,
-        initial_guess=hbm_dir.X,
-        label="inverted mass",
-        linestyle=":",
-    )
-
-    ode_mass = MathieuWithMass(
-        t=0,
-        x=np.zeros((2, fourier.L_DFT)),
-        a=a,
-        b=b,
-        omega=omega,
-        damping=damping,
-        forcing=forcing,
-    )
-    hbm_mass, axes = hbm_and_plot(
-        equ=ode_mass,
-        fourier=fourier,
-        solver=solver,
-        axes=axes,
-        dae=True,
-        hbm_ref=hbm_ref,
-        label="with mass",
-        linestyle="-.",
-    )
+    hbm_mass = solve_hbm(equ=ode_mass, fourier=fourier, dae=True)
+    plot_everything(hbm_inv, hbm_ref, axes, label="with mass", linestyle="-.")
 
     for ax in axes:
         ax.legend()
 
+    # ---- g functions + spectra ----
     g, g_inv = plot_g_functions(ode, ode_mass, fourier)
     fs = hbm_mass.ode.dynamics(t=fourier.time_samples(ode.omega), x=hbm_mass.x_time())
     plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time(), fs)
 
+    # ---- Hill matrices ----
     hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
     hill_matrix_inv = hbm_inv.hill_matrix(real_formulation=False, update=True)
+
     plot_matrix_block_norm(
         matrix=hill_matrix_ref - hill_matrix_inv,
         block_size=hbm_dir.fourier.n_dof,
         ax="error inv before",
         logscale=True,
-        vmin=1e-6,
-        vmax=10,
     )
 
     M = hbm_mass.M()
@@ -135,6 +75,7 @@ def main():
     hill_matrix_mass = np.linalg.solve(
         M, hbm_mass.hill_matrix(real_formulation=False, update=True)
     )
+
     plot_matrix_block_norm(
         matrix=hill_matrix_ref - hill_matrix_mass,
         block_size=hbm_dir.fourier.n_dof,
@@ -143,6 +84,7 @@ def main():
         logscale=True,
     )
 
+    # ---- Prints ----
     print("Reference Hill matrix blocks:")
     print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
 
@@ -255,22 +197,16 @@ def plot_fourier_coeffs(N_HBM=30, *funs):
     return ax
 
 
-def hbm_and_plot(
+def solve_hbm(
     equ,
     fourier,
-    solver,
-    axes=(None, None, None, None),
     dae=False,
-    hbm_ref: HBMEquation = None,
-    initial_guess=None,
-    **kwargs_plot,
 ):
     if dae:
         hbm = HBMEquationDAE(
             dae=equ,
             omega=equ.omega,
             fourier=fourier,
-            initial_guess=initial_guess,
             stability_method=KoopmanHillDAE(fourier),
         )
     else:
@@ -278,17 +214,19 @@ def hbm_and_plot(
             ode=equ,
             omega=equ.omega,
             fourier=fourier,
-            initial_guess=initial_guess,
             stability_method=KoopmanHillProjection(fourier),
         )
 
+    solver = NewtonSolver(verbose=True)
     solver.solve_equation(hbm, "X")
+    return hbm
 
+
+def plot_everything(hbm, hbm_ref=None, axes=(None, None, None, None), **kwargs_plot):
     axes = list(axes)
     axes[0] = plot_phase(hbm, ax=axes[0], **kwargs_plot)
     axes[1] = plot_period(hbm, ax=axes[1], **kwargs_plot)
     axes[2] = plot_floquet_multipliers(hbm, ax=axes[2], **kwargs_plot)
-    # axes[3] = plot_floquet_exponents(hbm, ax=axes[3], **kwargs_plot)
 
     if hbm_ref is not None:
         if axes[-1] is None:
@@ -297,11 +235,11 @@ def hbm_and_plot(
             axes[-1].set_xlabel("t")
             axes[-1].set_ylabel("Error norm")
 
-        t_samples = fourier.time_samples(equ.omega)
+        t_samples = hbm.fourier.time_samples(hbm.omega)
         error_dir = np.linalg.norm(hbm.x_time() - hbm_ref.x_time(), axis=0)
         axes[-1].plot(t_samples, error_dir, **kwargs_plot)
 
-    return hbm, axes
+    return axes
 
 
 def plot_matrix_block_norm(
