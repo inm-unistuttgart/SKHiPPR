@@ -9,7 +9,7 @@ from skhippr.solvers.newton import NewtonSolver
 from skhippr.odes.AbstractODE import AbstractDAE
 
 from skhippr.stability.KoopmanHillProjection import (
-    KoopmanHillSubharmonic,
+    KoopmanHillProjection,
     KoopmanHillDAE,
 )
 
@@ -37,7 +37,7 @@ def main():
     damping = 0.05
     forcing = 1
 
-    N_HBM = 2
+    N_HBM = 3
     N_ref = 30
     L_DFT = 1024
 
@@ -122,20 +122,23 @@ def main():
     hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
     hill_matrix_inv = hbm_inv.hill_matrix(real_formulation=False, update=True)
     plot_matrix_block_norm(
-        hill_matrix_ref - hill_matrix_inv,
-        hbm_dir.fourier.n_dof,
+        matrix=hill_matrix_ref - hill_matrix_inv,
+        block_size=hbm_dir.fourier.n_dof,
         ax="error inv before",
         logscale=True,
         vmin=1e-6,
         vmax=10,
     )
 
+    M = hbm_mass.M()
+    M = hbm_mass.fourier.T_to_cplx_from_real @ M @ hbm_mass.fourier.T_to_real_from_cplx
     hill_matrix_mass = np.linalg.solve(
-        hbm_mass.M(), hbm_mass.hill_matrix(real_formulation=False, update=True)
+        M, hbm_mass.hill_matrix(real_formulation=False, update=True)
     )
     plot_matrix_block_norm(
-        hill_matrix_ref - hill_matrix_mass,
-        hbm_dir.fourier.n_dof,
+        matrix=hill_matrix_ref - hill_matrix_mass,
+        block_size=hbm_dir.fourier.n_dof,
+        index=range(-hbm_dir.fourier.N_HBM, hbm_dir.fourier.N_HBM + 1),
         ax="error inv after",
         logscale=True,
     )
@@ -276,7 +279,7 @@ def hbm_and_plot(
             omega=equ.omega,
             fourier=fourier,
             initial_guess=initial_guess,
-            stability_method=KoopmanHillSubharmonic(fourier),
+            stability_method=KoopmanHillProjection(fourier),
         )
 
     solver.solve_equation(hbm, "X")
