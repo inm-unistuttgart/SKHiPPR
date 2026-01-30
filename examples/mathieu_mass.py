@@ -37,7 +37,7 @@ def main():
     damping = 0.05
     forcing = 1
 
-    N_HBM = 3
+    N_HBM = 2
     N_ref = 30
     L_DFT = 1024
 
@@ -116,7 +116,8 @@ def main():
         ax.legend()
 
     g, g_inv = plot_g_functions(ode, ode_mass, fourier)
-    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time())
+    fs = hbm_mass.ode.dynamics(t=fourier.time_samples(ode.omega), x=hbm_mass.x_time())
+    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time(), fs)
 
     hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
     hill_matrix_inv = hbm_inv.hill_matrix(real_formulation=False, update=True)
@@ -125,6 +126,8 @@ def main():
         hbm_dir.fourier.n_dof,
         ax="error inv before",
         logscale=True,
+        vmin=1e-6,
+        vmax=10,
     )
 
     hill_matrix_mass = np.linalg.solve(
@@ -136,6 +139,33 @@ def main():
         ax="error inv after",
         logscale=True,
     )
+
+
+def print_Toeplitz_blocks(matrix, block_size):
+    """Print the blocks of a given square matrix, traversing diagonally."""
+    n_blocks = matrix.shape[0] // block_size
+    row_start = n_blocks - 1
+    col_start = 0
+    diag_number = n_blocks - 1
+    while col_start < n_blocks and row_start >= 0:
+        row = row_start
+        col = col_start
+        print(f"Diagonal {diag_number}")
+        while row < n_blocks and col < n_blocks:
+            block = matrix[
+                row * block_size : (row + 1) * block_size,
+                col * block_size : (col + 1) * block_size,
+            ]
+            print(block)
+            row += 1
+            col += 1
+        if row_start > 0:
+            row_start -= 1
+        else:
+            col_start += 1
+
+        diag_number -= 1
+        print("\n")
 
 
 def plot_g_functions(ode, ode_mass, fourier):
@@ -381,5 +411,9 @@ def plot_hill_matrix_blocks(
 
 
 if __name__ == "__main__":
-    main()
-    plt.show()
+    # main()
+    # plt.show()
+
+    testmat = np.kron(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.eye(2))
+    print(testmat)
+    print_Toeplitz_blocks(testmat, 2)

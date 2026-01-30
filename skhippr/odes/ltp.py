@@ -270,6 +270,9 @@ class MathieuWithMassInverted(MathieuWithMass):
     def __init__(self, t, x, a=0, b=1, omega=1, damping=0, forcing=0):
         super().__init__(t, x, a, b, omega, damping, forcing)
 
+    def M_small(self, t=None, x=None):
+        return np.eye(self.n_dof)
+
     def dynamics(self, t=None, x=None):
         if len(x.shape) > 1:
             result = np.zeros_like(x)
