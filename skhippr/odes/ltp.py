@@ -15,7 +15,7 @@ class HillODE(AbstractODE):
 
     where ``g`` is a 2*pi-periodic function, e.g., a cosine or a rectangular wave."""
 
-    def __init__(self, t, x, g_fcn, a=0, b=1, omega=1, damping=0):
+    def __init__(self, t, x, g_fcn, a=0, b=1, omega=1, damping=0, forcing: float = 0.0):
         super().__init__(False, 2)
 
         self.g_fcn = g_fcn
@@ -26,6 +26,7 @@ class HillODE(AbstractODE):
         self.b = b
         self.omega = omega
         self.damping = damping
+        self.amp_forcing = forcing
 
     def dynamics(self, t=None, x=None):
         if x is None:
@@ -49,7 +50,7 @@ class HillODE(AbstractODE):
 
     def forcing(self, tau):
         """May be overridden in subclasses to have forcing terms. tau is normalized to have period 2*pi."""
-        return 0.0
+        return self.amp_forcing * np.sin(tau)
 
     def closed_form_derivative(self, variable, t=None, x=None):
         if t is None:
@@ -194,17 +195,12 @@ class MathieuODE(SmoothedMeissner):
         return self.amp_forcing * np.sin(tau)
 
 
-class MathieuWithMass(AbstractDAE):
-    """Mathieu equation divided by time-dependent term.
-    1/(a + b*cos(omega*t)) * x_ddot + d/(a+b*cos(omega*t))*x_dot + x = f*sin(omega*t)/(a+b*cos(omega*t))
+class HillWithMass(AbstractDAE):
+    """Hill equation divided by time-dependent term.
+    1/g(omega*t) * x_ddot + d/g(omega*t)*x_dot + x = f*sin(omega*t)/g(omega*t)
     """
 
-    def __init__(self, t, x, a=0, b=1, omega=1, damping=0, forcing: float = 0.0):
-
-        if abs(a) < abs(b):
-            raise ValueError(
-                "Mathieu equation is not always divisible by the time-dependent term for |b| > |a|"
-            )
+    def __init__(self, t, x, g_fun, omega=1, damping=0, forcing: float = 0.0):
 
         super().__init__(n_dof=2, autonomous=False, M_is_constant=False)
         self.t = t
@@ -212,19 +208,23 @@ class MathieuWithMass(AbstractDAE):
         self.omega = omega
         self.damping = damping
         self.amp_forcing = forcing
-        self.a = a
-        self.b = b
+        self.g_fun = g_fun
 
-    def g(self, t=None):
+    def g_inv(self, t=None):
         if t is None:
             t = self.t
-        return 1 / (self.a + self.b * np.cos(self.omega * t))
+        g = self.g_fun(self.omega * t)
+
+        if np.any(np.abs(g) < 1e-7):
+            raise ValueError("g is singular at some time instances!")
+
+        return 1 / g
 
     def M_small(self, t=None, x=None):
 
         M = np.zeros((2, 2, *t.shape))
         M[0, 0, ...] = 1
-        M[1, 1, ...] = self.g(t=t)
+        M[1, 1, ...] = self.g_inv(t=t)
         return M
 
     def dynamics(self, t=None, x=None):
@@ -236,9 +236,9 @@ class MathieuWithMass(AbstractDAE):
         f = np.zeros_like(x)
         f[0, ...] = x[1, ...]
         f[1, ...] = (
-            -self.damping * self.g(t) * x[1, ...]
+            -self.damping * self.g_inv(t) * x[1, ...]
             - x[0, ...]
-            + self.amp_forcing * np.sin(t) * self.g(t)
+            + self.amp_forcing * np.sin(t) * self.g_inv(t)
         )
 
         return f
@@ -250,12 +250,11 @@ class MathieuWithMass(AbstractDAE):
             x = self.x
         self.check_dimensions(t, x)
 
-        tau = self.omega * t
         match variable:
             case "x":
                 J = np.zeros((x.shape[0], *x.shape))
                 J[0, 1, ...] = 1
-                J[1, 1, ...] = -self.damping * self.g(t)
+                J[1, 1, ...] = -self.damping * self.g_inv(t)
                 J[1, 0, ...] = -1
                 return J
 
@@ -265,10 +264,10 @@ class MathieuWithMass(AbstractDAE):
                 )
 
 
-class MathieuWithMassInverted(MathieuWithMass):
+class HillWithMassInverted(HillWithMass):
 
-    def __init__(self, t, x, a=0, b=1, omega=1, damping=0, forcing=0):
-        super().__init__(t, x, a, b, omega, damping, forcing)
+    def __init__(self, t, x, g_fun, omega=1, damping=0, forcing=0):
+        super().__init__(t, x, g_fun, omega, damping, forcing)
 
     def M_small(self, t=None, x=None):
         return np.eye(self.n_dof)

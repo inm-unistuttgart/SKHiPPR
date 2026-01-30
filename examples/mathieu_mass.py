@@ -2,11 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
 
-from skhippr.odes.ltp import MathieuODE, MathieuWithMass, MathieuWithMassInverted
+from skhippr.odes.ltp import HillODE, HillWithMass, HillWithMassInverted
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
-from skhippr.odes.AbstractODE import AbstractDAE
 
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,
@@ -28,15 +27,16 @@ warnings.filterwarnings("error", category=ComplexWarning)
 
 def main():
     # ---- Parameters ----
-    params = dict(a=1, b=0.9, omega=1.0, damping=0.05, forcing=1)
+    params = dict(omega=1.0, damping=0.05, forcing=1)
+    g_fun = lambda t: 1 + 0.9 * np.cos(t)
     fourier_ref = Fourier(N_HBM=30, L_DFT=1024, n_dof=2, real_formulation=True)
     fourier = fourier_ref.__replace__(N_HBM=3)
     x0 = np.zeros((2, fourier.L_DFT))
 
     # ---- ODEs ----
-    ode = MathieuODE(t=0, x=x0, **params)
-    ode_inv = MathieuWithMassInverted(t=0, x=x0, **params)
-    ode_mass = MathieuWithMass(t=0, x=x0, **params)
+    ode = HillODE(t=0, x=x0, g_fcn=g_fun, **params)
+    ode_inv = HillWithMassInverted(t=0, x=x0, g_fun=g_fun, **params)
+    ode_mass = HillWithMass(t=0, x=x0, g_fun=g_fun, **params)
 
     # ---- Solutions ----
     hbm_ref = solve_hbm(equ=ode, fourier=fourier_ref)
@@ -49,7 +49,7 @@ def main():
     plot_everything(hbm=hbm_inv, hbm_ref=hbm_ref, axes=axes, label="inv", linestyle=":")
 
     hbm_mass = solve_hbm(equ=ode_mass, fourier=fourier, dae=True)
-    plot_everything(hbm_inv, hbm_ref, axes, label="with mass", linestyle="-.")
+    plot_everything(hbm_mass, hbm_ref, axes, label="with mass", linestyle="-.")
 
     for ax in axes:
         ax.legend()
@@ -152,16 +152,16 @@ def print_Toeplitz_blocks(matrix, block_size):
         print("\n")
 
 
-def plot_g_functions(ode, ode_mass, fourier):
+def plot_g_functions(ode: HillODE, ode_mass: HillWithMass, fourier: Fourier):
     """Plot g and 1/g functions in time and frequency domain."""
     t_samples = fourier.time_samples(ode.omega)
 
     # Time domain plot
     _, ax_cos = plt.subplots()
-    g = ode.a + ode.b * ode.g_fcn(t_samples)
+    g = ode.g_fcn(t_samples)
     ax_cos.plot(t_samples, g, "-", label="g")
 
-    g_inv = ode_mass.g(t_samples)
+    g_inv = ode_mass.g_inv(t_samples)
     ax_cos.plot(t_samples, g_inv, "--", label="1/g")
     ax_cos.plot(t_samples, g * g_inv, "-.", label="g*1/g")
     ax_cos.set_xlabel("t")
