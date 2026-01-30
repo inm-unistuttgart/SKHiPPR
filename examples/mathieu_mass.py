@@ -140,6 +140,45 @@ def main():
         logscale=True,
     )
 
+    print("Reference Hill matrix blocks:")
+    print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
+
+    print("Inverted Mass Hill matrix blocks:")
+    print_Toeplitz_blocks(clean_matrix(hill_matrix_inv), hbm_dir.fourier.n_dof)
+
+    print("With Mass Hill matrix blocks:")
+    print_Toeplitz_blocks(clean_matrix(hill_matrix_mass), hbm_dir.fourier.n_dof)
+
+
+def clean_matrix(matrix, tol=1e-10):
+    """Set real and imaginary parts of a matrix to zero if smaller than tolerance.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        Complex or real matrix to clean.
+    tol : float, optional
+        Tolerance threshold. Default is 1e-10.
+
+    Returns
+    -------
+    np.ndarray
+        Matrix with small real/imaginary parts zeroed out.
+    """
+    matrix = matrix.copy()
+
+    # Zero out small real parts
+    matrix[np.abs(np.real(matrix)) < tol] = 1j * np.imag(
+        matrix[np.abs(np.real(matrix)) < tol]
+    )
+
+    # Zero out small imaginary parts
+    matrix[np.abs(np.imag(matrix)) < tol] = np.real(
+        matrix[np.abs(np.imag(matrix)) < tol]
+    )
+
+    return matrix
+
 
 def print_Toeplitz_blocks(matrix, block_size):
     """Print the blocks of a given square matrix, traversing diagonally."""
@@ -411,9 +450,5 @@ def plot_hill_matrix_blocks(
 
 
 if __name__ == "__main__":
-    # main()
-    # plt.show()
-
-    testmat = np.kron(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), np.eye(2))
-    print(testmat)
-    print_Toeplitz_blocks(testmat, 2)
+    main()
+    plt.show()
