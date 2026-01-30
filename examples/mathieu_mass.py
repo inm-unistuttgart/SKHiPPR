@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors
 
 from skhippr.odes.ltp import MathieuODE, MathieuWithMass, MathieuWithMassInverted
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
@@ -7,7 +8,17 @@ from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
 from skhippr.odes.AbstractODE import AbstractDAE
 
-from skhippr.visualization.cycles import plot_phase, plot_period
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillSubharmonic,
+    KoopmanHillDAE,
+)
+
+from skhippr.visualization.cycles import (
+    plot_phase,
+    plot_period,
+    plot_floquet_exponents,
+    plot_floquet_multipliers,
+)
 
 import warnings
 from numpy.exceptions import ComplexWarning  # Corrected import
@@ -107,8 +118,24 @@ def main():
     g, g_inv = plot_g_functions(ode, ode_mass, fourier)
     plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time())
 
-    for hbm in [hbm_dir, hbm_inv, hbm_mass]:
-        plot_hill_matrix_blocks(hbm)
+    hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
+    hill_matrix_inv = hbm_inv.hill_matrix(real_formulation=False, update=True)
+    plot_matrix_block_norm(
+        hill_matrix_ref - hill_matrix_inv,
+        hbm_dir.fourier.n_dof,
+        ax="error inv before",
+        logscale=True,
+    )
+
+    hill_matrix_mass = np.linalg.solve(
+        hbm_mass.M(), hbm_mass.hill_matrix(real_formulation=False, update=True)
+    )
+    plot_matrix_block_norm(
+        hill_matrix_ref - hill_matrix_mass,
+        hbm_dir.fourier.n_dof,
+        ax="error inv after",
+        logscale=True,
+    )
 
 
 def plot_g_functions(ode, ode_mass, fourier):
@@ -160,7 +187,7 @@ def hbm_and_plot(
     equ,
     fourier,
     solver,
-    axes=(None, None, None),
+    axes=(None, None, None, None),
     dae=False,
     hbm_ref: HBMEquation = None,
     initial_guess=None,
@@ -168,11 +195,19 @@ def hbm_and_plot(
 ):
     if dae:
         hbm = HBMEquationDAE(
-            dae=equ, omega=equ.omega, fourier=fourier, initial_guess=initial_guess
+            dae=equ,
+            omega=equ.omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            stability_method=KoopmanHillDAE(fourier),
         )
     else:
         hbm = HBMEquation(
-            ode=equ, omega=equ.omega, fourier=fourier, initial_guess=initial_guess
+            ode=equ,
+            omega=equ.omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            stability_method=KoopmanHillSubharmonic(fourier),
         )
 
     solver.solve_equation(hbm, "X")
@@ -180,22 +215,33 @@ def hbm_and_plot(
     axes = list(axes)
     axes[0] = plot_phase(hbm, ax=axes[0], **kwargs_plot)
     axes[1] = plot_period(hbm, ax=axes[1], **kwargs_plot)
+    axes[2] = plot_floquet_multipliers(hbm, ax=axes[2], **kwargs_plot)
+    # axes[3] = plot_floquet_exponents(hbm, ax=axes[3], **kwargs_plot)
 
     if hbm_ref is not None:
-        if axes[2] is None:
-            _, axes[2] = plt.subplots()
-            axes[2].set_yscale("log")
-            axes[2].set_xlabel("t")
-            axes[2].set_ylabel("Error norm")
+        if axes[-1] is None:
+            _, axes[-1] = plt.subplots()
+            axes[-1].set_yscale("log")
+            axes[-1].set_xlabel("t")
+            axes[-1].set_ylabel("Error norm")
 
         t_samples = fourier.time_samples(equ.omega)
         error_dir = np.linalg.norm(hbm.x_time() - hbm_ref.x_time(), axis=0)
-        axes[2].plot(t_samples, error_dir, **kwargs_plot)
+        axes[-1].plot(t_samples, error_dir, **kwargs_plot)
 
     return hbm, axes
 
 
-def plot_matrix_block_norm(matrix, block_size, ax=None, index=None, **scatter_kwargs):
+def plot_matrix_block_norm(
+    matrix,
+    block_size,
+    ax=None,
+    index=None,
+    logscale=False,
+    vmax=None,
+    vmin=None,
+    **scatter_kwargs,
+):
     """
     Plot a given square matrix as a grid of blocks, colored by their 2-norm.
 
@@ -250,10 +296,16 @@ def plot_matrix_block_norm(matrix, block_size, ax=None, index=None, **scatter_kw
             y_positions.append(index[i])
             norm_values.append(norm)
 
-    if ax is None:
+    if isinstance(ax, str):
+        title = ax
+    else:
+        title = ""
+
+    if ax is None or isinstance(ax, str):
         _, ax = plt.subplots()
         ax.set_xlabel("Column index")
         ax.set_ylabel("Row index")
+        ax.set_title(title)
         ax.invert_yaxis()
 
     x_positions = np.array(x_positions)
@@ -261,6 +313,10 @@ def plot_matrix_block_norm(matrix, block_size, ax=None, index=None, **scatter_kw
     norm_values = np.array(norm_values)
 
     scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
+    if logscale:
+        scatter_defaults["norm"] = matplotlib.colors.LogNorm(
+            vmax=vmax, vmin=vmin, clip=False
+        )
     scatter_defaults.update(scatter_kwargs)
 
     sc = ax.scatter(
@@ -271,7 +327,10 @@ def plot_matrix_block_norm(matrix, block_size, ax=None, index=None, **scatter_kw
     )
 
     cbar = plt.colorbar(sc, ax=ax)
-    cbar.set_label("Block 2-norm")
+    if logscale:
+        cbar.formatter = plt.matplotlib.ticker.LogFormatterMathtext(base=10)
+        cbar.update_ticks()
+    cbar.set_label("2-norm of block")
 
     return ax
 

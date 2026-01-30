@@ -139,7 +139,6 @@ def plot_floquet_multipliers(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwarg
     ax.scatter(
         np.real(floquet_multipliers),
         np.imag(floquet_multipliers),
-        label="$\\lambda$",
         **plot_kwargs,
     )
     if generated_ax:
@@ -188,7 +187,6 @@ def plot_floquet_exponents(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwargs)
     ax.scatter(
         np.real(floquet_exponents),
         np.imag(floquet_exponents),
-        label="$\\alpha$",
         **plot_kwargs,
     )
     if generated_ax:

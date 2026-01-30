@@ -478,7 +478,7 @@ class KoopmanHillDAE(KoopmanHillProjection):
 
         funda_mat = (
             C
-            @ generalized_exponential(hbm.M, hill_matrix, t, self.tol_drazin)[0]
+            @ generalized_exponential(hbm.M(), hill_matrix, t, self.tol_drazin)[0]
             @ self.W
         )
 
@@ -522,15 +522,15 @@ def drazin(A, tol=0):
         W_nz = solve_sylvester(R, -N, -C)
         W[:n_cutoff, n_cutoff:] = W_nz
 
-    if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
-        warnings.warn(
-            "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
-        )
+    # if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
+    #     warnings.warn(
+    #         "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
+    #     )
 
-    if np.linalg.norm(Z @ Z.T.conj() - np.eye(n), np.inf) > tol:
-        warnings.warn(
-            "Drazin inverse computation: Schur vectors are not unitary. Results may be inaccurate."
-        )
+    # if np.linalg.norm(Z @ Z.T.conj() - np.eye(n), np.inf) > tol:
+    #     warnings.warn(
+    #         "Drazin inverse computation: Schur vectors are not unitary. Results may be inaccurate."
+    #     )
 
     drazin_schur = np.zeros_like(T)
     drazin_schur[:n_cutoff, :n_cutoff] = solve_triangular(
