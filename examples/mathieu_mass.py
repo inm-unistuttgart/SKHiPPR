@@ -11,6 +11,7 @@ from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,
     KoopmanHillDAE,
     KoopmanHillSubharmonic,
+    KoopmanHillDAESubharmonic,
 )
 
 from skhippr.visualization.cycles import (
@@ -54,6 +55,11 @@ def main():
 
     hbm_mass = solve_hbm(equ=ode_mass, fourier=fourier, dae=True)
     plot_everything(hbm_mass, hbm_ref, axes, label="with mass", linestyle="-.")
+
+    hbm_mass_subh = solve_hbm(equ=ode_mass, fourier=fourier, dae=True, subh=True)
+    plot_everything(
+        hbm_mass_subh, hbm_ref, axes, label="subh with mass", linestyle="-."
+    )
 
     for ax in axes:
         ax.legend()
@@ -212,13 +218,15 @@ def solve_hbm(
 ):
     if dae:
         if subh:
-            raise ValueError("Subharmonic not implemented for DAE.")
+            stability_method = KoopmanHillDAESubharmonic(fourier)
+        else:
+            stability_method = KoopmanHillDAE(fourier)
 
         hbm = HBMEquationDAE(
             dae=equ,
             omega=equ.omega,
             fourier=fourier,
-            stability_method=KoopmanHillDAE(fourier),
+            stability_method=stability_method,
         )
     else:
         if subh:

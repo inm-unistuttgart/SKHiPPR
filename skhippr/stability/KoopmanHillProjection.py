@@ -492,6 +492,48 @@ class KoopmanHillDAE(KoopmanHillProjection):
         raise NotImplementedError("Error bound not applicable for DAEs.")
 
 
+class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
+    def __init__(self, fourier: Fourier, tol=0, autonomous=False):
+        super().__init__(
+            fourier=fourier.__replace__(real_formulation=False),
+            tol=tol,
+            autonomous=autonomous,
+        )
+
+    @override
+    def fundamental_matrix(self, t_over_period, hbm):
+        if not hbm.ode.invertible:
+            raise ValueError(
+                "Subharmonic Koopman-Hill for DAEs with singular mass matrix is not implemented."
+            )
+
+        hill_matrix = hbm.hill_matrix(real_formulation=False)
+        hill_subh = hill_matrix[self.fourier.n_dof :, self.fourier.n_dof :]
+        hill_subh = hill_subh + 0.5j * hbm.omega * np.eye(
+            self.fourier.n_dof * 2 * self.fourier.N_HBM
+        )
+
+        M = hbm.M()
+        if hbm.fourier.real_formulation:
+            M = hbm.fourier.T_to_cplx_from_real @ M @ hbm.fourier.T_to_real_from_cplx
+        M_subh = M[self.fourier.n_dof :, self.fourier.n_dof :]
+
+        t = t_over_period * 2 * np.pi / hbm.omega
+
+        C = self.C_time(t_over_period)
+        C_subh = self.C_subh_time(t_over_period=t_over_period)
+
+        funda_mat = C @ expm(np.linalg.solve(M, hill_matrix) * t) @ self.W
+
+        funda_mat += C_subh @ expm(np.linalg.solve(M_subh, hill_subh) * t) @ self.W_subh
+
+        if np.any(np.abs(np.imag(funda_mat)) > 1e-12):
+            raise RuntimeError(
+                "KoopmanHillDAESubharmonic: Significant imaginary part in fundamental matrix."
+            )
+        return np.real(funda_mat)
+
+
 def drazin(A, tol=0):
     """Compute the Drazin inverse of a matrix A.
 
