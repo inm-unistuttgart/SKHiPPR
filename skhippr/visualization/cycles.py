@@ -5,7 +5,7 @@ The :py:mod:`~skhippr.visualization.cycles` module provides standardized functio
 Supported equations are instances of :py:class:`~skhippr.cycles.hbm.HBMEquation` or :py:class:`~skhippr.cycles.hbm.HBMSystem` that contain such an equation.
 
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
-:py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the floquet multipliers and exponents of a cycle.
+:py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
 """
 
 import numpy as np
