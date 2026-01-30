@@ -277,12 +277,13 @@ class MathieuWithMassInverted(MathieuWithMass):
         if len(x.shape) > 1:
             result = np.zeros_like(x)
             for k in range(x.shape[1]):
-                result[:, k, ...] = np.linalg.solve(
-                    super().M_small(t[k], x[:, k, ...]),
-                    super().dynamics(t[k], x[:, k, ...]),
-                )
+                M = super().M_small(t[k], x[:, k, ...])
+                f = super().dynamics(t[k], x[:, k, ...])
+                result[:, k, ...] = np.linalg.solve(M, f)
         else:
-            result = np.linalg.solve(super().M_small(t, x), super().dynamics(t, x))
+            M = super().M_small(t, x)
+            f = super().dynamics(t, x)
+            result = np.linalg.solve(M, f)
 
         return result
 
@@ -290,9 +291,9 @@ class MathieuWithMassInverted(MathieuWithMass):
 
         match variable:
             case "x":
-                return super().M_small(t, x) @ super().closed_form_derivative(
-                    variable, t, x
-                )
+                M = super().M_small(t, x)
+                J = super().closed_form_derivative(variable, t, x)
+                return np.linalg.solve(M, J)
 
             case _:
                 raise NotImplementedError(
