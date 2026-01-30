@@ -108,7 +108,6 @@ def main():
     plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time())
 
     for hbm in [hbm_dir, hbm_inv, hbm_mass]:
-        H = hbm.hill_matrix(real_formulation=False, update=True)
         plot_hill_matrix_blocks(hbm)
 
 
@@ -196,7 +195,90 @@ def hbm_and_plot(
     return hbm, axes
 
 
-def plot_hill_matrix_blocks(hbm: HBMEquation, ax=None, **scatter_kwargs):
+def plot_matrix_block_norm(matrix, block_size, ax=None, index=None, **scatter_kwargs):
+    """
+    Plot a given square matrix as a grid of blocks, colored by their 2-norm.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        The matrix to be plotted.
+    block_size : int
+        The size of each block (assumed square).
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    cmap : str, optional
+        The colormap to use for coloring the dots by block norm. Default is 'viridis'.
+    **scatter_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted matrix blocks.
+    sc : matplotlib.collections.PathCollection
+        The scatter plot collection object (for accessing colorbar, etc.).
+    """
+
+    if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(
+            f"Input matrix must be 2-D and square but has shape {matrix.shape}"
+        )
+
+    if index is None:
+        index = range(matrix.shape[0] // block_size)
+
+    num_blocks = len(index)
+
+    if num_blocks * block_size != matrix.shape[0]:
+        raise ValueError(
+            f"Matrix size ({matrix.shape[0]}) not given by block size ({block_size}) times number of blocks ({num_blocks})"
+        )
+
+    x_positions = []
+    y_positions = []
+    norm_values = []
+
+    for i in range(num_blocks):
+        for j in range(num_blocks):
+            block = matrix[
+                i * block_size : (i + 1) * block_size,
+                j * block_size : (j + 1) * block_size,
+            ]
+            norm = np.linalg.norm(block, ord=2)
+            x_positions.append(index[j])
+            y_positions.append(index[i])
+            norm_values.append(norm)
+
+    if ax is None:
+        _, ax = plt.subplots()
+        ax.set_xlabel("Column index")
+        ax.set_ylabel("Row index")
+        ax.invert_yaxis()
+
+    x_positions = np.array(x_positions)
+    y_positions = np.array(y_positions)
+    norm_values = np.array(norm_values)
+
+    scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
+    scatter_defaults.update(scatter_kwargs)
+
+    sc = ax.scatter(
+        x_positions,
+        y_positions,
+        c=norm_values,
+        **scatter_defaults,
+    )
+
+    cbar = plt.colorbar(sc, ax=ax)
+    cbar.set_label("Block 2-norm")
+
+    return ax
+
+
+def plot_hill_matrix_blocks(
+    hbm: HBMEquation, real_formulation=False, ax=None, **scatter_kwargs
+):
     """
     Plot the Hill matrix as a grid of blocks, colored by their 2-norm.
 
@@ -219,8 +301,6 @@ def plot_hill_matrix_blocks(hbm: HBMEquation, ax=None, **scatter_kwargs):
     -------
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
-    sc : matplotlib.collections.PathCollection
-        The scatter plot collection object (for accessing colorbar, etc.).
 
     Notes
     -----
@@ -230,62 +310,15 @@ def plot_hill_matrix_blocks(hbm: HBMEquation, ax=None, **scatter_kwargs):
     """
 
     # Compute Hill matrix
-    H = hbm.hill_matrix(real_formulation=False, update=True)
+    H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
     n_dof = hbm.fourier.n_dof
 
-    # Extract blocks and compute norms
-    num_blocks = 2 * hbm.fourier.N_HBM + 1
-    block_norms = np.zeros((2 * hbm.fourier.N_HBM + 1, num_blocks))
-    x_positions = []
-    y_positions = []
-    norm_values = []
-
-    for i in range(num_blocks):
-        for j in range(num_blocks):
-            block = H[i * n_dof : (i + 1) * n_dof, j * n_dof : (j + 1) * n_dof]
-            norm = np.linalg.norm(block, ord=2)
-            block_norms[i, j] = norm
-            x_positions.append(j)
-            y_positions.append(i)
-            norm_values.append(norm)
-
-    # Create plot if not provided
-    if ax is None:
-        _, ax = plt.subplots()
-
-    # Scatter plot with color based on norm
-    x_positions = np.array(x_positions)
-    y_positions = np.array(y_positions)
-    norm_values = np.array(norm_values)
-
-    # Set default scatter kwargs
-    scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
-    scatter_defaults.update(scatter_kwargs)
-
-    sc = ax.scatter(
-        x_positions,
-        y_positions,
-        c=norm_values,
-        **scatter_defaults,
-    )
-
-    # Add colorbar
-    cbar = plt.colorbar(sc, ax=ax)
-    cbar.set_label("Block 2-norm")
-
-    # Set labels and title
-    ax.set_xlabel("Column block index")
-    ax.set_ylabel("Row block index")
-    ax.set_title(f"Hill Matrix Block Structure (n_dof={n_dof})")
-
-    # Invert y-axis so (0,0) is at top-left
-    ax.invert_yaxis()
-
-    # Set integer ticks
-    ax.set_xticks(np.arange(num_blocks))
-    ax.set_yticks(np.arange(num_blocks))
-
-    return ax, sc
+    if real_formulation:
+        index = range(2 * hbm.fourier.N_HBM + 1)
+    else:
+        index = range(-hbm.fourier.N_HBM, hbm.fourier.N_HBM + 1)
+    ax = plot_matrix_block_norm(H, n_dof, ax=ax, index=index, **scatter_kwargs)
+    return ax
 
 
 if __name__ == "__main__":
