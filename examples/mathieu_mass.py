@@ -5,6 +5,7 @@ from skhippr.odes.ltp import MathieuODE, MathieuWithMass, MathieuWithMassInverte
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
+from skhippr.odes.AbstractODE import AbstractDAE
 
 from skhippr.visualization.cycles import plot_phase, plot_period
 
@@ -16,6 +17,8 @@ warnings.filterwarnings("error", category=ComplexWarning)
 
 
 def main():
+
+    # Init
 
     a = 1
     b = 0.9
@@ -29,7 +32,7 @@ def main():
 
     solver = NewtonSolver(verbose=True)
     fourier_ref = Fourier(N_HBM=N_ref, L_DFT=L_DFT, n_dof=2, real_formulation=True)
-    t_samples = fourier_ref.time_samples(omega)
+    fourier = fourier_ref.__replace__(N_HBM=N_HBM)
 
     ode = MathieuODE(
         t=0,
@@ -42,23 +45,20 @@ def main():
     )
 
     # Reference solution
-
-    hbm_ref = HBMEquation(ode, ode.omega, fourier_ref)
-    solver.solve_equation(hbm_ref, "X")
-    ax_phase = plot_phase(hbm_ref, label="ref")
-    ax_time = plot_period(hbm_ref, label="ref")
-
-    _, ax_error = plt.subplots()
+    hbm_ref, axes = hbm_and_plot(
+        equ=ode, fourier=fourier_ref, solver=solver, label="ref"
+    )
 
     # solution without mass matrix at small N_HBM
-
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=2, real_formulation=True)
-    hbm = HBMEquation(ode, ode.omega, fourier)
-    solver.solve_equation(hbm, "X")
-    plot_phase(hbm, ax=ax_phase, label="no mass", linestyle=":")
-    plot_period(hbm, ax=ax_time, label="no mass", linestyle=":")
-    error_dir = np.linalg.norm(hbm.x_time() - hbm_ref.x_time(), axis=0)
-    ax_error.plot(t_samples, error_dir, "-", label=f"error dir N = {N_HBM}")
+    hbm, axes = hbm_and_plot(
+        equ=ode,
+        fourier=fourier,
+        solver=solver,
+        axes=axes,
+        hbm_ref=hbm_ref,
+        linestyle="--",
+        label="no mass",
+    )
 
     # solution with inverted mass matrix
     ode_inv = MathieuWithMassInverted(
@@ -70,12 +70,16 @@ def main():
         damping=damping,
         forcing=forcing,
     )
-    hbm_inv = HBMEquation(ode_inv, ode_inv.omega, fourier, initial_guess=hbm.X)
-    solver.solve_equation(hbm_inv, "X")
-    plot_phase(hbm_inv, ax=ax_phase, label="inverted mass", linestyle=":")
-    plot_period(hbm_inv, ax=ax_time, label="inverted mass", linestyle=":")
-    error_inv = np.linalg.norm(hbm_inv.x_time() - hbm_ref.x_time(), axis=0)
-    ax_error.plot(t_samples, error_inv, "--", label=f"error inv N = {N_HBM}")
+    hbm_inv, axes = hbm_and_plot(
+        equ=ode_inv,
+        fourier=fourier,
+        solver=solver,
+        axes=axes,
+        hbm_ref=hbm_ref,
+        initial_guess=hbm.X,
+        label="inverted mass",
+        linestyle=":",
+    )
 
     ode_mass = MathieuWithMass(
         t=0,
@@ -86,22 +90,30 @@ def main():
         damping=damping,
         forcing=forcing,
     )
-    hbm_mass = HBMEquationDAE(ode_mass, ode_mass.omega, fourier, initial_guess=None)
+    hbm_mass, axes = hbm_and_plot(
+        equ=ode_mass,
+        fourier=fourier,
+        solver=solver,
+        axes=axes,
+        dae=True,
+        hbm_ref=hbm_ref,
+        label="with mass",
+        linestyle="-.",
+    )
 
-    solver.solve_equation(hbm_mass, "X")
-    plot_phase(hbm_mass, ax=ax_phase, label="with mass", linestyle="--")
-    plot_period(hbm_mass, ax=ax_time, label="with mass", linestyle="--")
-    error_mass = np.linalg.norm(hbm_mass.x_time() - hbm_ref.x_time(), axis=0)
-    ax_error.plot(t_samples, error_mass, "-.", label=f"error mass N = {N_HBM}")
+    for ax in axes:
+        ax.legend()
 
-    ax_phase.legend()
-    ax_time.legend()
-    ax_error.set_yscale("log")
-    ax_error.set_xlabel("t")
-    ax_error.set_ylabel("Error norm")
-    ax_error.legend()
+    g, g_inv = plot_g_functions(ode, ode_mass, fourier)
+    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv)
 
-    fig, ax_cos = plt.subplots()
+
+def plot_g_functions(ode, ode_mass, fourier):
+    """Plot g and 1/g functions in time and frequency domain."""
+    t_samples = fourier.time_samples(ode.omega)
+
+    # Time domain plot
+    _, ax_cos = plt.subplots()
     g = ode.a + ode.b * ode.g_fcn(t_samples)
     ax_cos.plot(t_samples, g, "-", label="g")
 
@@ -111,31 +123,73 @@ def main():
     ax_cos.set_xlabel("t")
     ax_cos.legend()
 
-    fig, ax_FC = plt.subplots()
-    fourier_scalar = Fourier(
-        N_HBM=fourier_ref.N_HBM, L_DFT=fourier.L_DFT, n_dof=1, real_formulation=False
-    )
-    g_FC = fourier_scalar.DFT(g[np.newaxis, :])
-    g_inv_FC = fourier_scalar.DFT(g_inv[np.newaxis, :])
+    return g, g_inv
 
-    bar_width = 0.4
-    indices = np.arange(-fourier_scalar.N_HBM, fourier_scalar.N_HBM + 1)
 
-    ax_FC.bar(
-        indices - bar_width / 2,
-        np.squeeze(np.abs(g_FC)),
-        width=bar_width,
-        label="g",
-    )
-    ax_FC.bar(
-        indices + bar_width / 2,
-        np.squeeze(np.abs(g_inv_FC)),
-        width=bar_width,
-        label="g inv",
-    )
-    ax_FC.set_xlabel("Harmonic index")
-    ax_FC.set_yscale("log")
-    ax_FC.legend()
+def plot_fourier_coeffs(N_HBM=30, *funs):
+    """Frequency domain plot"""
+    _, ax = plt.subplots()
+
+    bar_width = (1 - 0.1) / len(funs)
+    indices = np.arange(-N_HBM, N_HBM + 1)
+
+    for i, fun in enumerate(funs):
+        if len(fun.shape) == 1:
+            fun = fun[np.newaxis, :]
+        fourier = Fourier(
+            N_HBM=N_HBM, L_DFT=fun.shape[1], n_dof=fun.shape[0], real_formulation=False
+        )
+        coeffs = fourier.DFT(fun)
+        coeffs = np.reshape(coeffs, (fun.shape[0], -1), order="F")
+        x = indices + (i - (len(funs) - 1) / 2) * bar_width
+        ax.bar(
+            x,
+            np.linalg.norm(coeffs, axis=0),
+            width=bar_width,
+        )
+
+    ax.set_xlabel("Harmonic index")
+    ax.set_yscale("log")
+    return ax
+
+
+def hbm_and_plot(
+    equ,
+    fourier,
+    solver,
+    axes=(None, None, None),
+    dae=False,
+    hbm_ref: HBMEquation = None,
+    initial_guess=None,
+    **kwargs_plot,
+):
+    if dae:
+        hbm = HBMEquationDAE(
+            dae=equ, omega=equ.omega, fourier=fourier, initial_guess=initial_guess
+        )
+    else:
+        hbm = HBMEquation(
+            ode=equ, omega=equ.omega, fourier=fourier, initial_guess=initial_guess
+        )
+
+    solver.solve_equation(hbm, "X")
+
+    axes = list(axes)
+    axes[0] = plot_phase(hbm, ax=axes[0], **kwargs_plot)
+    axes[1] = plot_period(hbm, ax=axes[1], **kwargs_plot)
+
+    if hbm_ref is not None:
+        if axes[2] is None:
+            _, axes[2] = plt.subplots()
+            axes[2].set_yscale("log")
+            axes[2].set_xlabel("t")
+            axes[2].set_ylabel("Error norm")
+
+        t_samples = fourier.time_samples(equ.omega)
+        error_dir = np.linalg.norm(hbm.x_time() - hbm_ref.x_time(), axis=0)
+        axes[2].plot(t_samples, error_dir, **kwargs_plot)
+
+    return hbm, axes
 
 
 if __name__ == "__main__":
