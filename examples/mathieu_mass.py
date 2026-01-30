@@ -28,9 +28,9 @@ warnings.filterwarnings("error", category=ComplexWarning)
 def main():
     # ---- Parameters ----
     params = dict(omega=1.0, damping=0.05, forcing=1)
-    g_fun = lambda t: 1 + 0.9 * np.cos(t)
-    fourier_ref = Fourier(N_HBM=30, L_DFT=1024, n_dof=2, real_formulation=True)
-    fourier = fourier_ref.__replace__(N_HBM=3)
+    g_fun = lambda t: 1 / (1 + 0.9 * np.cos(t))
+    fourier_ref = Fourier(N_HBM=150, L_DFT=1024, n_dof=2, real_formulation=True)
+    fourier = fourier_ref.__replace__(N_HBM=140)
     x0 = np.zeros((2, fourier.L_DFT))
 
     # ---- ODEs ----
@@ -57,7 +57,8 @@ def main():
     # ---- g functions + spectra ----
     g, g_inv = plot_g_functions(ode, ode_mass, fourier)
     fs = hbm_mass.ode.dynamics(t=fourier.time_samples(ode.omega), x=hbm_mass.x_time())
-    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time(), fs)
+    # plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time(), fs)
+    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv)
 
     # ---- Hill matrices ----
     hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
@@ -85,14 +86,16 @@ def main():
     )
 
     # ---- Prints ----
-    print("Reference Hill matrix blocks:")
-    print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
 
-    print("Inverted Mass Hill matrix blocks:")
-    print_Toeplitz_blocks(clean_matrix(hill_matrix_inv), hbm_dir.fourier.n_dof)
+    if fourier.N_HBM <= 20:
+        print("Reference Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
 
-    print("With Mass Hill matrix blocks:")
-    print_Toeplitz_blocks(clean_matrix(hill_matrix_mass), hbm_dir.fourier.n_dof)
+        print("Inverted Mass Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_inv), hbm_dir.fourier.n_dof)
+
+        print("With Mass Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_mass), hbm_dir.fourier.n_dof)
 
 
 def clean_matrix(matrix, tol=1e-10):
