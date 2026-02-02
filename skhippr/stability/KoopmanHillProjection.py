@@ -520,22 +520,30 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         hill_matrix = hbm.hill_matrix(real_formulation=False)
 
         M = hbm.M()
+
         if hbm.fourier.real_formulation:
             M = hbm.fourier.T_to_cplx_from_real @ M @ hbm.fourier.T_to_real_from_cplx
+
+        # ## Other way around:
+        hill_matrix_inv = np.linalg.solve(M, hill_matrix)
+
+        # hill_subh_inv = hill_matrix_inv[self.fourier.n_dof :, self.fourier.n_dof :]
+        # hill_subh_inv = hill_subh_inv + 0.5j * hbm.omega * np.eye(
+        #     hill_subh_inv.shape[0]
+        # )
+
         M_subh = M[self.fourier.n_dof :, self.fourier.n_dof :]
 
         hill_subh = hill_matrix[self.fourier.n_dof :, self.fourier.n_dof :]
         hill_subh = hill_subh + 0.5j * hbm.omega * M_subh
+        hill_subh_inv = np.linalg.solve(M_subh, hill_subh)
 
         t = t_over_period * 2 * np.pi / hbm.omega
 
         C = self.C_time(t_over_period)
         C_subh = self.C_subh_time(t_over_period=t_over_period)
 
-        hill_matrix_inv = np.linalg.solve(M, hill_matrix)
         funda_mat = C @ expm(hill_matrix_inv * t) @ self.W
-
-        hill_subh_inv = np.linalg.solve(M_subh, hill_subh)
 
         funda_mat += C_subh @ expm(hill_subh_inv * t) @ self.W_subh
 

@@ -31,6 +31,7 @@ def main():
     # ---- Parameters ----
     params = dict(omega=1.0, damping=0.05, forcing=1)
     g_fun = lambda t: 1 / (1 + 0.9 * np.cos(t))
+    # g_fun = lambda t: 1 + 0.9 * np.cos(t)
     fourier_ref = Fourier(N_HBM=150, L_DFT=1024, n_dof=2, real_formulation=True)
     fourier = fourier_ref.__replace__(N_HBM=10)
     x0 = np.zeros((2, fourier.L_DFT))
