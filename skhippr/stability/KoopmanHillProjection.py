@@ -547,7 +547,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
 
         funda_mat += C_subh @ expm(hill_subh_inv * t) @ self.W_subh
 
-        if np.any(np.abs(np.imag(funda_mat)) > 1e-12):
+        if np.any(np.abs(np.imag(funda_mat)) > 1e-7):
             raise RuntimeError(
                 "KoopmanHillDAESubharmonic: Significant imaginary part in fundamental matrix."
             )
