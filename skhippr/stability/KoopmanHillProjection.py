@@ -391,33 +391,8 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
 
         hill_mat = equ.hill_matrix()
         if self.fourier.real_formulation:
-            # Split the Hill matrix into blocks for const, cos, sin
-            blocks = []
-            idx_split = [
-                0,
-                self.fourier.n_dof,
-                self.fourier.n_dof * (self.fourier.N_HBM + 1),
-                hill_mat.shape[0],
-            ]
-            for k in range(len(idx_split) - 1):
-                blocks.append(
-                    [
-                        hill_mat[
-                            idx_split[k] : idx_split[k + 1],
-                            idx_split[l] : idx_split[l + 1],
-                        ]
-                        for l in range(len(idx_split) - 1)
-                    ]
-                )
-
-            # and then identify 0.5*J_c, 0.5*J_s, K_c, K_s, T_c, T_s (cf. Bayer2024, Appendix)
-            Jc = blocks[0][1]
-            Js = blocks[0][2]
-            Tc = 0.5 * (blocks[1][1] + blocks[2][2])
-            Ts = 0.5 * (blocks[1][2] - blocks[2][1])
-            Kc = 0.5 * (blocks[1][1] - blocks[2][2])
-            Ks = 0.5 * (blocks[1][2] + blocks[2][1])
-
+            # Split the Hill matrix into blocks
+            Jc, Js, Tc, Ts, Kc, Ks = self.determine_toeplitz_hankel_blocks(hill_mat)
             # Construct their subharmonic pendants
             # Tc = Tc
             Ts += 0.5 * equ.omega * np.eye(self.fourier.n_dof * self.fourier.N_HBM)
@@ -434,6 +409,40 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
                 self.fourier.n_dof * 2 * self.fourier.N_HBM
             )
         return Hill_subh
+
+    def determine_toeplitz_hankel_blocks(self, hill_mat_real):
+        # if not self.fourier.real_formulation:
+        #     raise ValueError(
+        #         "This method is only applicable for real-valued formulation."
+        #     )
+
+        blocks = []
+        idx_split = [
+            0,
+            self.fourier.n_dof,
+            self.fourier.n_dof * (self.fourier.N_HBM + 1),
+            hill_mat_real.shape[0],
+        ]
+        for k in range(len(idx_split) - 1):
+            blocks.append(
+                [
+                    hill_mat_real[
+                        idx_split[k] : idx_split[k + 1],
+                        idx_split[l] : idx_split[l + 1],
+                    ]
+                    for l in range(len(idx_split) - 1)
+                ]
+            )
+
+        # and then identify 0.5*J_c, 0.5*J_s, K_c, K_s, T_c, T_s (cf. Bayer2024, Appendix)
+        Jc = blocks[0][1]
+        Js = blocks[0][2]
+        Tc = 0.5 * (blocks[1][1] + blocks[2][2])
+        Ts = 0.5 * (blocks[1][2] - blocks[2][1])
+        Kc = 0.5 * (blocks[1][1] - blocks[2][2])
+        Ks = 0.5 * (blocks[1][2] + blocks[2][1])
+
+        return Jc, Js, Tc, Ts, Kc, Ks
 
     def error_bound(self, t, a, b):
         """
@@ -477,7 +486,8 @@ class KoopmanHillDAE(KoopmanHillProjection):
         t = t_over_period * 2 * np.pi / hbm.omega
 
         if hbm.ode.invertible:
-            funda_mat = C @ expm(np.linalg.solve(hbm.M(), hill_matrix) * t) @ self.W
+            hill_matrix_inv = np.linalg.solve(hbm.M(), hill_matrix)
+            funda_mat = C @ expm(hill_matrix_inv * t) @ self.W
         else:
             funda_mat = (
                 C
@@ -508,24 +518,26 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
             )
 
         hill_matrix = hbm.hill_matrix(real_formulation=False)
-        hill_subh = hill_matrix[self.fourier.n_dof :, self.fourier.n_dof :]
-        hill_subh = hill_subh + 0.5j * hbm.omega * np.eye(
-            self.fourier.n_dof * 2 * self.fourier.N_HBM
-        )
 
         M = hbm.M()
         if hbm.fourier.real_formulation:
             M = hbm.fourier.T_to_cplx_from_real @ M @ hbm.fourier.T_to_real_from_cplx
         M_subh = M[self.fourier.n_dof :, self.fourier.n_dof :]
 
+        hill_subh = hill_matrix[self.fourier.n_dof :, self.fourier.n_dof :]
+        hill_subh = hill_subh + 0.5j * hbm.omega * M_subh
+
         t = t_over_period * 2 * np.pi / hbm.omega
 
         C = self.C_time(t_over_period)
         C_subh = self.C_subh_time(t_over_period=t_over_period)
 
-        funda_mat = C @ expm(np.linalg.solve(M, hill_matrix) * t) @ self.W
+        hill_matrix_inv = np.linalg.solve(M, hill_matrix)
+        funda_mat = C @ expm(hill_matrix_inv * t) @ self.W
 
-        funda_mat += C_subh @ expm(np.linalg.solve(M_subh, hill_subh) * t) @ self.W_subh
+        hill_subh_inv = np.linalg.solve(M_subh, hill_subh)
+
+        funda_mat += C_subh @ expm(hill_subh_inv * t) @ self.W_subh
 
         if np.any(np.abs(np.imag(funda_mat)) > 1e-12):
             raise RuntimeError(
