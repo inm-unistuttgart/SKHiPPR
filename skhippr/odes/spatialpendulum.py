@@ -515,6 +515,12 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
             case _:
                 return np.zeros(3)
 
+    def h_translational_energy(self, **kwargs):
+        return
+
+    def mass_translational_energy(self, **kwargs):
+        return super().mass_translational_energy(**kwargs)
+
 
 class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
     def __init__(
@@ -549,7 +555,7 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
 
     def I_v_S(self, t=None, angles=None, d_angles=None):
         """Velocity of the center of mass in inertial frame."""
-        return self.I_v_P(t=t) + self.A_IK(angles=angles) @ (
+        return self.I_v_P(t=t) - self.A_IK(angles=angles) @ (
             np.cross(self.K_Omega(angles=angles, d_angles=d_angles), self.K_r_SP)
         )
 
@@ -559,18 +565,27 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
             case "t":
                 return self.I_v_S(t=t, angles=angles, d_angles=d_angles)
             case "alpha" | "beta" | "gamma":
-                return (
-                    self.d_A_IK(angles=angles, d_angles=d_angles, variable=variable)
-                    @ self.K_r_SP
-                )
+                return self.d_A_IK(angles=angles, variable=variable) @ self.K_r_SP
             case _:
                 return np.zeros(3)
 
-    def M_small(self, t=None, x=None):
-        return None
+    def d_transl_dqdot(self, t=None, angles=None, d_angles=None, variable="alpha"):
+        """Derivative of the translational kinetic energy w.r.t. [d_alpha, d_beta, d_gamma]."""
+        K_J_R = self.K_J_R(angles=angles)
+        A_KI = self.A_KI(angles=angles)
+        r_tilde = tilde_operator(self.K_r_SP)
+        v = self.I_v_S(t=t, angles=angles, d_angles=d_angles)
+        return self.total_mass @ K_J_R.T @ r_tilde @ A_KI @ v
 
-    def dynamics(self, t=None, x=None):
-        return None
+    def h_translational_energy(self, **kwargs):
+        return super().h_translational_energy(**kwargs)
+
+    def mass_translational_energy(self, **kwargs):
+        """Contributions to mass matrix from the translational kinetic energy."""
+        K_J_R = self.K_J_R(angles=kwargs.get("angles", self.angles))
+        r_tilde = tilde_operator(self.K_r_SP)
+        mass = -self.total_mass * K_J_R.T @ r_tilde @ r_tilde @ K_J_R
+        return mass
 
 
 def trafo_around_x(angle):
