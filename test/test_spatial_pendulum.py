@@ -80,7 +80,7 @@ def pend_without_constraints():
     vec_angles = np.random.rand(3)
     vec_d_angles = np.random.rand(3)
     return SpatialPendulumWithoutConstraints(
-        0, vec_angles, vec_d_angles, [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
+        0, vec_angles, vec_d_angles, [1, 2, 3], 0.1, 1, 1, 1, 1, stability_method=None
     )
 
 
@@ -147,6 +147,68 @@ def test_K_Omega(pend_without_constraints):
             )
 
 
+def test_d_K_Omega_d_angle(pend_without_constraints):
+    eye = np.eye(3)
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.K_Omega(
+                    angles=pend_without_constraints.angles + var * eye[:, k],
+                    d_angles=d_angles,
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.K_Omega(
+                    angles=angles + var * eye[:, k],
+                    d_angles=d_angles,
+                )
+
+            d_K_Omega = pend_without_constraints.d_K_Omega(
+                angles=angles, d_angles=d_angles, variable=variable
+            )
+            d_K_J = pend_without_constraints.d_K_J_R(angles=angles, variable=variable)
+            if d_angles is None:
+                d_K_Omega_exp = d_K_J @ pend_without_constraints.d_angles
+            else:
+                d_K_Omega_exp = d_K_J @ d_angles
+            finite_difference(fd_func, d_K_Omega_exp)
+            assert np.allclose(d_K_Omega, d_K_Omega_exp)
+            finite_difference(fd_func, d_K_Omega)
+
+
+def test_d_K_Omega_d_dangle(pend_without_constraints):
+    eye = np.eye(3)
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        for k, variable in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+            if d_angles is None:
+                fd_func = lambda var: pend_without_constraints.K_Omega(
+                    angles=angles,
+                    d_angles=pend_without_constraints.d_angles + var * eye[:, k],
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.K_Omega(
+                    angles=angles,
+                    d_angles=d_angles + var * eye[:, k],
+                )
+
+            d_K_Omega = pend_without_constraints.d_K_Omega(
+                angles=angles, d_angles=d_angles, variable=variable
+            )
+            if angles is None:
+                d_K_Omega_exp = (
+                    pend_without_constraints.K_J_R(
+                        angles=pend_without_constraints.angles
+                    )
+                    @ eye[:, k]
+                )
+            else:
+                d_K_Omega_exp = (
+                    pend_without_constraints.K_J_R(angles=angles) @ eye[:, k]
+                )
+            finite_difference(fd_func, d_K_Omega_exp)
+            assert np.allclose(d_K_Omega, d_K_Omega_exp)
+            finite_difference(fd_func, d_K_Omega)
+
+
 def test_K_J_R(pend_without_constraints):
     for angles in [np.random.rand(3), None]:
         eye = np.eye(3)
@@ -158,7 +220,7 @@ def test_K_J_R(pend_without_constraints):
 
 def test_d_K_J_R(pend_without_constraints):
     eye = np.eye(3)
-    for angles in [None]:
+    for angles in [None, np.random.rand(3)]:
         for k, variable in enumerate(["alpha", "beta", "gamma"]):
             if angles is None:
                 fd_func = lambda var: pend_without_constraints.K_J_R(
@@ -173,6 +235,114 @@ def test_d_K_J_R(pend_without_constraints):
             finite_difference(fd_func, d_K_J_R)
 
 
+def test_d_rotational_energy(pend_without_constraints):
+    eye = np.eye(3)
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = [
+                    lambda var: pend_without_constraints.rotational_energy(
+                        angles=pend_without_constraints.angles + var * eye[:, k],
+                        d_angles=None,
+                    ),
+                    lambda var: pend_without_constraints.rotational_energy(
+                        angles=None,
+                        d_angles=pend_without_constraints.d_angles + var * eye[:, k],
+                    ),
+                ]
+            else:
+                fd_func = [
+                    lambda var: pend_without_constraints.rotational_energy(
+                        angles=angles + var * eye[:, k],
+                        d_angles=d_angles,
+                    ),
+                    lambda var: pend_without_constraints.rotational_energy(
+                        angles=angles, d_angles=d_angles + var * eye[:, k]
+                    ),
+                ]
+
+            for j, prefix in enumerate(["", "d_"]):
+                variable_full = prefix + variable
+
+                d_rot_energy = pend_without_constraints.d_rotational_energy(
+                    angles=angles, d_angles=d_angles, variable=variable_full
+                )
+                finite_difference(fd_func[j], d_rot_energy)
+
+
+def test_d_rotational_energy_dqdot(pend_without_constraints):
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        d_energy_dqdot = pend_without_constraints.d_rotational_energy_dqdot(
+            angles=angles, d_angles=d_angles
+        )
+        assert d_energy_dqdot.shape == (3,)
+        for k, variable in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+            d_energy_d_var = pend_without_constraints.d_rotational_energy(
+                angles, d_angles, variable=variable
+            )
+            assert np.allclose(d_energy_d_var, d_energy_dqdot[k])
+
+
+def test_mass_rotational(pend_without_constraints):
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        mass = pend_without_constraints.mass_rotational_energy(angles)
+        for k, variable in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+            dd_energy_exp = mass[:, k]
+            if d_angles is None:
+                fd_func = (
+                    lambda var: pend_without_constraints.d_rotational_energy_dqdot(
+                        angles=angles,
+                        d_angles=pend_without_constraints.d_angles
+                        + var * np.eye(3)[:, k],
+                    )
+                )
+            else:
+                fd_func = (
+                    lambda var: pend_without_constraints.d_rotational_energy_dqdot(
+                        angles=angles, d_angles=d_angles + var * np.eye(3)[:, k]
+                    )
+                )
+            finite_difference(fd_func, dd_energy_exp)
+
+
+def test_dd_rotational_energy_dqdot_dq(pend_without_constraints):
+    for angles, d_angles in zip([None, np.random.rand(3)], [None, np.random.rand(3)]):
+        dd_energy = pend_without_constraints.dd_rotational_energy_dqdot_dq(
+            angles=angles, d_angles=d_angles
+        )
+
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = (
+                    lambda var: pend_without_constraints.d_rotational_energy_dqdot(
+                        angles=pend_without_constraints.angles + var * np.eye(3)[:, k],
+                        d_angles=d_angles,
+                    )
+                )
+            else:
+                fd_func = (
+                    lambda var: pend_without_constraints.d_rotational_energy_dqdot(
+                        angles=angles + var * np.eye(3)[:, k],
+                        d_angles=d_angles,
+                    )
+                )
+            finite_difference(fd_func, dd_energy[:, k], arg=0, stepsize=1e-5)
+
+
+def test_gen_damping(pend_without_constraints):
+    prevs = []
+    for angles in [None, np.random.rand(3)]:
+        for d_angles in [None, np.random.rand(3)]:
+            gen_damping = pend_without_constraints.generalized_damping_force(
+                angles=angles, d_angles=d_angles
+            )
+            for prev in prevs:
+                assert not np.allclose(
+                    gen_damping, prev
+                ), "Generalized damping force should differ for different angles and velocities."
+            prevs.append(gen_damping)
+
+
 if __name__ == "__main__":
 
     vec_angles = np.random.rand(3)
@@ -180,4 +350,4 @@ if __name__ == "__main__":
     pend = SpatialPendulumWithoutConstraints(
         0, vec_angles, vec_d_angles, [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
     )
-    test_d_K_J_R(pend)
+    test_dd_rotational_energy_dqdot_dq(pend_without_constraints=pend)

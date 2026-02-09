@@ -18,17 +18,24 @@ class AbstractSpatialPendulum(AbstractDAE):
         epsilon,
         omega,
         damping,
-        n_dof,
-        invertible,
+        q_all=["alpha", "beta", "gamma"],
         stability_method=None,
     ):
+        self.num_constraints = len(q_all) - 3
+        invertible = self.num_constraints == 0
         super().__init__(
-            n_dof=n_dof,
+            n_dof=2 * len(q_all) + self.num_constraints,
             autonomous=False,
             stability_method=stability_method,
             M_is_constant=False,
             invertible=invertible,
         )
+
+        if q_all[:3] != ["alpha", "beta", "gamma"]:
+            raise ValueError(
+                "The first three generalized coordinates must be the angles alpha, beta, gamma."
+            )
+        self.q_all = q_all
         self.a = shape_cuboid[0]
         self.b = shape_cuboid[1]
         self.c = shape_cuboid[2]
@@ -59,7 +66,11 @@ class AbstractSpatialPendulum(AbstractDAE):
 
     @property
     def d_angles(self):
-        return self.x[3:]
+        return self.x[len(self.q_all) : len(self.q_all) + 3]
+
+    @property
+    def lam(self):
+        self.x[2 * len(self.q_all) :]
 
     """ Euler angle transformation matrices and their derivatives. """
 
@@ -152,7 +163,7 @@ class AbstractSpatialPendulum(AbstractDAE):
     def d_A_KI(self, angles=None, d_angles=None, variable="t"):
         return self.d_A_IK(angles=angles, d_angles=d_angles, variable=variable).T
 
-    """ Rotational quantities. """
+    """ Rotational quantities -- same in both formulations. """
 
     def K_J_R(self, angles=None):
         """Rotational Jacobian in body-fixed frame."""
@@ -214,13 +225,13 @@ class AbstractSpatialPendulum(AbstractDAE):
             d_angles = self.d_angles
         match variable:
             case "d_alpha":
-                return self.K_J_R(angles=angles)[0, :]
+                return self.K_J_R(angles=angles)[:, 0]
             case "d_beta":
-                return self.K_J_R(angles=angles)[1, :]
+                return self.K_J_R(angles=angles)[:, 1]
             case "d_gamma":
-                return self.K_J_R(angles=angles)[2, :]
+                return self.K_J_R(angles=angles)[:, 2]
 
-            case ["alpha", "beta", "gamma"]:
+            case "alpha" | "beta" | "gamma":
                 return self.d_K_J_R(angles=angles, variable=variable) @ d_angles
 
             case "t":
@@ -233,62 +244,111 @@ class AbstractSpatialPendulum(AbstractDAE):
     def generalized_damping_force(self, angles=None, d_angles=None):
         """Damping torque in body-fixed frame."""
         K_momentum = -self.damping * self.K_Omega(angles=angles, d_angles=d_angles)
-        return (
-            self.K_J_R.T @ K_momentum
-        )  # generalized damping force in angle coordinates
+        proj_matrix = np.vstack(
+            [self.K_J_R(angles=angles).T, np.zeros((len(self.q_all) - 3, 3))]
+        )
+        return proj_matrix @ K_momentum
 
     def rotational_energy(self, angles=None, d_angles=None):
         """Rotational kinetic energy."""
         K_Omega = self.K_Omega(angles=angles, d_angles=d_angles)
         return 0.5 * K_Omega.T @ self.K_inertia @ K_Omega
 
-    def d_rotational_energy(self, angles=None, d_angles=None, variable="t"):
+    def d_rotational_energy(self, angles=None, d_angles=None, variable="alpha"):
         """Derivative of the rotational kinetic energy."""
         K_Omega = self.K_Omega(angles=angles, d_angles=d_angles)
         d_K_Omega = self.d_K_Omega(angles=angles, d_angles=d_angles, variable=variable)
         return K_Omega.T @ self.K_inertia @ d_K_Omega
 
-    def ddt_d_rotational_energy_dqdot_without_qdot(self, angles=None, d_angles=None):
-        """Every component of d/dt(dT/dqdot) except M(q) @ dd_qdot."""
-        result = np.zeros(3)
-        for angle in ["alpha, beta, gamma"]:
-            result += (
+    def d_rotational_energy_dqdot(self, angles=None, d_angles=None):
+        """Derivative of the rotational kinetic energy w.r.t. [d_alpha, d_beta, d_gamma]."""
+        return (
+            self.K_Omega(angles, d_angles).T
+            @ self.K_inertia
+            @ self.K_J_R(angles=angles)
+        )
+
+    def dd_rotational_energy_dqdot_dq(self, angles=None, d_angles=None):
+        """Every component of d/dq(dT/dqdot)."""
+        result = np.zeros((3, 3))
+        for k, angle in enumerate(["alpha", "beta", "gamma"]):
+            result[:, k] = (
                 self.d_K_J_R(angles=angles, d_angles=d_angles, variable=angle).T
                 @ self.K_inertia
                 @ self.K_Omega(angles=angles, d_angles=d_angles)
             )
-            result += (
+            result[:, k] += (
                 self.K_J_R(angles=angles).T
                 @ self.K_inertia
                 @ self.d_K_Omega(angles=angles, d_angles=d_angles, variable=angle)
             )
+        return result
 
-    def mass_secondorder(self, angles=None):
-        """Mass matrix for the second-order form of the equations of motion."""
-        return self.K_J_R(angles=angles).T @ self.K_inertia @ self.K_J_R(angles=angles)
+    def mass_rotational_energy(self, angles=None):
+        """Contributions to mass matrix from the rotational kinetic energy."""
+        K_J_R = self.K_J_R(angles=angles)
+        mass_rot = K_J_R.T @ self.K_inertia @ K_J_R  # acting on rotational DOFs
+        mass = np.zeros((len(self.q_all), len(self.q_all)))
+        mass[:3, :3] = mass_rot
+        return mass
 
-    def rhs_spin(self, angles=None, d_angles=None):
-        """Contribution to the RHS of the angle-rows of the equations of motion due to balance of rotational momentum."""
-        rhs = -self.ddt_d_rotational_energy_dqdot_without_qdot(angles, d_angles)
-        for k, variable in enumerate(["alpha", "beta", "gamma"]):
-            rhs[k] += self.d_rotational_energy(
-                angles=angles, d_angles=d_angles, variable=variable
+    def h_rotational_energy(self, angles=None, d_angles=None):
+        """Contributions to h vector for angle coordinates from the rotational kinetic energy.
+        h vector in the form d/dt(dT/dqdot) - dT/dq = M @ ddot_q - h = 0.
+        h vector therefore includes - d/dq(dT/dqdot)*qdot + dT/dq."""
+
+        if d_angles is None:
+            d_angles = self.d_angles
+
+        h = np.zeros(len(self.q_all))
+
+        h[:3] = (
+            -self.dd_rotational_energy_dqdot_dq(angles=angles, d_angles=d_angles)
+            @ d_angles
+        )
+        for k, angle in enumerate(["alpha", "beta", "gamma"]):
+            h[k] += self.d_rotational_energy(
+                angles=angles, d_angles=d_angles, variable=angle
             )
-        rhs += self.generalized_damping_force(angles=angles, d_angles=d_angles)
-        return rhs
+        return h
 
-    def potential_energy(self, angles=None):
+    """ Potential energy and its derivative. """
+
+    def potential_energy(self, I_r_OS=None):
         """Potential energy."""
-        if angles is None:
-            angles = self.angles
-        return -self.total_mass * np.inner(self.I_r_OS(angles=angles), self.I_gravity)
+        if I_r_OS is None:
+            I_r_OS = self.I_r_OS()
+        return -self.total_mass * np.inner(I_r_OS, self.I_gravity)
+
+    def d_potential_energy(self, variable="alpha", **kwargs):
+        """Derivative of the potential energy."""
+        return -self.total_mass * np.inner(
+            -self.I_gravity, self.d_I_r_OS(variable=variable, **kwargs)
+        )
+
+    def h_potential_energy(self, **kwargs):
+        """Contributions to h vector for angle coordinates from the potential energy.
+        - dV/dq"""
+        h = np.zeros(len(self.q_all))
+        for k, var in enumerate(self.q_all):
+            h[k] = -self.d_potential_energy(variable=var, **kwargs)
+
+    """ Translational kinematic quantities """
 
     @abstractmethod
-    def I_r_OS(self, angles=None):
+    def I_r_OS(self, **kwargs):
         """Position of the center of mass in inertial frame."""
         ...
 
-    """ Kinematic quantities related to the suspension point. """
+    @abstractmethod
+    def d_I_r_OS(self, variable, **kwargs):
+        """Derivative of the position of the center of mass in inertial frame."""
+        ...
+
+    @abstractmethod
+    def I_v_S(self, **kwargs):
+        """Velocity of the center of mass in inertial frame."""
+        ...
 
     def I_r_OP(self, t=None):
         """Position suspension point in inertial frame."""
@@ -302,9 +362,158 @@ class AbstractSpatialPendulum(AbstractDAE):
             t = self.t
         return -self.epsilon * self.omega * np.sin(self.omega * t) * self.I_normal
 
+    """ Translational kinetic energy and its derivatives. """
+
+    def translational_energy(self, **kwargs):
+        v_S = self.I_v_S(**kwargs)
+        return 0.5 * self.total_mass * np.inner(v_S, v_S)
+
+    def d_translational_energy(self, variable, **kwargs):
+        v_S = self.I_v_S(**kwargs)
+        d_v_S = self.d_I_r_OS(variable, **kwargs)
+        return self.total_mass * np.inner(v_S, d_v_S)
+
+    @abstractmethod
+    def mass_translational_energy(self, **kwargs):
+        """Contributions to mass matrix from the translational kinetic energy."""
+        ...
+
+    @abstractmethod
+    def h_translational_energy(self, **kwargs):
+        """Contributions to h vector for angle coordinates from the translational kinetic energy.
+        h vector in the form d/dt(dT/dqdot) - dT/dq = M @ ddot_q - h = 0.
+        h vector therefore includes - d/dq(dT/dqdot)*qdot + dT/dq."""
+        ...
+
+    def constraints(self, **kwargs):
+        """Constraint equations. Should be zero when constraints are satisfied."""
+        return np.zeros(len(self.q_all) - 3)
+
+    def W_constraints(self, **kwargs):
+        """Transposed constraint Jacobian. Should be zero when constraints are satisfied."""
+        return np.zeros((len(self.q_all) - 3, len(self.q_all))).T
+
+    """ Assembly of first-order dynamics."""
+
+    def h_all(self, t, x, **kwargs):
+        """Assembly of h vector for all coordinates."""
+        if t is not None:
+            self.t = t
+        if x is not None:
+            self.x = x
+
+        h = (
+            self.h_rotational_energy()
+            + self.h_translational_energy()
+            + self.generalized_damping_force()
+            + self.h_potential_energy()
+        )
+
+        if self.num_constraints > 0:
+            h += self.W_constraints() @ self.lam
+
+    def dynamics(self, t=None, x=None):
+        if t is not None:
+            self.t = t
+        if x is not None:
+            self.x = x
+
+        # M = self.mass_rotational_energy() + self.mass_translational_energy()
+        h = (
+            self.h_rotational_energy()
+            + self.h_translational_energy()
+            + self.generalized_damping_force()
+            + self.h_potential_energy()
+            + self.W_constraints() @ self.lam
+        )
+
+        f = np.zeros(self.n_dof)
+        # Kinematics qdot = qdot
+        f[: len(self.q_all)] = self.x[len(self.q_all) : 2 * len(self.q_all)]
+        # Dynamics M @ ddot_q = h
+        f[len(self.q_all) : 2 * len(self.q_all)] = h
+        # Constraints
+        if self.num_constraints > 0:
+            f[2 * len(self.q_all) :] = self.constraints()
+        return f
+
+    def M_small(self, t=None, x=None):
+        """Pseudo-mass matrix for the first-order dynamics"""
+        if t is not None:
+            self.t = t
+        if x is not None:
+            self.x = x
+
+        # Kinematics
+        M = np.eye(self.n_dof)
+
+        # Kinetics
+        M[
+            len(self.q_all) : 2 * len(self.q_all), len(self.q_all) : 2 * len(self.q_all)
+        ] = (self.mass_rotational_energy() + self.mass_translational_energy())
+
+        # Constraints
+        M[2 * len(self.q_all) :, len(self.q_all) :] = 0
+
+        return M
+
 
 class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
-    pass
+    def __init__(
+        self,
+        t,
+        angles,
+        d_angles,
+        I_r_OS,
+        I_v_S,
+        lam,
+        d_lam,
+        shape_cuboid,
+        density,
+        delta,
+        epsilon,
+        omega,
+        damping,
+        stability_method=None,
+    ):
+        super().__init__(
+            t=t,
+            shape_cuboid=shape_cuboid,
+            density=density,
+            delta=delta,
+            epsilon=epsilon,
+            omega=omega,
+            damping=damping,
+            q_all=["alpha", "beta", "gamma", "x", "y", "z"],
+            invertible=False,
+            stability_method=stability_method,
+        )
+        self.x = np.concatenate([angles, I_r_OS, lam, d_angles, I_v_S, d_lam])
+
+    def I_r_OS(self, I_r_OS=None, **kwargs):
+        if I_r_OS is None:
+            return self.x[3:6]
+        else:
+            return I_r_OS
+
+    def I_v_S(self, I_v_S=None, **kwargs):
+        if I_v_S is None:
+            return self.x[10:13]
+        else:
+            return I_v_S
+
+    def d_I_r_OS(self, variable, I_v_S=None, **kwargs):
+        match variable:
+            case "t":
+                return self.I_v_S(I_v_S=I_v_S)
+            case "x":
+                return np.eye(3)[:, 0]
+            case "y":
+                return np.eye(3)[:, 1]
+            case "z":
+                return np.eye(3)[:, 2]
+            case _:
+                return np.zeros(3)
 
 
 class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
@@ -329,8 +538,7 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
             epsilon=epsilon,
             omega=omega,
             damping=damping,
-            n_dof=6,
-            invertible=True,
+            q_all=["alpha", "beta", "gamma"],
             stability_method=stability_method,
         )
         self.x = np.concatenate([angles, d_angles])
@@ -350,48 +558,13 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
         match variable:
             case "t":
                 return self.I_v_S(t=t, angles=angles, d_angles=d_angles)
-            case ["alpha", "beta", "gamma"]:
+            case "alpha" | "beta" | "gamma":
                 return (
                     self.d_A_IK(angles=angles, d_angles=d_angles, variable=variable)
                     @ self.K_r_SP
                 )
             case _:
                 return np.zeros(3)
-
-        return (
-            self.I_v_P(t=t)
-            + self.d_A_IK(angles=angles, d_angles=d_angles) @ self.K_r_SP
-        )
-
-    def d_potential_energy(self, angles=None, variable="alpha"):
-        """derivative of Potential energy w.r.t. alpha, beta, gamma."""
-        return np.inner(
-            -self.I_gravity, self.d_I_r_OS(angles=angles, variable=variable)
-        )
-
-    def translational_energy(self, t=None, angles=None, d_angles=None):
-        """Translational kinetic energy."""
-        v_S = self.I_v_S(t=t, angles=angles, d_angles=d_angles)
-        return 0.5 * self.total_mass * np.inner(v_S, v_S)
-
-    def d_translational_energy(
-        self, t=None, angles=None, d_angles=None, variable="alpha"
-    ):
-        """Derivative of the translational kinetic energy."""
-        v_S = self.I_v_S(t=t, angles=angles, d_angles=d_angles)
-        d_v_S = self.d_I_r_OS(t=t, angles=angles, d_angles=d_angles, variable=variable)
-        return self.total_mass * np.inner(v_S, d_v_S)
-
-    @override
-    def mass_secondorder(self, angles=None):
-        """There is an additional contribution to the mass matrix from the translational kinetic energy."""
-        mass = super().mass_secondorder(angles)
-        mass -= (
-            self.total_mass
-            * self.A_IK(angles=angles)
-            @ tilde_operator(self.K_r_SP)
-            @ self.K_J_R(angles=angles)
-        )  # TODO check whether this thing is symmetric!
 
     def M_small(self, t=None, x=None):
         return None
