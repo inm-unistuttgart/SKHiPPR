@@ -22,6 +22,7 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoi
 # --- Visualization ---
 from skhippr.visualization.continuation import plot_continuation
 
+
 def main():
     """
     Runs a demonstration of pseudo-arclength continuation for solving a nonlinear problem
@@ -157,7 +158,7 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
     ):
 
         branch.append(branch_point)
-        
+
         # Stopping criteria etc. can be user-defined in the loop
         if (
             param_max is not None
@@ -175,8 +176,8 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
         branch=branch,
         plot_fun=lambda point: point.y,
         ax=ax,
-        linestyle = "dotted",
-        )
+        linestyle="dotted",
+    )
 
     # Make sure the plots are perfectly circular
     plt.axis("equal")

@@ -2,7 +2,7 @@
 
 The :py:mod:`~skhippr.visualization.cycles` module provides standardized functions for visualizing limit cycles over multiple periods, their phase portraits as well as Floquet multipliers and exponents.
 
-Supported equations are instances of :py:class:`~skhippr.cycles.hbm.HBMEquation` or an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` like a :py:class:`~skhippr.cycles.hbm.HBMSystem` that contain such an equation.
+Supported arguments are an instance of :py:class:`~skhippr.cycles.hbm.HBMEquation` or an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` like a :py:class:`~skhippr.cycles.hbm.HBMSystem` that contains such an equation.
 
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
 :py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
@@ -18,7 +18,11 @@ from collections.abc import Sequence
 
 
 def plot_period(
-    hbm: HBMEquation | EquationSystem, ax=None, idx=0, n_periods: float = 1.0, **plot_kwargs
+    hbm: HBMEquation | EquationSystem,
+    ax=None,
+    idx=0,
+    n_periods: float = 1.0,
+    **plot_kwargs,
 ):
     """
     Plot the time series of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation` over a given number of periods.
@@ -66,7 +70,10 @@ def plot_period(
 
 
 def plot_phase(
-    hbm: HBMEquation | EquationSystem, ax=None, idx: Sequence[int] = [0, 1], **plot_kwargs
+    hbm: HBMEquation | EquationSystem,
+    ax=None,
+    idx: Sequence[int] = [0, 1],
+    **plot_kwargs,
 ):
     """
     Plot the phase of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`.
@@ -123,8 +130,8 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-        
-    kwargs = {"marker" : "x"}
+
+    kwargs = {"marker": "x"}
     kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(hbm)
@@ -170,8 +177,8 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-        
-    kwargs = {"marker" : "x"}
+
+    kwargs = {"marker": "x"}
     kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(hbm)
@@ -188,21 +195,21 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
         ax.set_xlabel("Re($\\alpha$)")
         ax.set_ylabel("Im($\\alpha$)")
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
-    return ax 
+    return ax
 
 
 def plot_hill_matrix_blocks(
     hbm: HBMEquation | EquationSystem,
     real_formulation=None,
     ax=None,
-    **plot_kwargs
+    **plot_kwargs,
 ):
     """
     Plot the Hill matrix as a grid of blocks, colored by their 2-norm.
     This function computes the Hill matrix of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`,
     segments it into n_dof x n_dof blocks, and creates a scatter plot where each block is represented
     as a dot. The color of each dot is determined by the 2-norm (spectral norm) of the corresponding block.
-    
+
     Parameters
     ----------
     hbm : HBMEquation or EquationSystem
@@ -211,12 +218,12 @@ def plot_hill_matrix_blocks(
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.scatter()``.
-    
+
     Returns
     -------
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
-    
+
     Notes
     -----
     The Hill matrix is partitioned into blocks of size n_dof x n_dof, arranged in a 2D grid.
@@ -226,20 +233,20 @@ def plot_hill_matrix_blocks(
     """
     # Compute Hill matrix
     hbm = _get_equation_helper(hbm=hbm)
-    #H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
-    H = hbm.hill_matrix(real_formulation=real_formulation)
+    H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
     n_dof = hbm.fourier.n_dof
     if hbm.fourier.real_formulation:
         index = range(2 * hbm.fourier.N_HBM + 1)
     else:
         index = range(-hbm.fourier.N_HBM, hbm.fourier.N_HBM + 1)
     ax = plot_matrix_block_norm(H, n_dof, ax=ax, index=index, **plot_kwargs)
-    return ax 
+    return ax
+
 
 def plot_matrix_block_norm(
     matrix: np.ndarray,
     block_size: int,
-    ax = None,
+    ax=None,
     index=None,
     logscale=False,
     vmax=None,
@@ -258,12 +265,12 @@ def plot_matrix_block_norm(
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     index : array-like, optional
-        Labels for block indices along both axes. If ``None``, uses 
+        Labels for block indices along both axes. If ``None``, uses
         ``range(matrix.shape[0] // block_size)``.
     logscale : bool, optional
         If ``True``, use logarithmic color scaling with :py:class:`~matplotlib.colors.LogNorm`.
     vmax, vmin : float, optional
-        Colorbar value limits passed to :py:class:`~matplotlib.colors.LogNorm` 
+        Colorbar value limits passed to :py:class:`~matplotlib.colors.LogNorm`
         when ``logscale=True``. If ``None``, limits are determined automatically.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.scatter()``.
@@ -314,9 +321,7 @@ def plot_matrix_block_norm(
     norm_values = np.array(norm_values)
     scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
     if logscale:
-        scatter_defaults["norm"] = LogNorm(
-            vmax=vmax, vmin=vmin, clip=False
-        )
+        scatter_defaults["norm"] = LogNorm(vmax=vmax, vmin=vmin, clip=False)
     scatter_defaults.update(plot_kwargs)
     sc = ax.scatter(
         x_positions,
@@ -330,6 +335,7 @@ def plot_matrix_block_norm(
         cbar.update_ticks()
     cbar.set_label("2-norm of block")
     return ax, sc
+
 
 def _get_equation_helper(hbm: HBMEquation | EquationSystem):
     """

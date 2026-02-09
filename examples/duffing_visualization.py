@@ -27,20 +27,20 @@ from skhippr.visualization.cycles import (
     plot_floquet_multipliers,
     plot_floquet_exponents,
     plot_phase,
-    plot_hill_matrix_blocks
+    plot_hill_matrix_blocks,
 )
 
 
 def main():
     """
     Demonstrates solving an ordinary differential equation for a periodic solution using HBM and visualizes properties of the solved :py:class:`~skhippr.cycles.hbm.HBMSystem` using SKHiPPR.
-    
+
     This function does the following:
-    
-    #. instantiate a :py:class:`~skhippr.cycles.hbm.HBMSystem` from a :py:class:`~skhippr.odes.nonautonomous.Duffing` object 
+
+    #. instantiate a :py:class:`~skhippr.cycles.hbm.HBMSystem` from a :py:class:`~skhippr.odes.nonautonomous.Duffing` object
     #. solve it using :py:func:`skhippr.solvers.newton.NewtonSolver.solve`
     #. visualize solution properties.
-    
+
     It generates multiple figures:
 
     #. A phase plot of the periodic solution
@@ -49,7 +49,7 @@ def main():
     #. A plot of the Floquet exponents in the complex plane
     #. A plot of the time series over a non-integer amount of periods
     #. A figure containing three of the plots as subplots.
-    
+
     """
 
     # --- FFT, stability method and Newton solver configuration ---
@@ -62,9 +62,7 @@ def main():
     F = 0.05
 
     # --- Instantiation of the ODE at initial point ---
-    ode = Duffing(
-        t=0, x=[1.0, 0.0], alpha=1, beta=2, delta=0.16, F=F, omega=omega
-    )
+    ode = Duffing(t=0, x=[1.0, 0.0], alpha=1, beta=2, delta=0.16, F=F, omega=omega)
 
     # --- Initial guess in time and frequency domain ---
     ts = fourier.time_samples(omega)
@@ -83,10 +81,10 @@ def main():
     # --- Solve initial point and visualize---
     solver.solve(hbm_sys)
     assert hbm_sys.solved
-    
+
     # --- Plotting a HBMSystem directly will use the first valid HBMEquation contained in the system ---
     plot_phase(hbm=hbm_sys)
-    
+
     # --- Optional: keyword arguments can be given for plotting and exctracting a specific HBMEquation from a system---
     kwargs = {"linestyle": "--"}
     hbm_equation = hbm_sys.equations[0]
@@ -96,7 +94,7 @@ def main():
     plot_floquet_multipliers(hbm=hbm_sys)
     plot_floquet_exponents(hbm=hbm_sys)
     plot_period(hbm=hbm_sys, n_periods=1.22)
-    #plot_hill_matrix_blocks(hbm = hbm_sys)
+    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=False, s=2, logscale=True)
 
     # --- Realisation with subplots ---
     _, axs = plt.subplots(nrows=1, ncols=3)
@@ -115,6 +113,7 @@ def main():
     axs[1].axis("equal")
     axs[2] = plot_floquet_exponents(hbm=hbm_sys, ax=axs[2])
     axs[2].set_title("Floquet exponents")
+
 
 if __name__ == "__main__":
     main()
