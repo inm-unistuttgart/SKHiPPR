@@ -26,7 +26,8 @@ from skhippr.visualization.cycles import (
     plot_period,
     plot_floquet_multipliers,
     plot_floquet_exponents,
-    plot_phase
+    plot_phase,
+    plot_hill_matrix_blocks
 )
 
 
@@ -95,6 +96,7 @@ def main():
     plot_floquet_multipliers(hbm=hbm_sys)
     plot_floquet_exponents(hbm=hbm_sys)
     plot_period(hbm=hbm_sys, n_periods=1.22)
+    #plot_hill_matrix_blocks(hbm = hbm_sys)
 
     # --- Realisation with subplots ---
     _, axs = plt.subplots(nrows=1, ncols=3)

@@ -44,12 +44,13 @@ def plot_equilibrium(
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+        
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(ode=ode)
     x = np.asarray(equation.x)
-    ax.plot(x[idx[0]], x[idx[1]], **plot_kwargs)
+    ax.plot(x[idx[0]], x[idx[1]], **kwargs)
     if generated_ax:
         ax.set_title("Equilibria")
         ax.set_xlabel("x1")
@@ -79,12 +80,14 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+        
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
+    
     equation = _get_equation_helper(ode=ode)
     eigenvalues = np.asarray(equation.eigenvalues)
     ax.scatter(
-        np.real(eigenvalues), np.imag(eigenvalues), label="eigenvalues", **plot_kwargs
+        np.real(eigenvalues), np.imag(eigenvalues), **kwargs
     )
     if generated_ax:
         ax.set_title("Equilibria eigenvalues")
@@ -115,7 +118,7 @@ def _get_equation_helper(ode: AbstractODE | EquationSystem):
     """
     if isinstance(ode, AbstractODE):
         return ode
-    if isinstance(ode, EquationSystem) and hasattr(ode, "equations"):
+    if isinstance(ode, EquationSystem):
         for equation in ode.equations:
             if isinstance(equation, AbstractODE):
                 return equation

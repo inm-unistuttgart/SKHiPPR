@@ -2,38 +2,31 @@
 
 The :py:mod:`~skhippr.visualization.cycles` module provides standardized functions for visualizing limit cycles over multiple periods, their phase portraits as well as Floquet multipliers and exponents.
 
-Supported equations are instances of :py:class:`~skhippr.cycles.hbm.HBMEquation` or :py:class:`~skhippr.cycles.hbm.HBMSystem` that contain such an equation.
+Supported equations are instances of :py:class:`~skhippr.cycles.hbm.HBMEquation` or an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` like a :py:class:`~skhippr.cycles.hbm.HBMSystem` that contain such an equation.
 
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
-:py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the floquet multipliers and exponents of a cycle.
+:py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 from skhippr.cycles.hbm import HBMEquation
-from skhippr.cycles.hbm import HBMSystem
+from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence
 
 
-__all__ = [
-    "plot_period",
-    "plot_phase",
-    "plot_floquet_multipliers",
-    "plot_floquet_exponents",
-]
-
-
 def plot_period(
-    hbm: HBMEquation | HBMSystem, ax=None, idx=0, n_periods: float = 1.0, **plot_kwargs
+    hbm: HBMEquation | EquationSystem, ax=None, idx=0, n_periods: float = 1.0, **plot_kwargs
 ):
     """
     Plot the time series of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation` over a given number of periods.
 
     Parameters
     ----------
-    hbm : HBMEquation or HBMSystem
-        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.cycles.hbm.HBMSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    hbm : HBMEquation or EquationSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, an :py:class:`~matplotlib.axes.Axes` instance will be created.
     idx : int, optional
@@ -73,15 +66,15 @@ def plot_period(
 
 
 def plot_phase(
-    hbm: HBMEquation | HBMSystem, ax=None, idx: Sequence[int] = [0, 1], **plot_kwargs
+    hbm: HBMEquation | EquationSystem, ax=None, idx: Sequence[int] = [0, 1], **plot_kwargs
 ):
     """
     Plot the phase of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`.
 
     Parameters
     ----------
-    hbm : HBMEquation or HBMSystem
-        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.cycles.hbm.HBMSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    hbm : HBMEquation or EquationSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If None, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     idx : Sequence[int], optional
@@ -108,14 +101,14 @@ def plot_phase(
     return ax
 
 
-def plot_floquet_multipliers(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwargs):
+def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_kwargs):
     """
     Plot the Floquet multipliers of the :py:class:`~skhippr.cycles.hbm.HBMEquation` solution.
 
     Parameters
     ----------
-    hbm : HBMEquation or HBMSystem
-        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.cycles.hbm.HBMSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    hbm : HBMEquation or EquationSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     **plot_kwargs
@@ -130,8 +123,9 @@ def plot_floquet_multipliers(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwarg
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+        
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(hbm)
     floquet_multipliers = equation.eigenvalues
@@ -139,15 +133,13 @@ def plot_floquet_multipliers(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwarg
     ax.scatter(
         np.real(floquet_multipliers),
         np.imag(floquet_multipliers),
-        label="$\\lambda$",
-        **plot_kwargs,
+        **kwargs,
     )
     if generated_ax:
         ax.set_title("Floquet multipliers")
         ax.set_xlabel("Re($\\lambda$)")
         ax.set_ylabel("Im($\\lambda$)")
         ax.set_aspect("equal")
-        ax.legend(loc="best")
         ax.plot(
             np.cos(fourier.time_samples_normalized),
             np.sin(fourier.time_samples_normalized),
@@ -156,14 +148,14 @@ def plot_floquet_multipliers(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwarg
     return ax
 
 
-def plot_floquet_exponents(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwargs):
+def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kwargs):
     """
     Calculate and plot the Floquet exponents of the :py:class:`~skhippr.cycles.hbm.HBMEquation` solution from the Floquet multipliers.
 
     Parameters
     ----------
-    hbm : HBMEquation or HBMSystem
-        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.cycles.hbm.HBMSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    hbm : HBMEquation or EquationSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     **plot_kwargs
@@ -178,8 +170,9 @@ def plot_floquet_exponents(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwargs)
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+        
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(hbm)
     floquet_multipliers = equation.eigenvalues
@@ -188,25 +181,163 @@ def plot_floquet_exponents(hbm: HBMEquation | HBMSystem, ax=None, **plot_kwargs)
     ax.scatter(
         np.real(floquet_exponents),
         np.imag(floquet_exponents),
-        label="$\\alpha$",
-        **plot_kwargs,
+        **kwargs,
     )
     if generated_ax:
         ax.set_title("Floquet exponents")
         ax.set_xlabel("Re($\\alpha$)")
         ax.set_ylabel("Im($\\alpha$)")
-        ax.legend(loc="best")
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
-    return ax
+    return ax 
 
 
-def _get_equation_helper(hbm: HBMEquation | HBMSystem):
+def plot_hill_matrix_blocks(
+    hbm: HBMEquation | EquationSystem,
+    real_formulation=None,
+    ax=None,
+    **plot_kwargs
+):
+    """
+    Plot the Hill matrix as a grid of blocks, colored by their 2-norm.
+    This function computes the Hill matrix of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`,
+    segments it into n_dof x n_dof blocks, and creates a scatter plot where each block is represented
+    as a dot. The color of each dot is determined by the 2-norm (spectral norm) of the corresponding block.
+    
+    Parameters
+    ----------
+    hbm : HBMEquation or EquationSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``.
+    
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
+    
+    Notes
+    -----
+    The Hill matrix is partitioned into blocks of size n_dof x n_dof, arranged in a 2D grid.
+    Each block's position in the plot corresponds to its position in the Hill matrix, and its
+    color represents the spectral norm (2-norm) of that block.
+
+    """
+    # Compute Hill matrix
+    hbm = _get_equation_helper(hbm=hbm)
+    #H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
+    H = hbm.hill_matrix(real_formulation=real_formulation)
+    n_dof = hbm.fourier.n_dof
+    if hbm.fourier.real_formulation:
+        index = range(2 * hbm.fourier.N_HBM + 1)
+    else:
+        index = range(-hbm.fourier.N_HBM, hbm.fourier.N_HBM + 1)
+    ax = plot_matrix_block_norm(H, n_dof, ax=ax, index=index, **plot_kwargs)
+    return ax 
+
+def plot_matrix_block_norm(
+    matrix: np.ndarray,
+    block_size: int,
+    ax = None,
+    index=None,
+    logscale=False,
+    vmax=None,
+    vmin=None,
+    **plot_kwargs,
+):
+    """
+    Plot a given square matrix as a grid of blocks, colored by their 2-norm.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        The matrix to be plotted.
+    block_size : int
+        The size of each block (assumed square).
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    index : array-like, optional
+        Labels for block indices along both axes. If ``None``, uses 
+        ``range(matrix.shape[0] // block_size)``.
+    logscale : bool, optional
+        If ``True``, use logarithmic color scaling with :py:class:`~matplotlib.colors.LogNorm`.
+    vmax, vmin : float, optional
+        Colorbar value limits passed to :py:class:`~matplotlib.colors.LogNorm` 
+        when ``logscale=True``. If ``None``, limits are determined automatically.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted matrix blocks.
+    sc : matplotlib.collections.PathCollection
+        The scatter plot collection object (for accessing colorbar, etc.).
+    """
+    if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(
+            f"Input matrix must be 2-D and square but has shape {matrix.shape}"
+        )
+    if index is None:
+        index = range(matrix.shape[0] // block_size)
+    num_blocks = len(index)
+    if num_blocks * block_size != matrix.shape[0]:
+        raise ValueError(
+            f"Matrix size ({matrix.shape[0]}) not given by block size ({block_size}) times number of blocks ({num_blocks})"
+        )
+    x_positions = []
+    y_positions = []
+    norm_values = []
+    for i in range(num_blocks):
+        for j in range(num_blocks):
+            block = matrix[
+                i * block_size : (i + 1) * block_size,
+                j * block_size : (j + 1) * block_size,
+            ]
+            norm = np.linalg.norm(block, ord=2)
+            x_positions.append(index[j])
+            y_positions.append(index[i])
+            norm_values.append(norm)
+    if isinstance(ax, str):
+        title = ax
+    else:
+        title = ""
+    if ax is None or isinstance(ax, str):
+        _, ax = plt.subplots()
+        ax.set_xlabel("Column index")
+        ax.set_ylabel("Row index")
+        ax.set_title(title)
+        ax.invert_yaxis()
+    x_positions = np.array(x_positions)
+    y_positions = np.array(y_positions)
+    norm_values = np.array(norm_values)
+    scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
+    if logscale:
+        scatter_defaults["norm"] = LogNorm(
+            vmax=vmax, vmin=vmin, clip=False
+        )
+    scatter_defaults.update(plot_kwargs)
+    sc = ax.scatter(
+        x_positions,
+        y_positions,
+        c=norm_values,
+        **scatter_defaults,
+    )
+    cbar = plt.colorbar(sc, ax=ax)
+    if logscale:
+        cbar.formatter = plt.matplotlib.ticker.LogFormatterMathtext(base=10)
+        cbar.update_ticks()
+    cbar.set_label("2-norm of block")
+    return ax, sc
+
+def _get_equation_helper(hbm: HBMEquation | EquationSystem):
     """
     Helper function that returns a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
     Parameters
     ----------
-    hbm : HBMEquation or HBMSystem
-        A equation or system of equations.
+    hbm : HBMEquation or EquationSystem
+        An equation or system of equations.
 
     Returns
     -------
@@ -220,7 +351,7 @@ def _get_equation_helper(hbm: HBMEquation | HBMSystem):
     """
     if isinstance(hbm, HBMEquation):
         return hbm
-    if isinstance(hbm, HBMSystem) and hasattr(hbm, "equations"):
+    if isinstance(hbm, EquationSystem):
         for equation in hbm.equations:
             if isinstance(equation, HBMEquation):
                 return equation
