@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors
+from copy import copy
+import tikzplotlib
 
 from skhippr.odes.ltp import HillODE, HillWithMass, HillWithMassInverted
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
@@ -27,6 +29,114 @@ from numpy.exceptions import ComplexWarning  # Corrected import
 warnings.filterwarnings("error", category=ComplexWarning)
 
 
+def plot_for_diss():
+
+    # System
+    fourier_ref = Fourier(N_HBM=300, L_DFT=1024, n_dof=2, real_formulation=True)
+
+    params = dict(omega=1.0, damping=0.05, forcing=1)
+    g_fun = lambda t: np.exp(5 * np.cos(t))
+    x0 = np.zeros((2, fourier_ref.L_DFT))
+
+    ode = HillODE(t=0, x=x0, g_fcn=g_fun, **params)
+    ode_mass = HillWithMass(t=0, x=x0, g_fun=g_fun, **params)
+
+    hbm_ref = solve_hbm(ode_mass, fourier_ref, dae=True, subh=False)
+    FMs_ref = np.sort(hbm_ref.eigenvalues)
+    print(FMs_ref)
+    ax_phase = plot_phase(hbm_ref, label="ref N = {fourier_ref.N_HBM}")
+
+    # Phase plots
+    N_phase = 17
+    hbm = solve_hbm(ode, fourier_ref.__replace__(N_HBM=N_phase), subh=True)
+    plot_phase(hbm, ax=ax_phase, label=f"no mass N = {N_phase}")
+
+    hbm_mass = solve_hbm(
+        ode_mass, fourier_ref.__replace__(N_HBM=N_phase), dae=True, subh=True
+    )
+    plot_phase(hbm_mass, ax=ax_phase, label="with mass N = {N_phase}")
+    ax_phase.set_title("Periodic solution")
+    ax_phase.legend()
+
+    tikzplotlib.save("plots/mathieu_mass_phase.tex")
+
+    # Excitation function
+    # ---- g functions + spectra ----
+    g, g_inv = plot_g_functions(ode, ode_mass, fourier_ref)
+    plot_fourier_coeffs(40, g, g_inv)
+    tikzplotlib.save("plots/mathieu_mass_FC.tex")
+
+    # Iterate through N_HBM values and plot error
+    ax_FMs = [None, None, None, None]
+    N_max = 90
+    Ns = np.arange(1, N_max + 1)
+    errors = np.zeros((6, len(Ns)))
+
+    N_visualize = (17, 55)
+    for k, N_HBM in enumerate(Ns):
+        print(N_HBM)
+        fourier = fourier_ref.__replace__(N_HBM=N_HBM)
+        hbm_dir = solve_hbm(copy(ode), fourier, subh=False, verbose=False)
+        hbm_subh = solve_hbm(copy(ode), fourier, subh=True, verbose=False)
+        hbm_mass = solve_hbm(
+            copy(ode_mass), fourier, dae=True, subh=False, verbose=False
+        )
+        hbm_mass_subh = solve_hbm(
+            copy(ode_mass), fourier, dae=True, subh=True, verbose=False
+        )
+
+        # Plot errors in Floquet multipliers
+        for idx, hbm in enumerate((hbm_dir, hbm_subh, hbm_mass, hbm_mass_subh)):
+            FMs = np.sort(hbm.stability_method.determine_eigenvalues(hbm))
+            e1 = np.max(np.abs(FMs - FMs_ref))
+            e2 = np.max(np.abs(FMs - np.flip(FMs_ref)))
+            errors[idx, k] = min(e1, e2)
+
+        # Plot errors in HBM
+        for idx, hbm in enumerate((hbm_dir, hbm_mass)):
+            x_time = hbm.x_time()
+            x_time_ref = hbm_ref.x_time()
+            error_hbm = np.max(np.abs(x_time - x_time_ref))
+            errors[idx + 4, k] = np.max(error_hbm)
+
+        # visualize Toeplitz structure
+        if N_HBM in N_visualize:
+            hill_mat = hbm_dir.hill_matrix(real_formulation=False, update=False)
+            hill_mat_mass = hbm_mass.hill_matrix(real_formulation=False, update=False)
+            M = hbm_mass.M()
+            if hbm.fourier.real_formulation:
+                M = (
+                    hbm_mass.fourier.T_to_cplx_from_real
+                    @ M
+                    @ hbm_mass.fourier.T_to_real_from_cplx
+                )
+            hill_mat_mass = np.linalg.solve(M, hill_mat_mass)
+            plot_matrix_block_norm(
+                hill_mat - hill_mat_mass,
+                hbm.fourier.n_dof,
+                index=np.arange(-N_HBM, N_HBM + 1),
+                ax=f"Hill matrix difference N={N_HBM}",
+                logscale=True,
+                s=0.5,
+                cmap="Greys",
+            )
+            tikzplotlib.save(f"plots/mathieu_mass_hill_N_{N_HBM}.tex")
+
+    _, ax_error = plt.subplots()
+    ax_error.plot(Ns, errors[0, :], "-", label="no mass")
+    ax_error.plot(Ns, errors[1, :], "--", label="no mass subh")
+    ax_error.plot(Ns, errors[2, :], "-.", label="with mass")
+    ax_error.plot(Ns, errors[3, :], ":", label="with mass subh")
+    ax_error.plot(Ns, errors[4, :], "-o", label="HBM no mass")
+    ax_error.plot(Ns, errors[5, :], "--s", label="HBM with mass")
+
+    ax_error.set_yscale("log")
+    ax_error.set_xlabel("N_HBM")
+    ax_error.set_ylabel("Max Floquet Multiplier Error")
+    ax_error.legend()
+    tikzplotlib.save("plots/mathieu_mass_error.tex")
+
+
 def main():
     # ---- Parameters ----
     params = dict(omega=1.0, damping=0.05, forcing=1)
@@ -34,7 +144,7 @@ def main():
     # g_fun = lambda t: 1 / (1 + 0.9 * np.cos(t))
     # g_fun = lambda t: 1 + 0.9 * np.cos(t)
     fourier_ref = Fourier(N_HBM=150, L_DFT=1024, n_dof=2, real_formulation=True)
-    fourier = fourier_ref.__replace__(N_HBM=55)
+    fourier = fourier_ref.__replace__(N_HBM=17)
     x0 = np.zeros((2, fourier.L_DFT))
 
     # ---- ODEs ----
@@ -103,7 +213,7 @@ def main():
 
     # ---- Prints ----
 
-    if fourier.N_HBM <= 20:
+    if fourier.N_HBM <= 10:
         print("Reference Hill matrix blocks:")
         print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
 
@@ -221,6 +331,7 @@ def solve_hbm(
     fourier,
     dae=False,
     subh=False,
+    verbose=True,
 ):
     if dae:
         if subh:
@@ -247,7 +358,7 @@ def solve_hbm(
             stability_method=stability_method,
         )
 
-    solver = NewtonSolver(verbose=True)
+    solver = NewtonSolver(verbose=verbose)
     solver.solve_equation(hbm, "X")
     return hbm
 
@@ -421,5 +532,5 @@ def plot_hill_matrix_blocks(
 
 
 if __name__ == "__main__":
-    main()
+    plot_for_diss()
     plt.show()
