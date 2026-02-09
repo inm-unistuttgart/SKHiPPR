@@ -188,7 +188,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 _, beta, gamma = angles
                 return np.array(
                     [
-                        [np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
+                        [-np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
                         [-np.sin(beta) * np.sin(gamma), np.cos(gamma), 0],
                         [0, 0, 0],
                     ]

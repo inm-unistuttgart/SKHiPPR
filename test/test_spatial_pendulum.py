@@ -3,6 +3,21 @@ import pytest
 from skhippr.odes.spatialpendulum import *
 
 
+def finite_difference(func, res_expected, arg=0, stepsize=1e-5):
+    val_0 = func(arg)
+    val_1 = func(arg + stepsize)
+    res = (val_1 - val_0) / stepsize
+    assert np.allclose(
+        res, res_expected, atol=1e-2
+    ), f"Finite difference error: {np.linalg.norm(res - res_expected)}"
+
+
+def test_fd():
+    func = lambda x: np.array([np.sin(x), np.cos(x), np.exp(x)])
+    res_expected = np.array([np.cos(1), -np.sin(1), np.exp(1)])
+    finite_difference(func, res_expected, arg=1)
+
+
 def test_trafo_x():
     alphas = np.linspace(0, 2 * np.pi, num=300)
     d_alpha = alphas[1] - alphas[0]
@@ -61,37 +76,50 @@ def test_tilde_operator():
 
 
 @pytest.fixture
-def pend():
+def pend_without_constraints():
     vec_angles = np.random.rand(3)
+    vec_d_angles = np.random.rand(3)
     return SpatialPendulumWithoutConstraints(
-        0, vec_angles, np.zeros(3), [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
+        0, vec_angles, vec_d_angles, [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
     )
 
 
-def test_angle_extraction(pend):
-    assert np.linalg.norm(pend.d_angles) == 0
-    assert np.linalg.norm(pend.angles - pend.x[:3]) == 0
+def test_angle_extraction(pend_without_constraints):
+    assert (
+        np.linalg.norm(pend_without_constraints.angles - pend_without_constraints.x[:3])
+        == 0
+    )
+    assert (
+        np.linalg.norm(
+            pend_without_constraints.d_angles - pend_without_constraints.x[3:]
+        )
+        == 0
+    )
     try:
-        pend.angles = np.array([0.1, 0.2, 0.3])
+        pend_without_constraints.angles = np.array([0.1, 0.2, 0.3])
         raise AssertionError("Should not be able to set angles directly.")
     except AttributeError as AE:
         pass  # expected behavior
 
     try:
-        pend.d_angles = np.array([0.1, 0.2, 0.3])
+        pend_without_constraints.d_angles = np.array([0.1, 0.2, 0.3])
         raise AssertionError("Should not be able to set angle derivatives directly.")
     except AttributeError as AE:
         pass  # expected behavior
 
 
-def test_A_KI(pend):
+def test_A_KI(pend_without_constraints):
     range_angles = np.arange(0, 2 * np.pi, 13)
     for alpha in range_angles:
         for beta in range_angles:
             for gamma in range_angles:
                 angles = np.array([alpha, beta, gamma])
-                res_A_IK = pend.A_IK(angles)
-                res_prod = pend.A_I1(angles) @ pend.A_12(angles) @ pend.A_2K(angles)
+                res_A_IK = pend_without_constraints.A_IK(angles)
+                res_prod = (
+                    pend_without_constraints.A_I1(angles)
+                    @ pend_without_constraints.A_12(angles)
+                    @ pend_without_constraints.A_2K(angles)
+                )
                 res_exp = (
                     trafo_around_z(alpha) @ trafo_around_x(beta) @ trafo_around_z(gamma)
                 )
@@ -99,16 +127,57 @@ def test_A_KI(pend):
                 assert np.allclose(res_prod, res_exp)
 
 
-def test_fd():
-    func = lambda x: np.array([np.sin(x), np.cos(x), np.exp(x)])
-    res_expected = np.array([np.cos(1), -np.sin(1), np.exp(1)])
-    finite_difference(func, res_expected, arg=1)
+def test_K_Omega(pend_without_constraints):
+
+    for angles in [np.random.rand(3)]:
+        for d_angles in [np.random.rand(3)]:
+            if d_angles is None:
+                d_angles = pend_without_constraints.d_angles
+            d_alpha, d_beta, d_gamma = d_angles
+
+            omega_1 = np.array([0, 0, d_alpha])
+            omega_2 = pend_without_constraints.A_12(angles).T @ omega_1 + np.array(
+                [d_beta, 0, 0]
+            )
+            omega_ref = pend_without_constraints.A_2K(angles).T @ omega_2 + np.array(
+                [0, 0, d_gamma]
+            )
+            assert np.allclose(
+                pend_without_constraints.K_Omega(angles, d_angles), omega_ref
+            )
 
 
-def finite_difference(func, res_expected, arg=0, stepsize=1e-5):
-    val_0 = func(arg)
-    val_1 = func(arg + stepsize)
-    res = (val_1 - val_0) / stepsize
-    assert np.allclose(
-        res, res_expected, atol=1e-2
-    ), f"Finite difference error: {np.linalg.norm(res - res_expected)}"
+def test_K_J_R(pend_without_constraints):
+    for angles in [np.random.rand(3), None]:
+        eye = np.eye(3)
+        K_J_R = pend_without_constraints.K_J_R(angles)
+        for col in range(3):
+            col_exp = pend_without_constraints.K_Omega(angles, eye[:, col])
+            assert np.allclose(K_J_R[:, col], col_exp)
+
+
+def test_d_K_J_R(pend_without_constraints):
+    eye = np.eye(3)
+    for angles in [None]:
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.K_J_R(
+                    angles=pend_without_constraints.angles + var * eye[:, k]
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.K_J_R(
+                    angles=angles + var * eye[:, k]
+                )
+
+            d_K_J_R = pend_without_constraints.d_K_J_R(angles=angles, variable=variable)
+            finite_difference(fd_func, d_K_J_R)
+
+
+if __name__ == "__main__":
+
+    vec_angles = np.random.rand(3)
+    vec_d_angles = np.random.rand(3)
+    pend = SpatialPendulumWithoutConstraints(
+        0, vec_angles, vec_d_angles, [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
+    )
+    test_d_K_J_R(pend)
