@@ -365,6 +365,12 @@ class AbstractSpatialPendulum(AbstractDAE):
             t = self.t
         return -self.epsilon * self.omega * np.sin(self.omega * t) * self.I_normal
 
+    def I_a_P(self, t=None):
+        """Acceleration of the suspension point in inertial frame."""
+        if t is None:
+            t = self.t
+        return -self.epsilon * self.omega**2 * np.cos(self.omega * t) * self.I_normal
+
     """ Translational kinetic energy and its derivatives. """
 
     def translational_energy(self, **kwargs):
@@ -631,14 +637,60 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
         A_KI = self.A_KI(angles=angles)
         r_tilde = tilde_operator(self.K_r_SP)
         v = self.I_v_S(t=t, angles=angles, d_angles=d_angles)
-        return self.total_mass @ K_J_R.T @ r_tilde @ A_KI @ v
+        return -self.total_mass * K_J_R.T @ r_tilde @ A_KI @ v
 
     def h_translational_energy(self, **kwargs):
-        return super().h_translational_energy(**kwargs)
+        """Contributions to h vector for angle coordinates from the translational kinetic energy.
+        h vector in the form d/dt(dT/dqdot) - dT/dq = M @ ddot_q - h = 0.
+        h vector therefore includes -partial_t(dT/dqdot) -d/dq(dT/dqdot)*qdot + dT/dq.
+        """
+        angles = kwargs.get("angles", self.angles)
+        d_angles = kwargs.get("d_angles", self.d_angles)
+        t = kwargs.get("t", self.t)
 
-    def mass_translational_energy(self, **kwargs):
+        K_J_R = self.K_J_R(angles=angles)
+        A_KI = self.A_KI(angles=angles)
+        r_tilde = tilde_operator(self.K_r_SP)
+        v = self.I_v_S(t=t, angles=angles, d_angles=d_angles)
+
+        # partial time derivative
+        h = self.total_mass * K_J_R.T @ r_tilde @ A_KI @ self.I_a_P(t=t)
+        for k, var in enumerate(["alpha", "beta", "gamma"]):
+            # dT/dq term
+            h[k] += self.d_translational_energy(
+                variable=var, angles=angles, d_angles=d_angles, **kwargs
+            )
+
+            # d/dq (dT/dqdot) qdot terms by product rule
+            h += (
+                d_angles[k]
+                * self.total_mass
+                * self.d_K_J_R(angles=angles, variable=var).T
+                @ r_tilde
+                @ A_KI
+                @ v
+            )
+            h += (
+                d_angles[k]
+                * self.total_mass
+                * K_J_R.T
+                @ r_tilde
+                @ self.d_A_KI(angles=angles, variable=var)
+                @ v
+            )
+            h += (
+                d_angles[k]
+                * self.total_mass
+                * K_J_R.T
+                @ r_tilde
+                @ A_KI
+                @ self.d_I_v_S(t=t, angles=angles, d_angles=d_angles, variable=var)
+            )
+        return h
+
+    def mass_translational_energy(self, angles=None, **kwargs):
         """Contributions to mass matrix from the translational kinetic energy."""
-        K_J_R = self.K_J_R(angles=kwargs.get("angles", self.angles))
+        K_J_R = self.K_J_R(angles=angles)
         r_tilde = tilde_operator(self.K_r_SP)
         mass = -self.total_mass * K_J_R.T @ r_tilde @ r_tilde @ K_J_R
         return mass

@@ -576,6 +576,36 @@ def test_d_translational_energy(pend_without_constraints):
                 finite_difference(fd_func[j], d_tr_energy)
 
 
+def test_d_transl_d_qdot(pend_without_constraints):
+    for t in [None, np.random.rand(1)]:
+        for angles, d_angles in zip(
+            [None, np.random.rand(3)], [None, np.random.rand(3)]
+        ):
+            d_transl_dqdot = pend_without_constraints.d_transl_dqdot(
+                t=t, angles=angles, d_angles=d_angles
+            )
+            assert d_transl_dqdot.shape == (3,)
+            for k, variable in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+                d_transl_d_var = pend_without_constraints.d_translational_energy(
+                    t=t, angles=angles, d_angles=d_angles, variable=variable
+                )
+                assert np.allclose(d_transl_d_var, d_transl_dqdot[k])
+
+
+def test_mass_translational_energy(pend_without_constraints):
+    for angles in [None, np.random.rand(3)]:
+        mass = pend_without_constraints.mass_translational_energy(angles=angles)
+        for k, variable in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+            fd_func = lambda var: pend_without_constraints.d_transl_dqdot(
+                angles=angles,
+                d_angles=pend_without_constraints.d_angles + var * np.eye(3)[:, k],
+            )
+            finite_difference(fd_func, mass[:, k])
+
+
+# no clue how one can check h vector :(
+
+
 if __name__ == "__main__":
 
     vec_angles = np.random.rand(3)
@@ -583,4 +613,4 @@ if __name__ == "__main__":
     pend = SpatialPendulumWithoutConstraints(
         0, vec_angles, vec_d_angles, [1, 2, 3], 0.1, 1, 1, 1, 1, stability_method=None
     )
-    test_d_translational_energy(pend)
+    test_d_transl_d_qdot(pend)
