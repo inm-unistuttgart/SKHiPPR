@@ -200,7 +200,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 return np.array(
                     [
                         [np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
-                        [-np.sin(beta) * np.sin(gamma), np.cos(gamma), 0],
+                        [-np.sin(beta) * np.sin(gamma), -np.cos(gamma), 0],
                         [0, 0, 0],
                     ]
                 )
@@ -350,6 +350,9 @@ class AbstractSpatialPendulum(AbstractDAE):
         """Velocity of the center of mass in inertial frame."""
         ...
 
+    @abstractmethod
+    def d_I_v_S(self, variable, **kwargs): ...
+
     def I_r_OP(self, t=None):
         """Position suspension point in inertial frame."""
         if t is None:
@@ -370,7 +373,7 @@ class AbstractSpatialPendulum(AbstractDAE):
 
     def d_translational_energy(self, variable, **kwargs):
         v_S = self.I_v_S(**kwargs)
-        d_v_S = self.d_I_r_OS(variable, **kwargs)
+        d_v_S = self.d_I_v_S(variable=variable, **kwargs)
         return self.total_mass * np.inner(v_S, d_v_S)
 
     @abstractmethod
@@ -515,6 +518,9 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
             case _:
                 return np.zeros(3)
 
+    def d_I_v_S(self, variable, **kwargs):
+        pass
+
     def h_translational_energy(self, **kwargs):
         return
 
@@ -577,7 +583,49 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
             case _:
                 return np.zeros(3)
 
-    def d_transl_dqdot(self, t=None, angles=None, d_angles=None, variable="alpha"):
+    def d_I_v_S(self, t=None, angles=None, d_angles=None, variable="alpha"):
+        """derivative of the velocity of the center of mass in inertial frame.
+        v_S = v_P + A_IK @ tilde(K_r_SP) @ K_J_R @ d_angles
+
+        """
+        match variable:
+            case "t":
+                raise ValueError(
+                    "Time derivative of I_v_S requires 2nd derivatives of the angles and cannot be computed in this method. "
+                )
+            case "alpha" | "beta" | "gamma":
+                r_tilde = tilde_operator(self.K_r_SP)
+                A_IK = self.A_IK(angles=angles)
+                K_J_R = self.K_J_R(angles=angles)
+                if d_angles is None:
+                    d_angles = self.d_angles
+
+                result = (
+                    self.d_A_IK(angles=angles, variable=variable)
+                    @ r_tilde
+                    @ K_J_R
+                    @ d_angles
+                )
+                result += (
+                    A_IK
+                    @ r_tilde
+                    @ self.d_K_J_R(angles=angles, variable=variable)
+                    @ d_angles
+                )
+                return result
+            case "d_alpha" | "d_beta" | "d_gamma":
+                dv_dqdot = (
+                    self.A_IK(angles=angles)
+                    @ tilde_operator(self.K_r_SP)
+                    @ self.K_J_R(angles=angles)
+                )
+                for k, angle in enumerate(["d_alpha", "d_beta", "d_gamma"]):
+                    if variable == angle:
+                        return dv_dqdot[:, k]
+            case _:
+                return np.zeros(3)
+
+    def d_transl_dqdot(self, t=None, angles=None, d_angles=None):
         """Derivative of the translational kinetic energy w.r.t. [d_alpha, d_beta, d_gamma]."""
         K_J_R = self.K_J_R(angles=angles)
         A_KI = self.A_KI(angles=angles)
