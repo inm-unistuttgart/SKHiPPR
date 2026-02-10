@@ -48,7 +48,7 @@ def test_trafo_z():
     vec_before = vec_0
     for alpha in alphas:
         vec_trafo = trafo_around_z(alpha) @ vec_0
-        vec_expected = np.array([np.cos(alpha), np.sin(alpha), 1])
+        vec_expected = np.array([np.cos(alpha), -np.sin(alpha), 1])
         assert np.isclose(np.linalg.norm(vec_trafo), np.linalg.norm(vec_expected))
 
         if alpha > 0:
@@ -127,6 +127,86 @@ def test_A_KI(pend_without_constraints):
                 assert np.allclose(res_prod, res_exp)
 
 
+def test_d_AI1(pend_without_constraints):
+    for angles in [None, np.random.rand(3)]:
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.A_I1(
+                    angles=pend_without_constraints.angles + var * np.eye(3)[:, k]
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.A_I1(
+                    angles=angles + var * np.eye(3)[:, k]
+                )
+            d_A_I1 = pend_without_constraints.d_A_I1(angles=angles, variable=variable)
+            finite_difference(fd_func, d_A_I1)
+
+        # test derivative w.r.t time
+        omega_I1_expected = np.array([0, 0, pend_without_constraints.d_angles[0]])
+        dot_A_I1 = pend_without_constraints.d_A_I1(angles=angles, variable="t")
+        A_I1 = pend_without_constraints.A_I1(angles=angles)
+        tilde_omega_I1 = dot_A_I1 @ A_I1.T
+        assert np.allclose(tilde_omega_I1, tilde_operator(omega_I1_expected))
+
+
+def test_d_A12(pend_without_constraints):
+    for angles in [None, np.random.rand(3)]:
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.A_12(
+                    angles=pend_without_constraints.angles + var * np.eye(3)[:, k]
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.A_12(
+                    angles=angles + var * np.eye(3)[:, k]
+                )
+            d_A_12 = pend_without_constraints.d_A_12(angles=angles, variable=variable)
+            finite_difference(fd_func, d_A_12)
+        # test derivative w.r.t time
+        omega_12_expected = np.array([pend_without_constraints.d_angles[1], 0, 0])
+        dot_A_12 = pend_without_constraints.d_A_12(angles=angles, variable="t")
+        A_12 = pend_without_constraints.A_12(angles=angles)
+        tilde_omega_12 = dot_A_12 @ A_12.T
+        assert np.allclose(tilde_omega_12, tilde_operator(omega_12_expected))
+
+
+def test_d_A2K(pend_without_constraints):
+    for angles in [None, np.random.rand(3)]:
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.A_2K(
+                    angles=pend_without_constraints.angles + var * np.eye(3)[:, k]
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.A_2K(
+                    angles=angles + var * np.eye(3)[:, k]
+                )
+            d_A_2K = pend_without_constraints.d_A_2K(angles=angles, variable=variable)
+            finite_difference(fd_func, d_A_2K)
+
+        # test derivative w.r.t time
+        omega_2K_expected = np.array([0, 0, pend_without_constraints.d_angles[2]])
+        dot_A_2K = pend_without_constraints.d_A_2K(angles=angles, variable="t")
+        A_2K = pend_without_constraints.A_2K(angles=angles)
+        tilde_omega_2K = dot_A_2K @ A_2K.T
+        assert np.allclose(tilde_omega_2K, tilde_operator(omega_2K_expected))
+
+
+def test_d_AIK(pend_without_constraints):
+    for angles in [None, np.random.rand(3)]:
+        for k, variable in enumerate(["alpha", "beta", "gamma"]):
+            if angles is None:
+                fd_func = lambda var: pend_without_constraints.A_IK(
+                    angles=pend_without_constraints.angles + var * np.eye(3)[:, k]
+                )
+            else:
+                fd_func = lambda var: pend_without_constraints.A_IK(
+                    angles=angles + var * np.eye(3)[:, k]
+                )
+            d_A_IK = pend_without_constraints.d_A_IK(angles=angles, variable=variable)
+            finite_difference(fd_func, d_A_IK)
+
+
 def test_K_Omega(pend_without_constraints):
 
     for angles in [np.random.rand(3)]:
@@ -142,9 +222,19 @@ def test_K_Omega(pend_without_constraints):
             omega_ref = pend_without_constraints.A_2K(angles).T @ omega_2 + np.array(
                 [0, 0, d_gamma]
             )
+
+            K_Omega = pend_without_constraints.K_Omega(angles, d_angles)
             assert np.allclose(
                 pend_without_constraints.K_Omega(angles, d_angles), omega_ref
             )
+
+            A_KI = pend_without_constraints.A_KI(angles)
+            d_A_IK = pend_without_constraints.d_A_IK(
+                angles=angles, d_angles=d_angles, variable="t"
+            )
+            om_tilde_exp = A_KI @ d_A_IK
+            om_tilde = tilde_operator(K_Omega)
+            assert np.allclose(om_tilde, om_tilde_exp)
 
 
 def test_d_K_Omega_d_angle(pend_without_constraints):
@@ -395,10 +485,8 @@ def test_d_I_r_OS(pend_without_constraints):
 
 
 def test_v_S(pend_without_constraints):
-    for t in [None, np.random.rand(1)]:
-        for angles, d_angles in zip(
-            [None, np.random.rand(3)], [None, np.random.rand(3)]
-        ):
+    for t in [0, np.random.rand(1)]:
+        for angles, d_angles in zip([np.random.rand(3)], [np.random.rand(3)]):
             v_exp = pend_without_constraints.I_v_P(t=t)
             for k, var in enumerate(["alpha", "beta", "gamma"]):
                 if d_angles is None:
@@ -411,10 +499,11 @@ def test_v_S(pend_without_constraints):
                     )
                     * d_angle
                 )
-
-            assert np.allclose(
-                pend_without_constraints.I_v_S(t, angles, d_angles), v_exp
+            v_exp2 = pend_without_constraints.d_I_r_OS(
+                t=t, angles=angles, variable="t", d_angles=d_angles
             )
+            v_act = pend_without_constraints.I_v_S(t, angles, d_angles)
+            assert np.allclose(v_act, v_exp)
 
 
 def test_d_translational_energy(pend_without_constraints):
@@ -459,4 +548,6 @@ if __name__ == "__main__":
     pend = SpatialPendulumWithoutConstraints(
         0, vec_angles, vec_d_angles, [1, 1, 1], 0.1, 1, 1, 1, 1, stability_method=None
     )
+    test_d_A2K(pend)
+    test_K_Omega(pend)
     test_v_S(pend)

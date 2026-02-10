@@ -172,8 +172,8 @@ class AbstractSpatialPendulum(AbstractDAE):
         _, beta, gamma = angles
         return np.array(
             [
-                [-np.sin(gamma) * np.sin(beta), np.cos(gamma), 0],
-                [np.sin(beta) * np.cos(gamma), np.sin(gamma), 0],
+                [np.sin(gamma) * np.sin(beta), np.cos(gamma), 0],
+                [np.sin(beta) * np.cos(gamma), -np.sin(gamma), 0],
                 [np.cos(beta), 0, 1],
             ]
         )
@@ -188,7 +188,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 _, beta, gamma = angles
                 return np.array(
                     [
-                        [-np.sin(gamma) * np.cos(beta), 0, 0],
+                        [np.sin(gamma) * np.cos(beta), 0, 0],
                         [np.cos(beta) * np.cos(gamma), 0, 0],
                         [-np.sin(beta), 0, 0],
                     ]
@@ -199,7 +199,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 _, beta, gamma = angles
                 return np.array(
                     [
-                        [-np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
+                        [np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
                         [-np.sin(beta) * np.sin(gamma), np.cos(gamma), 0],
                         [0, 0, 0],
                     ]
@@ -551,21 +551,29 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
 
     def I_r_OS(self, t=None, angles=None):
         """Position of the center of mass in inertial frame."""
-        return self.I_r_OP(t=t) + self.A_IK(angles=angles) @ self.K_r_SP
+        K_r_PS = -self.K_r_SP
+        I_r_PS = self.A_IK(angles=angles) @ K_r_PS
+        return self.I_r_OP(t=t) + I_r_PS
 
     def I_v_S(self, t=None, angles=None, d_angles=None):
         """Velocity of the center of mass in inertial frame."""
-        return self.I_v_P(t=t) - self.A_IK(angles=angles) @ (
-            np.cross(self.K_Omega(angles=angles, d_angles=d_angles), self.K_r_SP)
-        )
+        A_IK = self.A_IK(angles=angles)
+        K_Omega = self.K_Omega(angles=angles, d_angles=d_angles)
+        K_r_PS = -self.K_r_SP
+        return self.I_v_P(t=t) + A_IK @ np.cross(K_Omega, K_r_PS)
 
     def d_I_r_OS(self, t=None, angles=None, d_angles=None, variable="alpha"):
         """derivative of the center of mass in inertial frame."""
         match variable:
             case "t":
-                return self.I_v_S(t=t, angles=angles, d_angles=d_angles)
+                # return self.I_v_S(t=t, angles=angles, d_angles=d_angles)
+                return (
+                    self.I_v_P(t=t)
+                    - self.d_A_IK(angles=angles, d_angles=d_angles, variable="t")
+                    @ self.K_r_SP
+                )
             case "alpha" | "beta" | "gamma":
-                return self.d_A_IK(angles=angles, variable=variable) @ self.K_r_SP
+                return -self.d_A_IK(angles=angles, variable=variable) @ self.K_r_SP
             case _:
                 return np.zeros(3)
 
@@ -611,8 +619,8 @@ def d_trafo_around_x(angle):
 def trafo_around_z(angle):
     return np.array(
         [
-            [np.cos(angle), np.sin(angle), 0],
-            [-np.sin(angle), np.cos(angle), 0],
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
             [0, 0, 1],
         ]
     )
@@ -621,8 +629,8 @@ def trafo_around_z(angle):
 def d_trafo_around_z(angle):
     return np.array(
         [
-            [-np.sin(angle), np.cos(angle), 0],
-            [-np.cos(angle), -np.sin(angle), 0],
+            [-np.sin(angle), -np.cos(angle), 0],
+            [np.cos(angle), -np.sin(angle), 0],
             [0, 0, 0],
         ]
     )
