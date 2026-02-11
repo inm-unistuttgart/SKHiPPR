@@ -70,7 +70,8 @@ class NewtonSolver:
 
         residual = self.check_converged(equation_system, update=True)
         if not equation_system.solved:
-            delta_x = np.linalg.solve(equation_system.jacobian(update=True), -residual)
+            jac = equation_system.jacobian(update=True)
+            delta_x = np.linalg.solve(jac, -residual)
             equation_system.vector_of_unknowns = (
                 equation_system.vector_of_unknowns + delta_x
             )

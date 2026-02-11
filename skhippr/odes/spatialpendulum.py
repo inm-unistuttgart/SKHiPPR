@@ -272,7 +272,8 @@ class AbstractSpatialPendulum(AbstractDAE):
             [self.K_J_R(angles=angles).T, np.zeros((len(self.q_all) - 3, 3))]
         )
         # Spring force for alpha rotation
-        gen_spring_force = np.array([-self.spring * self.angles[0], 0, 0])
+        gen_spring_force = np.zeros(len(self.q_all))
+        gen_spring_force[0] = -self.spring * self.angles[0]
         return gen_spring_force + proj_matrix @ K_damping
 
     def rotational_energy(self, angles=None, d_angles=None):
