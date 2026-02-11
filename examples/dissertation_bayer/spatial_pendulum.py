@@ -97,89 +97,90 @@ def main():
     solver.solve_equation(equation=hbm_inv, unknown="X")
     print("solved inv equation.")
 
-    # anims.append(
-    #     animate_pendulum(
-    #         pend, hbm_inv.fourier.time_samples(omega=pend.omega), hbm_inv.x_time()
-    #     )
-    # )
+    anims.append(
+        animate_pendulum(
+            pend, hbm_inv.fourier.time_samples(omega=pend.omega), hbm_inv.x_time()
+        )
+    )
 
-    # hbm = HBMEquationDAE(
-    #     dae=pend,
-    #     omega=pend.omega,
-    #     fourier=fourier,
-    #     initial_guess=hbm_inv.X + 0.001 * np.random.randn(*hbm_inv.X.shape),
-    #     stability_method=KoopmanHillDAESubharmonic(fourier),
-    # )
-    # solver = NewtonSolver(verbose=True, max_iterations=20)
-    # solver.solve_equation(equation=hbm, unknown="X")
-    # print("solved ang equation.")
+    hbm = HBMEquationDAE(
+        dae=pend,
+        omega=pend.omega,
+        fourier=fourier,
+        initial_guess=hbm_inv.X + 0.001 * np.random.randn(*hbm_inv.X.shape),
+        stability_method=KoopmanHillDAESubharmonic(fourier),
+    )
+    solver = NewtonSolver(verbose=True, max_iterations=20)
+    solver.solve_equation(equation=hbm, unknown="X")
+    print("solved ang equation.")
 
-    # anims.append(
-    #     animate_pendulum(
-    #         pend, hbm_inv.fourier.time_samples(omega=pend.omega), hbm_inv.x_time()
-    #     )
-    # )
+    anims.append(
+        animate_pendulum(
+            pend, hbm_inv.fourier.time_samples(omega=pend.omega), hbm_inv.x_time()
+        )
+    )
 
-    # print("Preparing constrained initial condition")
-    # x_angle = hbm.x_time()
-    # ts = hbm.fourier.time_samples(omega=pend.omega)
-    # I_r_OS = np.zeros_like(x_angle[:3, :])
-    # I_v_S = np.zeros_like(x_angle[3:, :])
-    # for i in range(x_angle.shape[1]):
-    #     I_r_OS[:, i] = pend.I_r_OS(t=ts[i], angles=x_angle[:3, i])
-    #     I_v_S[:, i] = pend.I_v_S(
-    #         t=ts[i], angles=x_angle[:3, i], d_angles=x_angle[3:, i]
-    #     )
+    print("Preparing constrained initial condition")
+    x_angle = hbm.x_time()
+    ts = hbm.fourier.time_samples(omega=pend.omega)
+    I_r_OS = np.zeros_like(x_angle[:3, :])
+    I_v_S = np.zeros_like(x_angle[3:, :])
+    for i in range(x_angle.shape[1]):
+        I_r_OS[:, i] = pend.I_r_OS(t=ts[i], angles=x_angle[:3, i])
+        I_v_S[:, i] = pend.I_v_S(
+            t=ts[i], angles=x_angle[:3, i], d_angles=x_angle[3:, i]
+        )
 
-    # fourier_constr = fourier.__replace__(n_dof=15)
-    # # 3 angles, 3 COM positions, 3 angular velocities, 3 COM velocities, 3 lambdas
-    # x = 0.001 * np.random.randn(fourier_constr.n_dof, fourier_constr.L_DFT)
-    # x[:3, :] = x_angle[:3, :]
-    # x[3:6, :] = I_r_OS
-    # x[6:9, :] = x_angle[3:, :]
-    # x[9:12, :] = I_v_S
-    # # x[12: , :] = lambdas initialized at zero
-    # X_init = fourier_constr.DFT(x)
+    fourier_constr = fourier.__replace__(n_dof=15)
+    # 3 angles, 3 COM positions, 3 angular velocities, 3 COM velocities, 3 lambdas
+    x = 0.001 * np.random.randn(fourier_constr.n_dof, fourier_constr.L_DFT)
+    x[:3, :] = x_angle[:3, :]
+    x[3:6, :] = I_r_OS
+    x[6:9, :] = x_angle[3:, :]
+    x[9:12, :] = I_v_S
+    # x[12: , :] = lambdas initialized at zero
+    X_init = fourier_constr.DFT(x)
 
-    # pend_constr = SpatialPendulumWithConstraints(
-    #     t=0,
-    #     angles=np.pi / 180 * initial_angles_deg,
-    #     d_angles=[0, 0, 0],
-    #     I_r_OS=[0, 0, 0],
-    #     I_v_S=[0, 0, 0],
-    #     lam=[0, 0, 0],
-    #     shape_cuboid=[pend.a, pend.b, pend.c],
-    #     density=pend.density,
-    #     delta=pend.delta,
-    #     epsilon=pend.epsilon,
-    #     omega=pend.omega,
-    #     damping=pend.damping,
-    # )
+    pend_constr = SpatialPendulumWithConstraints(
+        t=0,
+        angles=np.pi / 180 * initial_angles_deg,
+        d_angles=[0, 0, 0],
+        I_r_OS=[0, 0, 0],
+        I_v_S=[0, 0, 0],
+        lam=[0, 0, 0],
+        shape_cuboid=[pend.a, pend.b, pend.c],
+        density=pend.density,
+        delta=pend.delta,
+        epsilon=pend.epsilon,
+        omega=pend.omega,
+        damping=pend.damping,
+        spring=pend.spring,
+    )
 
-    # hbm_constr = HBMEquationDAE(
-    #     dae=pend_constr,
-    #     omega=pend_constr.omega,
-    #     fourier=fourier_constr,
-    #     initial_guess=X_init,
-    #     stability_method=KoopmanHillDAESubharmonic(fourier),
-    # )
-    # solver = NewtonSolver(verbose=True, max_iterations=20)
-    # solver.solve_equation(equation=hbm_constr, unknown="X")
-    # print("solved constr equation.")
+    hbm_constr = HBMEquationDAE(
+        dae=pend_constr,
+        omega=pend_constr.omega,
+        fourier=fourier_constr,
+        initial_guess=X_init,
+        stability_method=KoopmanHillDAESubharmonic(fourier),
+    )
+    solver = NewtonSolver(verbose=True, max_iterations=20)
+    solver.solve_equation(equation=hbm_constr, unknown="X")
+    print("solved constr equation.")
 
-    # animate_pendulum(
-    #     pend_constr,
-    #     hbm_constr.fourier.time_samples(omega=pend_constr.omega),
-    #     hbm_constr.x_time()[:3, :],
-    # )
+    animate_pendulum(
+        pend_constr,
+        hbm_constr.fourier.time_samples(omega=pend_constr.omega),
+        hbm_constr.x_time()[:3, :],
+    )
 
-    # _, ax_FM = plt.subplots(1, 1)
-    # ax_FM.plot(
-    #     np.real(hbm_inv.eigenvalues), np.imag(hbm_inv.eigenvalues), "x", label="inv"
-    # )
-    # ax_FM.plot(np.real(hbm.eigenvalues), np.imag(hbm.eigenvalues), "+", label="ang")
-    # ax_FM.plot(np.real(hbm.eigenvalues), np.imag(hbm.eigenvalues), "s", label="constr")
-    # ax_FM.legend()
+    _, ax_FM = plt.subplots(1, 1)
+    ax_FM.plot(
+        np.real(hbm_inv.eigenvalues), np.imag(hbm_inv.eigenvalues), "x", label="inv"
+    )
+    ax_FM.plot(np.real(hbm.eigenvalues), np.imag(hbm.eigenvalues), "+", label="ang")
+    ax_FM.plot(np.real(hbm.eigenvalues), np.imag(hbm.eigenvalues), "s", label="constr")
+    ax_FM.legend()
 
     return anims
 

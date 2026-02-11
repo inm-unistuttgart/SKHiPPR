@@ -271,9 +271,9 @@ class AbstractSpatialPendulum(AbstractDAE):
         proj_matrix = np.vstack(
             [self.K_J_R(angles=angles).T, np.zeros((len(self.q_all) - 3, 3))]
         )
-        # Spring force for alpha rotation
+        # Spring force for rotation
         gen_spring_force = np.zeros(len(self.q_all))
-        gen_spring_force[0] = -self.spring * self.angles[0]
+        gen_spring_force[:3] = -self.spring * self.angles
         return gen_spring_force + proj_matrix @ K_damping
 
     def rotational_energy(self, angles=None, d_angles=None):
@@ -350,7 +350,7 @@ class AbstractSpatialPendulum(AbstractDAE):
     def d_potential_energy(self, variable="alpha", **kwargs):
         """Derivative of the potential energy."""
         return -self.total_mass * np.inner(
-            -self.I_gravity, self.d_I_r_OS(variable=variable, **kwargs)
+            self.I_gravity, self.d_I_r_OS(variable=variable, **kwargs)
         )
 
     def h_potential_energy(self, **kwargs):
@@ -580,8 +580,11 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
         I_r_OS = self.I_r_OS(I_r_OS=I_r_OS, **kwargs)
         return I_r_OS - self.I_r_OP(t=t, **kwargs)
 
-    def W_constraints(self, t=None, I_r_OS=None, **kwargs):
-        return np.vstack((np.zeros((3, 3)), np.eye(3)))
+    def W_constraints(self, t=None, angles=None, I_r_OS=None, **kwargs):
+        dg_dal = np.zeros((3, 3))
+        for k, angle in enumerate(["alpha", "beta", "gamma"]):
+            dg_dal[:, k] = self.d_A_IK(angles=angles, variable=angle) @ self.K_r_SP
+        return np.vstack((dg_dal, np.eye(3)))
 
 
 class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
