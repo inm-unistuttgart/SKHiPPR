@@ -26,12 +26,14 @@ from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoint
 from skhippr.solvers.newton import NewtonSolver
 
+
 # --- Visualization ---
 from skhippr.visualization.cycles import (
     plot_floquet_multipliers,
     plot_floquet_exponents,
     plot_phase
 )
+from skhippr.visualization.continuation import plot_continuation
 
 
 def main():
@@ -222,7 +224,7 @@ def plot_all_responses(
 ):
     ax = plot_3D_frc(initial_response, "Initial response", plot_stability=True)
     for response in other_responses:
-        plot_3D_frc(response, ax=ax, plot_stability=True)
+        ax = plot_3D_frc(response, ax=ax, plot_stability=True) # added ax =
 
 
 def plot_3D_frc(
@@ -251,42 +253,54 @@ def plot_3D_frc(
     ax: matplotlib.axes._subplots.Axes3DSubplot
         The 3D axes with the plotted data.
     """
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
+    # if ax is None:
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111, projection="3d")
 
-    stable = np.array([point.stable for point in list_of_points])
-    omegas = np.array(
-        [np.squeeze(point.equations[0].omega) for point in list_of_points]
-    )
-    Fs = np.array([np.squeeze(point.equations[0].F) for point in list_of_points])
-    amplitudes = np.array(
-        [np.max(np.abs(point.equations[0].x_time()[0, :])) for point in list_of_points]
-    )
-
-    ax.plot(omegas, Fs, amplitudes, label=label)
-    if plot_stability:
-        ax.plot(
-            omegas[stable],
-            Fs[stable],
-            amplitudes[stable],
-            "r.",
-            label="stable",
-            markersize=1,
+    def plot_fun(point: BranchPoint) -> np.ndarray:
+        omega = np.squeeze(point.equations[0].omega)
+        F = np.squeeze(point.equations[0].F)
+        amplitude = np.max(np.abs(point.equations[0].x_time()[0, :]))
+        return np.array([omega, F, amplitude])
+    
+    ax = plot_continuation(
+        branch = list_of_points, 
+        plot_fun = plot_fun,
+        ax = ax,
         )
-        ax.plot(
-            omegas[~stable],
-            Fs[~stable],
-            amplitudes[~stable],
-            "b.",
-            label="unstable",
-            markersize=1,
-        )
-
+    
     ax.set_xlabel("omega")
     ax.set_ylabel("F")
     ax.set_zlabel("|x_1|")
     return ax
+    
+    # stable = np.array([point.stable for point in list_of_points])
+    # omegas = np.array(
+    #     [np.squeeze(point.equations[0].omega) for point in list_of_points]
+    # )
+    # Fs = np.array([np.squeeze(point.equations[0].F) for point in list_of_points])
+    # amplitudes = np.array(
+    #     [np.max(np.abs(point.equations[0].x_time()[0, :])) for point in list_of_points]
+    # )
+    
+    # ax.plot(omegas, Fs, amplitudes, label=label)
+    # if plot_stability:
+    #     ax.plot(
+    #         omegas[stable],
+    #         Fs[stable],
+    #         amplitudes[stable],
+    #         "r.",
+    #         label="stable",
+    #         markersize=1,
+    #     )
+    #     ax.plot(
+    #         omegas[~stable],
+    #         Fs[~stable],
+    #         amplitudes[~stable],
+    #         "b.",
+    #         label="unstable",
+    #         markersize=1,
+    #     )
 
 
 def visualize_solution(system: HBMSystem):

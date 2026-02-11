@@ -25,6 +25,9 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoi
 # --- Newton solver ---
 from skhippr.solvers.newton import NewtonSolver
 
+# --- Visualization ---
+from skhippr.visualization.continuation import plot_continuation
+from skhippr.visualization.cycles import plot_hill_matrix_blocks
 
 def main():
     """
@@ -32,13 +35,13 @@ def main():
 
     This function performs the following steps:
 
-    #. Creation of :py:class:`~skhippr.Fourier`, :py:class:`~skhippr.solvers.newton.NewtonSolver`, and :py:class:`~skhippr.stability.KoopmmanHillProjection.KoopmanHillSubharmonic` objects to collect method parameters.
-    #. Instantiation of a :py:class:`~skhippr.odes.AbstractODE.AbstractODE` (here: :py:class:`~skhippr.odes.nonautonomous.Duffing`) object which contains the ODE.
+    #. Creation of :py:class:`~skhippr.Fourier`, :py:class:`~skhippr.solvers.newton.NewtonSolver`, and :py:class:`~skhippr.stability.KoopmmanHillProjection.KoopmanHillSubharmonic` objects to collect method parameters
+    #. Instantiation of a :py:class:`~skhippr.odes.AbstractODE.AbstractODE` (here: :py:class:`~skhippr.odes.nonautonomous.Duffing`) object which contains the ODE
     #. Setup of an initial guess
-    #. Setup and solution of the :py:class:`~skhippr.cycles.hbm.HBMEquation`, which formalizes the Harmonic Balance equations.
-    #. Creation of an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` containing only the HBM equations as input to the continuation method.
+    #. Setup and solution of the :py:class:`~skhippr.cycles.hbm.HBMEquation`, which formalizes the Harmonic Balance equations
+    #. Creation of an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` containing only the HBM equations as input to the continuation method
     #. Continuation of the frequency response curve using :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` and collecting the branch points
-    #. Analyzing and plotting the branch points
+    #. Plotting the continuation curve from the collected :py:class:`~skhippr.solvers.continuation.BranchPoint` objects via SKHiPPR visualization tools.
 
     Returns
     -------
@@ -106,28 +109,12 @@ def main():
         if branch_point.omega > 2.5:
             break
 
-    # --- Analyze the branch. ---
-    freqs = np.array([np.squeeze(point.omega) for point in frc])
-    stable = np.array([point.stable for point in frc])
-
-    # --- Determine maximum x_1 amplitude of every point on the branch. ---
-    # the first equation of the BranchPoint equation system is the HBMequation, which provides x_time().
-    amps = np.array([np.max(point.equations[0].x_time()[0, :]) for point in frc])
-
-    # --- plot ---
-    plt.figure()
-
-    freqs_stable = np.where(stable, freqs, np.nan)
-    freqs_unstable = np.where(~stable, freqs, np.nan)
-
-    plt.plot(freqs_stable, amps, "r", label="stable")
-    plt.plot(freqs_unstable, amps, "b--", label="unstable")
-
-    plt.xlabel("$\\omega$")
-    plt.ylabel("$|x_1|$")
-    plt.legend()
-
-
+    # --- Plot the continuation curve using SKHiPPR visualization functions---
+    # Passing a scalar_measure is optional, the default will call unknowns[0][0] on each BranchPoint object
+    plot_continuation(
+        frc,
+        plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:])
+        )
 if __name__ == "__main__":
     main()
     tikzplotlib.save("duffing.tikz", axis_width="5cm", axis_height="5cm")
