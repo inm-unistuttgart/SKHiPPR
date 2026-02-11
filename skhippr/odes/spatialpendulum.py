@@ -17,6 +17,7 @@ class AbstractSpatialPendulum(AbstractDAE):
         delta,
         epsilon,
         omega,
+        spring,
         damping,
         q_all=["alpha", "beta", "gamma"],
         stability_method=None,
@@ -49,14 +50,15 @@ class AbstractSpatialPendulum(AbstractDAE):
             )
         )
         self.t = t
+        self.spring = spring
         self.damping = damping
         self.delta = delta
         self.epsilon = epsilon
         self.omega = omega
         self.K_r_SP = 0.5 * np.array(shape_cuboid)
-        self.I_normal = np.array([0, 1, 0])  # self.K_r_SP / np.linalg.norm(self.K_r_SP)
+        self.I_normal = np.array([0, 0, 1])  # self.K_r_SP / np.linalg.norm(self.K_r_SP)
 
-        self.I_gravity = 9.81 * self.I_normal
+        self.I_gravity = -9.81 * self.I_normal
 
     """ Extract angles and their derivatives from x"""
 
@@ -94,7 +96,7 @@ class AbstractSpatialPendulum(AbstractDAE):
     def lam(self):
         return self.x[2 * len(self.q_all) :]
 
-    """ Euler angle transformation matrices and their derivatives. """
+    """ Kardan angle transformation matrices and their derivatives. """
 
     def A_I1(self, angles=None):
         if angles is None:
@@ -121,7 +123,7 @@ class AbstractSpatialPendulum(AbstractDAE):
         if angles is None:
             angles = self.angles
         beta = angles[1]
-        return trafo_around_x(beta)
+        return trafo_around_y(beta)
 
     def d_A_12(self, angles=None, d_angles=None, variable="beta"):
         match variable:
@@ -129,7 +131,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 if angles is None:
                     angles = self.angles
                 beta = angles[1]
-                return d_trafo_around_x(beta)
+                return d_trafo_around_y(beta)
             case "t":
                 if d_angles is None:
                     d_angles = self.d_angles
@@ -142,7 +144,7 @@ class AbstractSpatialPendulum(AbstractDAE):
         if angles is None:
             angles = self.angles
         gamma = angles[2]
-        return trafo_around_z(gamma)
+        return trafo_around_x(gamma)
 
     def d_A_2K(self, angles=None, d_angles=None, variable="gamma"):
         match variable:
@@ -150,7 +152,7 @@ class AbstractSpatialPendulum(AbstractDAE):
                 if angles is None:
                     angles = self.angles
                 gamma = angles[2]
-                return d_trafo_around_z(gamma)
+                return d_trafo_around_x(gamma)
             case "t":
                 if d_angles is None:
                     d_angles = self.d_angles
@@ -194,9 +196,9 @@ class AbstractSpatialPendulum(AbstractDAE):
         _, beta, gamma = angles
         return np.array(
             [
-                [np.sin(gamma) * np.sin(beta), np.cos(gamma), 0],
-                [np.sin(beta) * np.cos(gamma), -np.sin(gamma), 0],
-                [np.cos(beta), 0, 1],
+                [-np.sin(beta), 0, 1],
+                [np.cos(beta) * np.sin(gamma), np.cos(gamma), 0],
+                [np.cos(beta) * np.cos(gamma), -np.sin(gamma), 0],
             ]
         )
 
@@ -210,9 +212,9 @@ class AbstractSpatialPendulum(AbstractDAE):
                 _, beta, gamma = angles
                 return np.array(
                     [
-                        [np.sin(gamma) * np.cos(beta), 0, 0],
-                        [np.cos(beta) * np.cos(gamma), 0, 0],
-                        [-np.sin(beta), 0, 0],
+                        [-np.cos(beta), 0, 0],
+                        [-np.sin(beta) * np.sin(gamma), 0, 0],
+                        [-np.sin(beta) * np.cos(gamma), 0, 0],
                     ]
                 )
             case "gamma":
@@ -221,9 +223,9 @@ class AbstractSpatialPendulum(AbstractDAE):
                 _, beta, gamma = angles
                 return np.array(
                     [
-                        [np.cos(gamma) * np.sin(beta), -np.sin(gamma), 0],
-                        [-np.sin(beta) * np.sin(gamma), -np.cos(gamma), 0],
                         [0, 0, 0],
+                        [np.cos(beta) * np.cos(gamma), -np.sin(gamma), 0],
+                        [-np.cos(beta) * np.sin(gamma), -np.cos(gamma), 0],
                     ]
                 )
             case "t":
@@ -264,12 +266,14 @@ class AbstractSpatialPendulum(AbstractDAE):
                 return np.zeros(3)
 
     def generalized_damping_force(self, angles=None, d_angles=None):
-        """Damping torque in body-fixed frame."""
-        K_momentum = -self.damping * self.K_Omega(angles=angles, d_angles=d_angles)
+        """Damping and spring torque in body-fixed frame."""
+        K_damping = -self.damping * self.K_Omega(angles=angles, d_angles=d_angles)
         proj_matrix = np.vstack(
             [self.K_J_R(angles=angles).T, np.zeros((len(self.q_all) - 3, 3))]
         )
-        return proj_matrix @ K_momentum
+        # Spring force for alpha rotation
+        gen_spring_force = np.array([-self.spring * self.angles[0], 0, 0])
+        return gen_spring_force + proj_matrix @ K_damping
 
     def rotational_energy(self, angles=None, d_angles=None):
         """Rotational kinetic energy."""
@@ -502,6 +506,7 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
         delta,
         epsilon,
         omega,
+        spring,
         damping,
         stability_method=None,
     ):
@@ -512,6 +517,7 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
             delta=delta,
             epsilon=epsilon,
             omega=omega,
+            spring=spring,
             damping=damping,
             q_all=["alpha", "beta", "gamma", "x", "y", "z"],
             stability_method=stability_method,
@@ -588,6 +594,7 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
         delta,
         epsilon,
         omega,
+        spring,
         damping,
         stability_method=None,
     ):
@@ -599,6 +606,7 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
             epsilon=epsilon,
             omega=omega,
             damping=damping,
+            spring=spring,
             q_all=["alpha", "beta", "gamma"],
             stability_method=stability_method,
         )
@@ -750,6 +758,7 @@ class SpatialPendulumWithMassInverted(SpatialPendulumWithoutConstraints):
         delta,
         epsilon,
         omega,
+        spring,
         damping,
         stability_method=None,
     ):
@@ -762,6 +771,7 @@ class SpatialPendulumWithMassInverted(SpatialPendulumWithoutConstraints):
             delta,
             epsilon,
             omega,
+            spring,
             damping,
             stability_method,
         )
@@ -793,6 +803,26 @@ def d_trafo_around_x(angle):
             [0, 0, 0],
             [0, -np.sin(angle), -np.cos(angle)],
             [0, np.cos(angle), -np.sin(angle)],
+        ]
+    )
+
+
+def trafo_around_y(angle):
+    return np.array(
+        [
+            [np.cos(angle), 0, np.sin(angle)],
+            [0, 1, 0],
+            [-np.sin(angle), 0, np.cos(angle)],
+        ]
+    )
+
+
+def d_trafo_around_y(angle):
+    return np.array(
+        [
+            [-np.sin(angle), 0, np.cos(angle)],
+            [0, 0, 0],
+            [-np.cos(angle), 0, -np.sin(angle)],
         ]
     )
 

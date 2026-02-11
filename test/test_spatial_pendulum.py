@@ -80,7 +80,17 @@ def pend_without_constraints():
     vec_angles = np.random.rand(3)
     vec_d_angles = np.random.rand(3)
     return SpatialPendulumWithoutConstraints(
-        0, vec_angles, vec_d_angles, [1, 2, 3], 0.1, 1, 1, 1, 1, stability_method=None
+        t=0,
+        angles=vec_angles,
+        d_angles=vec_d_angles,
+        shape_cuboid=[1, 2, 3],
+        density=0.1,
+        delta=1,
+        epsilon=1,
+        omega=1,
+        spring=1,
+        damping=1,
+        stability_method=None,
     )
 
 
@@ -163,7 +173,7 @@ def test_d_A12(pend_without_constraints):
             d_A_12 = pend_without_constraints.d_A_12(angles=angles, variable=variable)
             finite_difference(fd_func, d_A_12)
         # test derivative w.r.t time
-        omega_12_expected = np.array([pend_without_constraints.d_angles[1], 0, 0])
+        omega_12_expected = np.array([0, pend_without_constraints.d_angles[1], 0])
         dot_A_12 = pend_without_constraints.d_A_12(angles=angles, variable="t")
         A_12 = pend_without_constraints.A_12(angles=angles)
         tilde_omega_12 = dot_A_12 @ A_12.T
@@ -185,7 +195,7 @@ def test_d_A2K(pend_without_constraints):
             finite_difference(fd_func, d_A_2K)
 
         # test derivative w.r.t time
-        omega_2K_expected = np.array([0, 0, pend_without_constraints.d_angles[2]])
+        omega_2K_expected = np.array([pend_without_constraints.d_angles[2], 0, 0])
         dot_A_2K = pend_without_constraints.d_A_2K(angles=angles, variable="t")
         A_2K = pend_without_constraints.A_2K(angles=angles)
         tilde_omega_2K = dot_A_2K @ A_2K.T
@@ -217,10 +227,10 @@ def test_K_Omega(pend_without_constraints):
 
             omega_1 = np.array([0, 0, d_alpha])
             omega_2 = pend_without_constraints.A_12(angles).T @ omega_1 + np.array(
-                [d_beta, 0, 0]
+                [0, d_beta, 0]
             )
             omega_ref = pend_without_constraints.A_2K(angles).T @ omega_2 + np.array(
-                [0, 0, d_gamma]
+                [d_gamma, 0, 0]
             )
 
             K_Omega = pend_without_constraints.K_Omega(angles, d_angles)
@@ -443,6 +453,7 @@ def test_v_P():
         delta=0.3,
         epsilon=0.7,
         omega=0.9,
+        spring=1,
         damping=1,
         stability_method=None,
     )
@@ -611,6 +622,16 @@ if __name__ == "__main__":
     vec_angles = np.random.rand(3)
     vec_d_angles = np.random.rand(3)
     pend = SpatialPendulumWithoutConstraints(
-        0, vec_angles, vec_d_angles, [1, 2, 3], 0.1, 1, 1, 1, 1, stability_method=None
+        0,
+        vec_angles,
+        vec_d_angles,
+        [1, 2, 3],
+        0.1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        stability_method=None,
     )
     test_d_transl_d_qdot(pend)
