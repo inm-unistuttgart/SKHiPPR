@@ -54,11 +54,33 @@ class AbstractSpatialPendulum(AbstractDAE):
         self.epsilon = epsilon
         self.omega = omega
         self.K_r_SP = 0.5 * np.array(shape_cuboid)
-        self.I_normal = self.K_r_SP / np.linalg.norm(self.K_r_SP)
+        self.I_normal = np.array([0, 1, 0])  # self.K_r_SP / np.linalg.norm(self.K_r_SP)
 
-        self.I_gravity = -9.81 * self.I_normal
+        self.I_gravity = 9.81 * self.I_normal
 
     """ Extract angles and their derivatives from x"""
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, value):
+        if not len(value.shape) == 1:
+            raise ValueError("x must be a 1-D array.")
+        if not len(value) == self.n_dof:
+            raise ValueError(f"x must have length {self.n_dof}.")
+        self._x = value
+
+    @property
+    def t(self):
+        return self._t
+
+    @t.setter
+    def t(self, value):
+        if not np.isscalar(value):
+            raise ValueError("t must be a scalar.")
+        self._t = value
 
     @property
     def angles(self):
@@ -70,7 +92,7 @@ class AbstractSpatialPendulum(AbstractDAE):
 
     @property
     def lam(self):
-        self.x[2 * len(self.q_all) :]
+        return self.x[2 * len(self.q_all) :]
 
     """ Euler angle transformation matrices and their derivatives. """
 
@@ -332,6 +354,7 @@ class AbstractSpatialPendulum(AbstractDAE):
         h = np.zeros(len(self.q_all))
         for k, var in enumerate(self.q_all):
             h[k] = -self.d_potential_energy(variable=var, **kwargs)
+        return h
 
     """ Translational kinematic quantities """
 
@@ -407,8 +430,12 @@ class AbstractSpatialPendulum(AbstractDAE):
     def h_all(self, t, x, **kwargs):
         """Assembly of h vector for all coordinates."""
         if t is not None:
+            if not np.isscalar(t):
+                raise ValueError("t must be a scalar.")
             self.t = t
         if x is not None:
+            if not len(x.shape) == 1:
+                raise ValueError("x must be a 1-D array.")
             self.x = x
 
         h = (
@@ -419,7 +446,8 @@ class AbstractSpatialPendulum(AbstractDAE):
         )
 
         if self.num_constraints > 0:
-            h += self.W_constraints() @ self.lam
+            h += self.W_constraints(t=t, x=x, **kwargs) @ self.lam
+        return h
 
     def dynamics(self, t=None, x=None):
         if t is not None:
@@ -428,14 +456,7 @@ class AbstractSpatialPendulum(AbstractDAE):
             self.x = x
 
         # M = self.mass_rotational_energy() + self.mass_translational_energy()
-        h = (
-            self.h_rotational_energy()
-            + self.h_translational_energy()
-            + self.generalized_damping_force()
-            + self.h_potential_energy()
-            + self.W_constraints() @ self.lam
-        )
-
+        h = self.h_all(t=t, x=x)
         f = np.zeros(self.n_dof)
         # Kinematics qdot = qdot
         f[: len(self.q_all)] = self.x[len(self.q_all) : 2 * len(self.q_all)]
@@ -476,7 +497,6 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
         I_r_OS,
         I_v_S,
         lam,
-        d_lam,
         shape_cuboid,
         density,
         delta,
@@ -494,10 +514,9 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
             omega=omega,
             damping=damping,
             q_all=["alpha", "beta", "gamma", "x", "y", "z"],
-            invertible=False,
             stability_method=stability_method,
         )
-        self.x = np.concatenate([angles, I_r_OS, lam, d_angles, I_v_S, d_lam])
+        self.x = np.concatenate([angles, I_r_OS, d_angles, I_v_S, lam])
 
     def I_r_OS(self, I_r_OS=None, **kwargs):
         if I_r_OS is None:
@@ -507,7 +526,7 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
 
     def I_v_S(self, I_v_S=None, **kwargs):
         if I_v_S is None:
-            return self.x[10:13]
+            return self.x[len(self.q_all) + 3 : len(self.q_all) + 6]
         else:
             return I_v_S
 
@@ -525,13 +544,37 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
                 return np.zeros(3)
 
     def d_I_v_S(self, variable, **kwargs):
-        pass
+        match variable:
+            case "t":
+                raise ValueError(
+                    "Time derivative of I_v_S requires 2nd derivatives of the state and cannot be computed in this method. Use self.Mass_secondorder @ ddot_angles instead."
+                )
+            case "d_x":
+                return np.eye(3)[:, 0]
+            case "d_y":
+                return np.eye(3)[:, 1]
+            case "d_z":
+                return np.eye(3)[:, 2]
+            case _:
+                return np.zeros(3)
 
     def h_translational_energy(self, **kwargs):
-        return
+        return np.zeros(len(self.q_all))
 
     def mass_translational_energy(self, **kwargs):
-        return super().mass_translational_energy(**kwargs)
+        return (
+            np.block(
+                [[np.zeros((3, 3)), np.zeros((3, 3))], [np.zeros((3, 3)), np.eye(3)]]
+            )
+            * self.total_mass,
+        )
+
+    def constraints(self, t=None, I_r_OS=None, **kwargs):
+        I_r_OS = self.I_r_OS(I_r_OS=I_r_OS, **kwargs)
+        return I_r_OS - self.I_r_OP(t=t, **kwargs)
+
+    def W_constraints(self, t=None, I_r_OS=None, **kwargs):
+        return np.vstack((np.zeros((3, 3)), np.eye(3)))
 
 
 class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
@@ -696,6 +739,44 @@ class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):
         return mass
 
 
+class SpatialPendulumWithMassInverted(SpatialPendulumWithoutConstraints):
+    def __init__(
+        self,
+        t,
+        angles,
+        d_angles,
+        shape_cuboid,
+        density,
+        delta,
+        epsilon,
+        omega,
+        damping,
+        stability_method=None,
+    ):
+        super().__init__(
+            t,
+            angles,
+            d_angles,
+            shape_cuboid,
+            density,
+            delta,
+            epsilon,
+            omega,
+            damping,
+            stability_method,
+        )
+        self.M_is_constant = True
+        self.M_invertible = True
+
+    def M_small(self, t=None, x=None):
+        return np.eye(self.n_dof)
+
+    def dynamics(self, t=None, x=None):
+        f = super().dynamics(t=t, x=x)
+        M = super().M_small(t=t, x=x)
+        return np.linalg.solve(M, f)
+
+
 def trafo_around_x(angle):
     return np.array(
         [
@@ -745,3 +826,31 @@ def tilde_operator(vector):
             [-vector[1], vector[0], 0],
         ]
     )
+
+
+def trafo_for_plot(a=2, b=1.5, c=1):
+    """Transformation matrix from body-fixed to inertial frame for plotting."""
+
+    # y axis of I frame points upwards and along r_SP
+    K_ey_I = np.array([a, b, c])
+
+    # x axis of I frame is chosen orthogonal with z component zero (arbitrary choice)
+    K_ex_I = np.array([-b, a, 0])
+
+    # z axis of I frame to complete right-handed system
+    K_ez_I = np.cross(K_ex_I, K_ey_I)
+
+    # Normalize to get orthonormal basis
+    K_ex_I = K_ex_I / np.linalg.norm(K_ex_I)
+    K_ey_I = K_ey_I / np.linalg.norm(K_ey_I)
+    K_ez_I = K_ez_I / np.linalg.norm(K_ez_I)
+
+    # Construct A_{IK} = A_{KI}.T from the basis vectors
+    A_IK = np.vstack((K_ex_I, K_ey_I, K_ez_I))
+    print(f"a={a}, b={b}, c={c}")
+    print("A_IK for plotting:")
+    print(A_IK)
+
+
+if __name__ == "__main__":
+    trafo_for_plot()

@@ -22,8 +22,25 @@ class AbstractEquation(ABC):
         self.stable = None
         self.eigenvalues = None
 
+    # @property
+    # def residual_value(self):
+    #     return self._residual_value
+
+    # @residual_value.setter
+    # def residual_value(self, value):
+    #     if (
+    #         self.residual_value is not None
+    #         and value.shape[0] != self._residual_value.shape[0]
+    #     ):
+    #         raise ValueError(
+    #             f"Shape of residual value cannot be changed once set. Expected shape {self._residual_value.shape}, got {value.shape}."
+    #         )
+    #     self._residual_value = value
+
     def residual(self, update=False):
-        if update:
+        # if update:
+        # HACK
+        if True:
             # compute the residual using the attributes
             self.residual_value = self.residual_function()
             if self.residual_value.ndim > 1:
@@ -160,13 +177,32 @@ class AbstractEquation(ABC):
         if x.ndim == 1:
             x = x[:, np.newaxis]
         n = x.shape[0]
-        f = self.residual(update=True)
+
+        try:
+            f = self.residual(update=True)
+            vectorized = True
+        except Exception as e:
+            if len(x.shape) > 2:
+                raise RuntimeError(
+                    f"Error computing vectorized finite difference derivative w.r.t. '{variable}' at index {k}. This may be due to a mismatch in the expected shape of the residual. Vectorized version required if dim(x) = {x.shape} > 2. Original error message: {e}"
+                ) from e
+            vectorized = False
+            f = np.zeros_like(x)
+            for i in range(x.shape[1]):
+                setattr(self, variable, np.squeeze(x[:, i]))
+                f[:, i] = self.residual(update=True)
+
         delta = h_step * np.eye(n)
         derivative = np.zeros((f.shape[0], n, *f.shape[1:]), dtype=f.dtype)
 
         for k in range(n):
-            setattr(self, variable, np.squeeze(x + delta[:, [k]]))
-            derivative[:, k, ...] = (self.residual_function() - f) / h_step
+            if vectorized:
+                setattr(self, variable, np.squeeze(x + delta[:, [k]]))
+                derivative[:, k, ...] = (self.residual_function() - f) / h_step
+            else:
+                for i in range(f.shape[1]):
+                    setattr(self, variable, np.squeeze(x[:, i] + delta[:, k]))
+                    derivative[:, k, i] = (self.residual_function() - f[:, i]) / h_step
 
         setattr(self, variable, x_orig)
         return derivative

@@ -124,17 +124,19 @@ class HBMEquation(AbstractCycleEquation):
 
         try:
             Js = self.ode.closed_form_derivative(variable="x", t=ts, x=x_samp)
-        except NotImplementedError:
-            # use finite differences
-            self.ode.t = ts
-            self.ode.x = x_samp
-            Js = self.ode.derivative(variable="x")
+        # except NotImplementedError:
+        #     # use finite differences
+        #     self.ode.t = ts
+        #     self.ode.x = x_samp
+        #     Js = self.ode.derivative(variable="x")
         except:
             # Vectorization not working, determine sample by sample
             Js = np.zeros((x_samp.shape[0], *x_samp.shape))
             for k, t in enumerate(ts):
-                Js[:, :, k, ...] = self.ode.closed_form_derivative(
-                    "x", t, np.squeeze(x_samp[:, k])
+                self.ode.t = t
+                self.ode.x = np.squeeze(x_samp[:, k])
+                Js[:, :, k, ...] = self.ode.derivative(
+                    "x", t=t, x=np.squeeze(x_samp[:, k])
                 )
 
         derivative = self.fourier.matrix_DFT(Js)
