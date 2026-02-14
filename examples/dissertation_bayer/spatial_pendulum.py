@@ -16,6 +16,7 @@ from skhippr.odes.spatialpendulum import (
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.cycles.hbm import HBMEquationDAE, HBMEquation
 from skhippr.solvers.newton import NewtonSolver, ScipyRootSolver
+from skhippr.solvers.continuation import pseudo_arclength_continuator
 from skhippr.Fourier import Fourier
 
 from skhippr.stability.KoopmanHillProjection import (
@@ -423,6 +424,8 @@ def compare_FMs():
 
     tikzplotlib.save("plots/spatial_pendulum_FMs.tex")
 
+    return hbm_constr, hbm_inv, hbm
+
 
 def animate_pendulum(pend, t, angles, ax=None):
     if ax is None:
@@ -575,9 +578,48 @@ def periodic_initial_condition():
     )
 
 
+def iterate_FMs(epsilon=0.5):
+
+    hbms = compare_FMs()[0, 2]
+    solver = NewtonSolver(verbose=False, max_iterations=20)
+
+    for hbm in hbms:
+        print(f"Iterating on {hbm.__class__.__name__} with delta as parameter")
+        sys = EquationSystem(equations=[hbm], unknowns=["X"])
+        sys.equations[0].delta = 0
+        sys.equations[0].epsilon = epsilon
+        results = []
+        for branch_point in pseudo_arclength_continuator(
+            initial_direction=1,
+            initial_system=sys,
+            solver=solver,
+            stepsize=0.05,
+            stepsize_range=(0.05, 0.05),
+            continuation_parameter="delta",
+            verbose=True,
+            num_steps=3,
+        ):
+            FMs = branch_point.equations[0].eigenvalues
+            print(f"delta={branch_point.delta}, FMs: {FMs}")
+            results.append(np.array([np.squeeze(branch_point.delta), *FMs]))
+
+        # Convert results to numpy array and save as CSV
+        results_array = np.array(results)
+        filename = f"results_{hbm.__class__.__name__}_epsilon_{epsilon}.csv"
+        np.savetxt(
+            filename,
+            results_array,
+            delimiter=",",
+            header="delta,"
+            + ",".join([f"FM_{i}" for i in range(results_array.shape[1] - 1)]),
+            comments="",
+        )
+        print(f"Results saved to {filename}")
+
+
 if __name__ == "__main__":
     # only_constr()
     # anims = main()
     # periodic_initial_condition()
-    compare_FMs()
+    iterate_FMs()
     plt.show()

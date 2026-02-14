@@ -169,9 +169,13 @@ class HBMEquation(AbstractCycleEquation):
             )
         except NotImplementedError:
             # use finite differences
-            self.ode.t = ts
-            self.ode.x = x_samp
-            derivatives_time = self.ode.derivative(variable=variable, update=True)
+            derivatives_time = np.zeros_like(x_samp)
+            for k, t in enumerate(ts):
+                self.ode.t = t
+                self.ode.x = np.squeeze(x_samp[:, k, ...])
+                derivatives_time[:, k, ...] = np.squeeze(
+                    self.ode.derivative(variable=variable, update=True)
+                )
         except:
             # Vectorization not working, determine sample by sample
             derivatives_time = np.zeros_like(x_samp)
@@ -179,8 +183,10 @@ class HBMEquation(AbstractCycleEquation):
                 derivatives_time[:, k, ...] = self.ode.closed_form_derivative(
                     variable, t, np.squeeze(x_samp[:, k])
                 )
-
-        return self.fourier.DFT(derivatives_time)
+        result = self.fourier.DFT(derivatives_time)
+        if len(result.shape) < 2:
+            result = np.atleast_2d(result).T
+        return result
 
     def hill_matrix(
         self, real_formulation: bool = None, update: bool = True
