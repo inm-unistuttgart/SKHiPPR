@@ -273,7 +273,9 @@ class AbstractSpatialPendulum(AbstractDAE):
         )
         # Spring force for rotation
         gen_spring_force = np.zeros(len(self.q_all))
-        gen_spring_force[:3] = -self.spring * self.angles
+        gen_spring_force[0] = (
+            -self.spring * self.angles[0]
+        )  # to break rotational symmetry
         return gen_spring_force + proj_matrix @ K_damping
 
     def rotational_energy(self, angles=None, d_angles=None):
@@ -576,15 +578,18 @@ class SpatialPendulumWithConstraints(AbstractSpatialPendulum):
             * self.total_mass,
         )
 
-    def constraints(self, t=None, I_r_OS=None, **kwargs):
-        I_r_OS = self.I_r_OS(I_r_OS=I_r_OS, **kwargs)
-        return I_r_OS - self.I_r_OP(t=t, **kwargs)
+    def constraints(self, t=None, I_r_OS=None, angles=None, **kwargs):
+        I_r_OP = (
+            self.I_r_OS(I_r_OS=I_r_OS, **kwargs)
+            + self.A_IK(angles=angles) @ self.K_r_SP
+        )
+        return I_r_OP - self.I_r_OP(t=t, **kwargs)
 
     def W_constraints(self, t=None, angles=None, I_r_OS=None, **kwargs):
         dg_dal = np.zeros((3, 3))
         for k, angle in enumerate(["alpha", "beta", "gamma"]):
             dg_dal[:, k] = self.d_A_IK(angles=angles, variable=angle) @ self.K_r_SP
-        return np.vstack((dg_dal, np.eye(3)))
+        return np.vstack((dg_dal.T, np.eye(3)))
 
 
 class SpatialPendulumWithoutConstraints(AbstractSpatialPendulum):

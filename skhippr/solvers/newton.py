@@ -201,6 +201,10 @@ class ScipyRootSolver(NewtonSolver):
         method="hybr",
     ):
         super().__init__(tolerance, max_iterations, verbose)
+        if use_fprime:
+            self.use_fprime = True
+        else:
+            self.use_fprime = None
         self.use_fprime = use_fprime
         self.method = method
         self.equation_system = None
@@ -215,16 +219,24 @@ class ScipyRootSolver(NewtonSolver):
             dfdx = self.equation_system.jacobian(update=True)
             return f, dfdx
 
+    def callback(self, x, f):
+        print(f"|f| = {np.linalg.norm(f):8.3g}, x[-1]={x[-1]:.3g}")
+
     @override
     def solve(self, equation_system: EquationSystem):
         self.equation_system = equation_system
+
+        if self.verbose:
+            print(f"Solving equation with method {self.method}")
 
         sol = root(
             fun=self.func,
             x0=equation_system.vector_of_unknowns,
             method=self.method,
-            jac=True,
+            jac=self.use_fprime,
             tol=self.tolerance,
+            options={"nit": self.max_iterations},
+            callback=self.callback if self.verbose else None,
         )
 
         self.num_iter = sol.nfev
@@ -240,5 +252,7 @@ class ScipyRootSolver(NewtonSolver):
                 print(
                     f"fsolve converged successfully with {sol.nfev} function calls and {sol.njev} jacobian calls. Residual {np.linalg.norm(sol.fun)}"
                 )
+                if equation_system.solved:
+                    equation_system.determine_stability(update=True)
             else:
                 print(f"fsolve did not converge! \n {sol.message}")
