@@ -590,17 +590,21 @@ def iterate_FMs(epsilon=0.5):
         sys.equations[0].delta = 0
         sys.equations[0].epsilon = epsilon
         results = []
-        for k, branch_point in enumerate(pseudo_arclength_continuator(
-            initial_direction=1,
-            initial_system=sys,
-            solver=solver,
-            stepsize=0.05,
-            stepsize_range=(0.05, 0.05),
-            continuation_parameter="delta",
-            verbose=True,
-            num_steps=10000,
-        )):
-            FMs = branch_point.equations[0].stability_method.determine_eigenvalues(branch_point.equations[0])
+        for k, branch_point in enumerate(
+            pseudo_arclength_continuator(
+                initial_direction=1,
+                initial_system=sys,
+                solver=solver,
+                stepsize=0.05,
+                stepsize_range=(0.05, 0.05),
+                continuation_parameter="delta",
+                verbose=True,
+                num_steps=10000,
+            )
+        ):
+            FMs = branch_point.equations[0].stability_method.determine_eigenvalues(
+                branch_point.equations[0]
+            )
             print(f"delta={branch_point.delta}, FMs: {FMs}")
             results.append(np.array([np.squeeze(branch_point.delta), *FMs]))
 
@@ -622,9 +626,44 @@ def iterate_FMs(epsilon=0.5):
                 break
 
 
+def precision():
+    solver = NewtonSolver(verbose=False, max_iterations=20)
+    for idx_hbm, hbm in enumerate(compare_FMs()):
+        fourier_ref = hbm.fourier
+        x_ref = fourier_ref.inv_DFT(hbm.X)
+        idx_sort = np.argsort(np.angle(hbm.eigenvalues))
+        FMs_ref = hbm.eigenvalues[idx_sort]
+        Ns = np.arange(fourier_ref.N_HBM, 0, -1)
+        errors = np.zeros((x_ref.shape[0], len(Ns)), dtype=complex)
+        FMs = np.zeros_like(errors)
+        for k, N_HBM in enumerate(Ns):
+            fourier = fourier_ref.__replace__(N_HBM=N_HBM)
+            hbm.fourier = fourier
+            hbm.X = fourier.DFT(x_ref)
+            hbm.stability_method = type(hbm.stability_method)(fourier)
+
+            solver.solve_equation(hbm, "X")
+            print(
+                f"{hbm.__class__.__name__} with N_HBM={N_HBM}, FMs: {hbm.eigenvalues}"
+            )
+            idx_sort = np.argsort(np.angle(hbm.eigenvalues))
+            FMs[:, k] = hbm.eigenvalues[idx_sort]
+            errors[:, k] = FMs[:, k] - FMs_ref
+        np.savetxt(
+            f"FMs_errors_case_{idx_hbm}.csv",
+            FMs,
+            delimiter=";",
+            header=";".join([f"N_HBM = {n}" for n in Ns]),
+            comments="",
+        )
+        fig, ax = plt.subplots(1, 1)
+        ax.semilogy(Ns, np.max(np.abs(errors), axis=0), "x-", label=f"case{idx_hbm}")
+
+
 if __name__ == "__main__":
     # only_constr()
     # anims = main()
     # periodic_initial_condition()
-    iterate_FMs()
+    # iterate_FMs()
+    precision()
     plt.show()
