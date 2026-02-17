@@ -235,7 +235,7 @@ class ScipyRootSolver(NewtonSolver):
             method=self.method,
             jac=self.use_fprime,
             tol=self.tolerance,
-            options={"nit": self.max_iterations},
+            options={"nit": self.max_iterations, "maxfev": self.max_iterations},
             callback=self.callback if self.verbose else None,
         )
 

@@ -20,8 +20,11 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_solution():
 
+    # solver = ScipyRootSolver(
+    #     tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
+    # )
     solver = ScipyRootSolver(
-        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
+        tolerance=1e-8, max_iterations=10000000, verbose=True, use_fprime=False, method="df-sane"
     )
 
     # BA Schütz case 1 (p. 44)
@@ -35,21 +38,34 @@ def plot_solution():
     # mu = 4
     # smoothing = 10
 
-    # BA Schütz case 2 (p. 50)
+    # # BA Schütz case 2 (p. 50)
+    # masses = [1, 1]
+    # g = 10
+    # stiffnesses = [1, 1]
+    # dampings = [0.02, 0.02]
+    # forcings = [20, 10]
+    # omega = 2 * np.pi
+    # phases = [0.5 * np.pi, 0]
+    # mu = 0.9
+    # smoothing = 40
+    # prox_parameter = 10
+
+    # # Legrand 
     masses = [1, 1]
-    g = 10
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
-    forcings = [20, 10]
-    omega = 2 * np.pi
+    forcings = [20, 0]
+    omega = 0.299
     phases = [0.5 * np.pi, 0]
     mu = 0.9
-    smoothing = 40
-    prox_parameter = 10
+    smoothing = 10
+    prox_parameter = 1
+    normal_force = 10.5
+    g = normal_force/masses[1]
 
     # warm-start from smoothed oscillator
-    Ns_HBM = [30]
-    L_DFT = 1000
+    Ns_HBM = [40, 100, 160]
+    L_DFT = 4096
 
     dae_smooth = SmoothedFrictionOscillator(
         stiffnesses=stiffnesses,
@@ -88,7 +104,7 @@ def plot_solution():
                 initial_guess[idx_sin_start:idx_sin_end] = hbm.X[idx_cos_end:]
 
             fourier = Fourier(
-                N_HBM=N_HBM, L_DFT=1000, n_dof=dae.n_dof, real_formulation=True
+                N_HBM=N_HBM, L_DFT=L_DFT, n_dof=dae.n_dof, real_formulation=True
             )
 
             hbm = HBMEquationDAE(
@@ -260,5 +276,5 @@ def plot_frc():
 
 if __name__ == "__main__":
     plot_solution()
-    plot_frc()
+    # plot_frc()
     plt.show()
