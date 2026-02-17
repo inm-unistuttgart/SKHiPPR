@@ -9,6 +9,7 @@ from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import ScipyFsolveSolver, NewtonSolver, ScipyRootSolver
 from skhippr.equations.EquationSystem import EquationSystem
+from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.solvers.continuation import pseudo_arclength_continuator
 
@@ -24,7 +25,11 @@ def plot_solution():
     #     tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
     # )
     solver = ScipyRootSolver(
-        tolerance=1e-8, max_iterations=10000000, verbose=True, use_fprime=False, method="df-sane"
+        tolerance=1e-8,
+        max_iterations=10000000,
+        verbose=True,
+        use_fprime=False,
+        method="df-sane",
     )
 
     # BA Schütz case 1 (p. 44)
@@ -50,7 +55,7 @@ def plot_solution():
     # smoothing = 40
     # prox_parameter = 10
 
-    # # Legrand 
+    # # Legrand
     masses = [1, 1]
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
@@ -61,7 +66,7 @@ def plot_solution():
     smoothing = 10
     prox_parameter = 1
     normal_force = 10.5
-    g = normal_force/masses[1]
+    g = normal_force / masses[1]
 
     # warm-start from smoothed oscillator
     Ns_HBM = [40, 100, 160]
@@ -274,7 +279,207 @@ def plot_frc():
         axs[k].set_ylabel("|x[0]| max")
 
 
+def solve_friction():
+    # # Legrand
+    masses = [1, 1]
+    stiffness = 1
+    damping = 0.02
+    forcings = [20, 0]
+    omega = 0.299
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    smoothing = 10
+    prox_parameter = 1
+    normal_force = 10.5
+    g = normal_force / masses[1]
+
+    N_HBM = 60
+    L_DFT = 4096
+
+    initial_guess = np.zeros(2 * N_HBM + 1)
+
+    solver = ScipyRootSolver(
+        tolerance=1e-8,
+        max_iterations=1000000,
+        verbose=True,
+        use_fprime=False,
+        method="hybr",
+    )
+
+    for smoothing in [10, np.inf]:
+
+        equ = FrictionDirect(
+            N_HBM=60,
+            L_DFT=4096,
+            real_formulation=True,
+            stiffness=stiffness,
+            damping=damping,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcings,
+            forcing_phases=phases,
+            omega=omega,
+            smoothing=smoothing,
+            prox_parameter=prox_parameter,
+            initial_guess=None,
+        )
+        solver.solve_equation(equ, unknown="Lambda")
+        x_time = equ.x_time()
+        ts = equ.fourier.time_samples(equ.omega)
+        _, axs = plt.subplots(5, 1)
+        for k in range(5):
+            axs[k].plot(ts, x_time[k, :])
+            if k == 0:
+                axs[k].set_title(f"Friction oscillator smoothing = {smoothing}")
+            axs[k].set_xlabel("time")
+            axs[k].set_ylabel(f"x[{k}]")
+
+
+class FrictionDirect(AbstractEquation):
+    """Substituted formulation of the friction oscillator, solving only for Lambda and inferring the rest."""
+
+    def __init__(
+        self,
+        N_HBM=60,
+        L_DFT=4096,
+        real_formulation=True,
+        stiffness=1,
+        damping=0.1,
+        masses=(1, 1),
+        g=9.81,
+        mu=1,
+        forcing_amplitudes=(1, 0),
+        forcing_phases=(0, 0),
+        omega=1,
+        smoothing=np.inf,
+        prox_parameter=1,
+        initial_guess=None,
+    ):
+        super().__init__(stability_method=None)
+        self.masses = np.atleast_1d(masses)
+        self.n_dof = len(self.masses)
+        self.g = g
+        self.mu = mu
+        self.forcing_amplitudes = np.atleast_1d(forcing_amplitudes)
+        self.forcing_phases = np.atleast_1d(forcing_phases)
+        self.smoothing = smoothing
+        self.prox_parameter = prox_parameter
+        self.fourier = Fourier(
+            N_HBM=N_HBM, L_DFT=L_DFT, n_dof=1, real_formulation=real_formulation
+        )
+        self.omega = omega
+
+        if initial_guess is None:
+            initial_guess = np.zeros((2 * self.fourier.N_HBM + 1))
+        self.Lambda = initial_guess
+
+        D = self.fourier.derivative_matrix
+        M = np.diag(self.masses)
+        K = (
+            -2 * stiffness * np.eye(self.n_dof)
+            + np.diag(stiffness * np.ones(self.n_dof - 1), k=1)
+            + np.diag(stiffness * np.ones(self.n_dof - 1), k=-1)
+        )
+        C = (
+            -2 * damping * np.eye(self.n_dof)
+            + np.diag(damping * np.ones(self.n_dof - 1), k=1)
+            + np.diag(damping * np.ones(self.n_dof - 1), k=-1)
+        )
+        self.M = np.kron(omega**2 * D @ D, M)
+        self.C = np.kron(omega * D, C)
+        self.K = np.kron(np.eye(2 * self.fourier.N_HBM + 1), K)
+        self.Z = self.M + self.C + self.K
+
+        t = self.fourier.time_samples(self.omega)
+        arguments = self.forcing_phases[:, np.newaxis] + self.omega * t[np.newaxis, :]
+        forcing = self.forcing_amplitudes[:, np.newaxis] * np.sin(arguments)
+
+        fourier_ndof = Fourier(
+            N_HBM=N_HBM,
+            L_DFT=L_DFT,
+            n_dof=self.n_dof,
+            real_formulation=real_formulation,
+        )
+        self.F = fourier_ndof.DFT(forcing)
+        W_time = np.zeros(self.n_dof)
+        W_time[-1] = 0
+        self.W = np.kron(np.eye(2 * self.fourier.N_HBM + 1), W_time[:, np.newaxis])
+
+        self.lam_crit = self.mu * self.masses[-1] * self.g
+
+    def FC_X(self, Lambda=None):
+        if Lambda is None:
+            Lambda = self.Lambda
+
+        X = np.linalg.solve(self.Z, -self.W @ Lambda + self.F)
+        X = np.reshape(X, (self.n_dof, -1), order="F")
+        return X
+
+    def FC_dX(self, Lambda=None):
+        X = self.FC_X(Lambda)
+        dX = np.zeros_like(X)
+        for i in range(X.shape[0]):
+            dX[i, :] = self.fourier.derivative_coeffs(X[i, :], omega=self.omega)
+        return X, dX
+
+    def x_time(self, Lambda=None):
+        if Lambda is None:
+            Lambda = self.Lambda
+        X, dX = self.FC_dX(Lambda)
+        x_time = np.zeros((2 * X.shape[0] + 1, self.fourier.L_DFT), dtype=X.dtype)
+        for k in range(X.shape[0] - 1):
+            x_time[k, :] = self.fourier.inv_DFT(X[k, :])
+            x_time[k + X.shape[0], :] = self.fourier.inv_DFT(dX[k, :])
+        x_time[-1, :] = self.fourier.inv_DFT(Lambda)
+        return x_time
+
+    def FC_gamma(self, Lambda=None):
+        _, dX = self.FC_dX(Lambda)
+        return dX[-1, :]
+
+    def residual_with_argument(self, Lambda=None):
+        if Lambda is None:
+            Lambda = self.Lambda
+
+        Gamma = self.FC_gamma(Lambda)
+        lambdas = self.fourier.inv_DFT(Lambda)
+        gammas = self.fourier.inv_DFT(Gamma)
+        residual_time = self.constraint(gammas, lambdas)
+        residual = self.fourier.DFT(residual_time)
+        return residual
+
+    def residual_function(self):
+        return self.residual_with_argument()
+
+    def constraint(self, gammas, lambdas):
+        if self.smoothing == np.inf:
+            return self.constraint_prox(gammas, lambdas)
+        else:
+            return self.constraint_smooth(gammas, lambdas)
+
+    def constraint_smooth(self, gammas, lambdas):
+        return lambdas + self.lam_crit * np.tanh(self.smoothing * gammas)
+
+    def constraint_prox(self, gammas, lambdas):
+        return (
+            gammas
+            + np.minimum(
+                0,
+                self.prox_parameter * (lambdas + self.lam_crit) - gammas,
+            )
+            + np.maximum(
+                0,
+                self.prox_parameter * (lambdas - self.lam_crit) - gammas,
+            )
+        )
+
+    def closed_form_derivative(self, variable):
+        return super().closed_form_derivative(variable)
+
+
 if __name__ == "__main__":
-    plot_solution()
+    solve_friction()
+    # plot_solution()
     # plot_frc()
     plt.show()
