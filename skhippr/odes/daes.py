@@ -41,7 +41,7 @@ class PendulumDAE(AbstractDAE):
         )
         f[3, ...] = (
             2 * x[1] * x[4]
-            - self.M_small[2, 2] * self.g
+            - self.masses[2] * self.g
             - self.d / (self.l**2) * x[3, ...]
         )
         f[4, ...] = x[0, ...] ** 2 + x[1, ...] ** 2 - self.l**2
@@ -180,8 +180,6 @@ class FrictionOscillator(AbstractDAE):
         forcing_amplitudes = np.atleast_1d(forcing_amplitudes)
         forcing_phases = np.atleast_1d(forcing_phases)
 
-        M_small = np.diag(np.hstack((np.ones(len(masses)), masses, 0)))
-
         if len(masses) != len(stiffnesses):
             raise ValueError(
                 f"Length of masses ({len(masses)}) must match length of stiffnesses ({len(stiffnesses)})."
@@ -202,9 +200,10 @@ class FrictionOscillator(AbstractDAE):
                 f"Length of forcing phases ({len(forcing_phases)}) must match length of stiffnesses ({len(stiffnesses)})."
             )
 
-        super().__init__(M_small, False, stability_method)
+        super().__init__(n_dof=5, autonomous=False, stability_method=stability_method, M_is_constant=True, invertible=False)
         self.stiffnesses = stiffnesses
         self.dampings = dampings
+        self.masses = masses
         self.forcing_amplitudes = forcing_amplitudes
         self.forcing_phases = forcing_phases
         self.mu = mu
@@ -261,6 +260,9 @@ class FrictionOscillator(AbstractDAE):
     def lam(self, value):
         self.x[-1, ...] = value
 
+    def M_small(self, t=None, x=None):
+        return np.diag(np.hstack((np.ones(len(self.masses)), self.masses, 0)))
+    
     def forcing(self, t=None):
         if t is None:
             t = self.t
