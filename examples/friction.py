@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 import warnings
 
 
@@ -125,13 +126,17 @@ def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=No
 
         initial_guess_lambda = np.zeros(2 * fourier.N_HBM + 1)
 
-        idx_cos_end = hbm_ref.fourier.N_HBM + 1
-        idx_sin_start = fourier.N_HBM + 1
-        idx_sin_end = fourier.N_HBM + 1 + hbm_ref.fourier.N_HBM
-        initial_guess_lambda[:idx_cos_end] = Lambda_old[:idx_cos_end]
-        initial_guess_lambda[idx_sin_start:idx_sin_end] = Lambda_old[
-            idx_cos_end:
-        ]
+        idx_cos_end_old = min(hbm_ref.fourier.N_HBM + 1, fourier.N_HBM + 1)
+        idx_cos_end_new = idx_cos_end_old
+        
+        idx_sin_start_old = hbm_ref.fourier.N_HBM + 1
+        idx_sin_end_old = idx_cos_end_old + hbm_ref.fourier.N_HBM
+
+        idx_sin_start_new = fourier.N_HBM+1
+        idx_sin_end_new = idx_cos_end_old + fourier.N_HBM+1
+
+        initial_guess_lambda[:idx_cos_end_new] = Lambda_old[:idx_cos_end_old]
+        initial_guess_lambda[idx_sin_start_new:idx_sin_end_new] = Lambda_old[idx_sin_start_old:idx_sin_end_old]
 
     # Solve with substituted formulation
     equ_lambda = solve_friction(
@@ -171,10 +176,155 @@ def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=No
 
     return hbm
     
+def plot_and_export_hbm(name_case='C', smoothing=np.inf, N_HBM=160, L_DFT=2**14):
+    fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
+    hbm = solve_hbm(name_case, smoothing, fourier)
+    x_time = hbm.x_time()
+    ts = hbm.fourier.time_samples(hbm.omega)
+    residual = np.linalg.norm(hbm.residual(update=True))
+
+    description = f"case-{name_case}-N-{N_HBM}-smoothing-{smoothing}"
+
+    # Plot position
+    _, ax = plt.subplots(1,1)
+    ax.plot(ts, x_time[0, :], label='x0')
+    ax.plot(ts, x_time[1, :], label='x1')
+    ax.set_xlabel('t')
+    ax.set_ylabel('position')
+    ax.set_title(f"position {description} r = {residual}")
+    ax.legend()
+    tikzplotlib.save(f"plots/position_{description}.tikz")
+
+    # Plot velocity
+    _, ax = plt.subplots(1,1)
+    ax.plot(ts, x_time[2, :], label='x2')
+    ax.plot(ts, x_time[3, :], label='x3')
+    ax.set_xlabel('t')
+    ax.set_ylabel('velocity')
+    ax.set_title(f"velocity {description} r = {residual}")
+    ax.legend()
+    tikzplotlib.save(f"plots/velocity_{description}.tikz")
+
+    # Plot tangential force
+    _, ax = plt.subplots(1,1)
+    ax.plot(ts, x_time[4, :], label='lambda')
+    ax.set_xlabel('t')
+    ax.set_ylabel('lambda')
+    ax.set_title(f"lambda {description} r = {residual}")
+    ax.legend()
+    tikzplotlib.save(f"plots/lambda_{description}.tikz")
+
+    # Plot force law
+    _, ax = plt.subplots(1,1)
+    ax.plot(x_time[3,:], x_time[4, :], label='lambda')
+    ax.set_xlabel('x3')
+    ax.set_ylabel('lambda')
+    ax.set_title(f"force law {description} r = {residual}")
+    ax.legend()
+    tikzplotlib.save(f"plots/forcelaw_{description}.tikz")
+
+def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14):
+
+    N_max = Ns_HBM[-1]
+    description = f"{name_case}-Nmax{N_max}-smoothing{smoothing}-L{L_DFT}"
+    hbm_ref = solve_hbm(name_case, smoothing, Fourier(N_max, L_DFT, n_dof=5, real_formulation=True))
+    FM_ref = sort_FMs(hbm_ref.eigenvalues)
+
+
+    e_hbm = np.zeros((5, len(Ns_HBM)))
+    e_hbm_fourier = np.zeros((5, len(Ns_HBM)))
+    e_stab = np.zeros((5, len(Ns_HBM)))
+    FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
+
+    for k, N_HBM in enumerate(Ns_HBM):
+        if k < len(Ns_HBM)-1:
+            fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
+            hbm = solve_hbm(name_case, smoothing, fourier, hbm_ref)
+        else:
+            hbm = hbm_ref
+
+        x_time = hbm.x_time()
+        X_comp = hbm_ref.fourier.DFT(x_time)
+        e_comp = np.reshape(hbm_ref.X - X_comp, (5, -1), order='F')
+
+        e_hbm[:, k] = np.max(np.abs(x_time - hbm_ref.x_time()), axis=1)
+        e_hbm_fourier[:,k] = np.linalg.norm(e_comp, axis=1)
+        FMs = sort_FMs(hbm.eigenvalues)
+        FMs_all[:, k] = FMs
+        e_stab[:, k] = np.abs(FMs - FM_ref)
+
+    # Plot Floquet multipliers
+    _, ax = plt.subplots(1,1)
+    phis = np.linspace(0, 2*np.pi, 250)
+    ax.plot(np.cos(phis), np.sin(phis))
+    ax.plot(np.real(FM_ref), np.imag(FM_ref), 'o', label=f"ref(N={N_max})")
+    for l in range(FMs_all.shape[0]):
+        ax.plot(np.real(FMs_all[l, :]), np.imag(FMs_all[l, :]), '-x', label=f"FM {l}")
+    ax.set_aspect('equal')
+    ax.set_title(description)
+    ax.legend()
+    tikzplotlib.save(f"plots/FMs_conv_{description}.tikz")
+
+    # Plot HBM convergence in time
+    _, ax = plt.subplots(1,1)
+    for l in range(e_hbm.shape[0]):
+        ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
+    ax.legend()
+    ax.set_xlabel('N')
+    ax.set_ylabel('error HBM')
+    ax.set_title(f"HBM convergence {description}")
+    tikzplotlib.save(f"plots/HBM_error_{description}.tikz")
+
+    # Plot HBM convergence in freq domain
+    _, ax = plt.subplots(1,1)
+    for l in range(e_hbm_fourier.shape[0]):
+        ax.semilogy(Ns_HBM[:-1], e_hbm_fourier[l, :-1], label=f"x{l}")
+    ax.legend()
+    ax.set_xlabel('N')
+    ax.set_ylabel('error HBM FCs')
+    ax.set_title(f"HBM FC convergence {description}")
+    tikzplotlib.save(f"plots/HBM_FC_error_{description}.tikz")
+
+    # Plot HBM convergence in FCs
+    _, ax = plt.subplots(1,1)
+    for l in range(e_hbm.shape[0]):
+        ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
+    ax.legend()
+    ax.set_xlabel('N')
+    ax.set_ylabel('error HBM')
+    ax.set_title(f"HBM convergence {description}")
+    tikzplotlib.save(f"plots/HBM_error_{description}.tikz")
+
+    # Plot FM convergence
+    _, ax = plt.subplots(1,1)
+    for l in range(e_stab.shape[0]):
+        ax.semilogy(Ns_HBM[:-1], e_stab[l, :-1], label=f"FM {l}")
+    ax.legend()
+    ax.set_xlabel('N')
+    ax.set_ylabel('error FMs')
+    ax.set_title(f"FM convergence {description}")
+    tikzplotlib.save(f"plots/FMs_error_{description}.tikz")
+
+
+def sort_FMs(FMs, significant_digits=2):
+    # reference: https://gist.github.com/ttamg/3f65227fd580b3d8dc8ba91e01507280
+    FMs_rounded = np.zeros_like(FMs)
+    for k, FM in enumerate(FMs):
+        if abs(FM) > 0:
+            round_digits = -int(np.floor(np.log10(np.abs(FM)))) + significant_digits - 1
+            FMs_rounded[k] = np.round(FM, round_digits)
+        else:
+            FMs_rounded[k] = FM
+    idx_sort = np.lexsort((np.angle(FMs_rounded), np.abs(FMs_rounded)))
+    FMs = FMs[idx_sort]
+    FMs_rounded = FMs_rounded[idx_sort]
+    # Separate complex and real eigenvalues
+    FMs = np.hstack((FMs[np.imag(FMs_rounded) == 0], FMs[np.imag(FMs_rounded)!= 0]))
+    return FMs
 
 
 
-def plot_solution():
+def plot_everything():
 
     Ns_HBM = [40]
     L_DFT = 2**13
@@ -586,7 +736,9 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    # plot_solve_friction()
-    plot_solution()
+    for name_case in ['C']:
+        # plot_and_export_hbm(name_case=name_case, smoothing=np.inf, N_HBM=40, L_DFT=2048)
+        convergence_study_N(name_case, Ns_HBM=range(1,50),L_DFT=512)
+    # plot_everything()
     # plot_frc()
     plt.show()
