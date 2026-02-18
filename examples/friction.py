@@ -282,24 +282,6 @@ def plot_frc():
 def solve_friction(
     oscillator, fourier, omega, smoothing, solver=None, initial_guess=None
 ):
-    # # # Legrand
-    # masses = [1, 1]
-    # stiffnesses = [1, 1]
-    # dampings = [0.02, 0.02]
-    # forcings = [20, 0]
-    # omega = 0.299
-    # phases = [0.5 * np.pi, 0]
-    # mu = 0.9
-    # smoothing = 10
-    # prox_parameter = 1
-    # normal_force = 10.5
-    # g = normal_force / masses[1]
-
-    # N_HBM = 80
-    # L_DFT = 4096
-
-    # initial_guess = np.zeros(2 * N_HBM + 1)
-    # initial_guess[1] = -10
 
     if solver is None:
         solver = ScipyRootSolver(
@@ -342,15 +324,15 @@ def solve_friction(
 
     if warmstart:  # warm-start with smoothed solution
         if solver.verbose:
-            print("Solving smoothed problem for warm-start...")
+            print("Solving smoothed lambda problem for warm-start...")
 
         equ.smoothing = 10
         solver.solve_equation(equ, unknown="Lambda")
+        equ.smoothing = smoothing
 
     if solver.verbose:
-        print("Solving problem with only lambda...")
+        print(f"Solving lambda problem (smoothing = {equ.smoothing})...")
 
-    equ.smoothing = 10
     solver.solve_equation(equ, unknown="Lambda")
 
     return equ
