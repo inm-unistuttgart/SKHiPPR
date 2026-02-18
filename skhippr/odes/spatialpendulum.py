@@ -58,9 +58,14 @@ class AbstractSpatialPendulum(AbstractDAE):
         self.K_r_SP = 0.5 * np.array(shape_cuboid)
         self.I_normal = np.array([0, 0, 1])  # self.K_r_SP / np.linalg.norm(self.K_r_SP)
 
-        self.I_gravity = -9.81 * self.I_normal
+        self.g = 9.81
+        # self.I_gravity = -self.g * self.I_normal
 
     """ Extract angles and their derivatives from x"""
+
+    @property
+    def I_gravity(self):
+        return -self.g * self.I_normal
 
     @property
     def x(self):
