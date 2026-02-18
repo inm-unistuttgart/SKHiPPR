@@ -243,6 +243,11 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
         print(f"solving N = {N_HBM} for {description}")
         fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
         hbm_ref = solve_hbm(name_case, smoothing, fourier, hbm_ref)
+
+        if np.linalg.norm(hbm_ref.residual(update=False)) > 1e-10:
+            hbm_ref = hbms[-1]
+            break
+
         hbms.append(hbm_ref)
 
     print(f"a posteriori analysis {description}")
@@ -596,7 +601,7 @@ def solve_friction(
         equ.smoothing = smoothing
 
     if solver.verbose:
-        print(f"Solving lambda problem (smoothing = {equ.smoothing})...")
+        print(f"Solving lambda problem (smoothing = {equ.smoothing}). Residual before: {np.linalg.norm(equ.residual(update=True))}...")
 
     solver.solve_equation(equ, unknown="Lambda")
 
@@ -814,7 +819,7 @@ if __name__ == "__main__":
     Ns = [int(N) for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 20)))]
     # Ns = Ns + [N_max + k for k in range(1, 11)]
     for name_case in ['Schuetz2']:# , 'A', 'B', 'C', 'D']:
-        for smoothing in [30, np.inf]:
+        for smoothing in [np.inf, 30]:
             # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
             convergence_study_N(name_case, Ns_HBM=Ns,L_DFT=8192, smoothing=smoothing)
     # plot_everything()
