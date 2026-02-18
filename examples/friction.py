@@ -95,7 +95,7 @@ def plot_solution():
     )
 
     for k, N_HBM in enumerate(Ns_HBM):
-        for l, dae in enumerate([dae_smooth]):
+        for l, dae in enumerate([dae_smooth, dae_nonsmooth]):
 
             if k + l == 0:
                 initial_guess = 0.1 * np.random.rand(dae.n_dof * (2 * N_HBM + 1))
@@ -279,7 +279,84 @@ def plot_frc():
         axs[k].set_ylabel("|x[0]| max")
 
 
-def solve_friction():
+def solve_friction(
+    oscillator, fourier, omega, smoothing, solver=None, initial_guess=None
+):
+    # # # Legrand
+    # masses = [1, 1]
+    # stiffnesses = [1, 1]
+    # dampings = [0.02, 0.02]
+    # forcings = [20, 0]
+    # omega = 0.299
+    # phases = [0.5 * np.pi, 0]
+    # mu = 0.9
+    # smoothing = 10
+    # prox_parameter = 1
+    # normal_force = 10.5
+    # g = normal_force / masses[1]
+
+    # N_HBM = 80
+    # L_DFT = 4096
+
+    # initial_guess = np.zeros(2 * N_HBM + 1)
+    # initial_guess[1] = -10
+
+    if solver is None:
+        solver = ScipyRootSolver(
+            tolerance=1e-8,
+            max_iterations=1000000,
+            verbose=True,
+            use_fprime=False,
+            method="lm",
+        )
+
+    try:
+        prox_parameter = oscillator.prox_parameter
+    except AttributeError:
+        if smoothing == np.inf:
+            raise ValueError("Must specify prox_parameter for non-smooth oscillator.")
+        prox_parameter = 0
+
+    g = oscillator.lam_crit / (oscillator.mu * oscillator.masses[-1])
+
+    warmstart = initial_guess is None and smoothing == np.inf
+    if initial_guess is None:
+        initial_guess = np.zeros(2 * fourier.N_HBM + 1)
+
+    equ = FrictionDirect(
+        N_HBM=fourier.N_HBM,
+        L_DFT=fourier.L_DFT,
+        real_formulation=fourier.real_formulation,
+        stiffnesses=oscillator.stiffnesses,
+        dampings=oscillator.dampings,
+        masses=oscillator.masses,
+        g=g,
+        mu=oscillator.mu,
+        forcing_amplitudes=oscillator.forcing_amplitudes,
+        forcing_phases=oscillator.forcing_phases,
+        omega=omega,
+        smoothing=smoothing,
+        prox_parameter=prox_parameter,
+        initial_guess=initial_guess,
+    )
+
+    if warmstart:  # warm-start with smoothed solution
+        if solver.verbose:
+            print("Solving smoothed problem for warm-start...")
+
+        equ.smoothing = 10
+        solver.solve_equation(equ, unknown="Lambda")
+
+    if solver.verbose:
+        print("Solving problem with only lambda...")
+
+    equ.smoothing = 10
+    solver.solve_equation(equ, unknown="Lambda")
+
+    return equ
+
+
+def plot_solve_friction():
     # # Legrand
     masses = [1, 1]
     stiffnesses = [1, 1]
@@ -293,43 +370,42 @@ def solve_friction():
     normal_force = 10.5
     g = normal_force / masses[1]
 
+    # warm-start from smoothed oscillator
     N_HBM = 40
     L_DFT = 4096
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=5, real_formulation=True)
 
-    initial_guess = np.zeros(2 * N_HBM + 1)
-    initial_guess[1] = -10
-
-    solver = ScipyRootSolver(
-        tolerance=1e-8,
-        max_iterations=1000000,
-        verbose=True,
-        use_fprime=False,
-        method="lm",
+    dae_smooth = SmoothedFrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        smoothing=smoothing,
     )
 
-    for smoothing in [10]:
+    dae_nonsmooth = FrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        prox_parameter=prox_parameter,
+    )
 
-        equ = FrictionDirect(
-            N_HBM=N_HBM,
-            L_DFT=L_DFT,
-            real_formulation=True,
-            stiffnesses=stiffnesses,
-            dampings=dampings,
-            masses=masses,
-            g=g,
-            mu=mu,
-            forcing_amplitudes=forcings,
-            forcing_phases=phases,
-            omega=omega,
-            smoothing=smoothing,
-            prox_parameter=prox_parameter,
-            initial_guess=initial_guess,
-        )
-        solver.solve_equation(equ, unknown="Lambda")
+    for smoothing, dae in zip(
+        (dae_smooth.smoothing, np.inf), [dae_smooth, dae_nonsmooth]
+    ):
+
+        equ = solve_friction(dae, fourier, omega, smoothing, initial_guess=None)
+
         x_time = equ.x_time()
         ts = equ.fourier.time_samples(equ.omega)
         _, axs = plt.subplots(5, 1)
-        initial_guess = equ.Lambda
         for k in range(5):
             axs[k].plot(ts, x_time[k, :])
             if k == 0:
@@ -487,7 +563,7 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    solve_friction()
-    plot_solution()
+    plot_solve_friction()
+    # plot_solution()
     # plot_frc()
     plt.show()
