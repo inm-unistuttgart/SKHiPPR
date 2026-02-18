@@ -70,7 +70,7 @@ def init_oscillator(name_case='A', smoothing=np.inf):
         case 'Schuetz_2':
             g = 10
             omega = 2*np.pi
-            forcings = [20, 50]
+            forcings = [20, 10]
             phases = [0.5*np.pi, 0]
             smoothing = 40
             prox_parameter=10
@@ -286,14 +286,14 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.plot(np.real(FM_ref), np.imag(FM_ref), 'o', label=f"ref(N={N_max})")
     ax.set_aspect('equal')
     ax.set_title(description)
-    ax.legend()
+    ax.legend(loc='upper left')
     tikzplotlib.save(f"plots/FMs_conv_{description}.tikz")
 
     # Plot HBM convergence in time
     _, ax = plt.subplots(1,1)
     for l in range(e_hbm.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
-    ax.legend()
+    ax.legend(loc='best')
     ax.set_xlabel('N')
     ax.set_ylabel('error HBM')
     ax.set_title(f"HBM convergence {description}")
@@ -303,7 +303,7 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     _, ax = plt.subplots(1,1)
     for l in range(e_hbm_fourier.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_hbm_fourier[l, :-1], label=f"x{l}")
-    ax.legend()
+    ax.legend(loc='best')
     ax.set_xlabel('N')
     ax.set_ylabel('error HBM FCs')
     ax.set_title(f"HBM FC convergence {description}")
@@ -313,7 +313,7 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     _, ax = plt.subplots(1,1)
     for l in range(e_stab.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_stab[l, :-1], label=f"FM {l}")
-    ax.legend()
+    ax.legend(loc='best')
     ax.set_xlabel('N')
     ax.set_ylabel('error FMs')
     ax.set_title(f"FM convergence {description}")
@@ -780,9 +780,11 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    for name_case in ['A', 'B', 'C']:
-        # plot_and_export_hbm(name_case=name_case, smoothing=np.inf, N_HBM=40, L_DFT=2048)
-        convergence_study_N(name_case, Ns_HBM=range(1,21),L_DFT=512, smoothing=np.inf)
+    
+    for name_case in ['Schuetz_2']:
+        for smoothing in [20, np.inf]:
+            plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
+            convergence_study_N(name_case, Ns_HBM=(40,),L_DFT=4096, smoothing=smoothing)
     # plot_everything()
     # plot_frc()
     plt.show()
