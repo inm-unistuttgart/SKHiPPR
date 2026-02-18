@@ -815,11 +815,13 @@ class FrictionDirect(AbstractEquation):
 
 if __name__ == "__main__":
     N_min = 1
-    N_max = 100
-    Ns = [int(N) for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 20)))]
+    N_max = 160
+    Ns = [int(N) for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 23)))]
+    Ns[-3] = 100
+    print(Ns)
     # Ns = Ns + [N_max + k for k in range(1, 11)]
     for name_case in ['Schuetz2']:# , 'A', 'B', 'C', 'D']:
-        for smoothing in [np.inf, 30]:
+       for smoothing in [np.inf, 30]:
             # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
             convergence_study_N(name_case, Ns_HBM=Ns,L_DFT=8192, smoothing=smoothing)
     # plot_everything()
