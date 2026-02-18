@@ -60,18 +60,18 @@ def init_oscillator(name_case='A', smoothing=np.inf):
             normal_force = 10.5
             g = normal_force / masses[1]
         
-        case 'Schuetz_1':
+        case 'Schuetz1':
             g = 10
             omega = 2*np.pi
             forcings = [20, 50]
             phases = [-0.5 * np.pi, np.pi]
             mu = 4
 
-        case 'Schuetz_2':
+        case 'Schuetz2':
             g = 10
             omega = 2*np.pi
             forcings = [20, 10]
-            phases = [0.5*np.pi, 0]
+            phases = [0.4398, 2.0106]
             smoothing = 40
             prox_parameter=10
 
@@ -138,7 +138,7 @@ def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=No
         idx_sin_end_old = idx_cos_end_old + hbm_ref.fourier.N_HBM
 
         idx_sin_start_new = fourier.N_HBM+1
-        idx_sin_end_new = idx_cos_end_old + fourier.N_HBM+1
+        idx_sin_end_new = idx_cos_end_old + fourier.N_HBM
 
         initial_guess_lambda[:idx_cos_end_new] = Lambda_old[:idx_cos_end_old]
         initial_guess_lambda[idx_sin_start_new:idx_sin_end_new] = Lambda_old[idx_sin_start_old:idx_sin_end_old]
@@ -228,12 +228,37 @@ def plot_and_export_hbm(name_case='C', smoothing=np.inf, N_HBM=160, L_DFT=2**14)
     ax.legend()
     tikzplotlib.save(f"plots/forcelaw_{description}.tikz")
 
+    np.savetxt(f"X_{description}.csv", hbm.X, delimiter=';')
+
 def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14, tol_drazin=1e-7):
 
     N_max = Ns_HBM[-1]
     description = f"{name_case}-Nmax{N_max}-smoothing{smoothing}-L{L_DFT}"
-    hbm_ref = solve_hbm(name_case, smoothing, Fourier(N_max, L_DFT, n_dof=5, real_formulation=True))
+    
+    hbms = []
+    hbm_ref = None
+
+    for N_HBM in Ns_HBM:
+        print('--------------------------------------------------------------------')
+        print(f"solving N = {N_HBM} for {description}")
+        fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
+        hbm_ref = solve_hbm(name_case, smoothing, fourier, hbm_ref)
+        hbms.append(hbm_ref)
+
+    print(f"a posteriori analysis {description}")
+
     FM_ref = sort_FMs(hbm_ref.eigenvalues)
+
+    results_to_csv = np.zeros((len(Ns_HBM), hbm_ref.X.shape[0] + 2))
+    header_components = lambda my_text: [f"X_{my_text}_{l}" for l in range(hbm_ref.fourier.n_dof)]
+    header_const = header_components('const')
+    header_cos = []
+    header_sin = []
+    for k in range(1, hbm_ref.fourier.N_HBM+1):
+        header_cos += header_components(f"cos{k}") 
+        header_sin += header_components(f"sin{k}") 
+    header_csv = ['N_HBM', 'HBM residual'] + header_const + header_cos + header_sin
+    header_csv = ";".join(header_csv)
 
 
     e_hbm = np.zeros((5, len(Ns_HBM)))
@@ -244,16 +269,16 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     drazin_ratios = np.zeros(len(Ns_HBM))
     _, ax_drazin = plt.subplots(1,1)
 
-    for k, N_HBM in enumerate(Ns_HBM):
-        if k < len(Ns_HBM)-1:
-            fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
-            hbm = solve_hbm(name_case, smoothing, fourier, hbm_ref)
-        else:
-            hbm = hbm_ref
-
+    for k, hbm in enumerate(hbms):
+        
         x_time = hbm.x_time()
         X_comp = hbm_ref.fourier.DFT(x_time)
+        X_comp[np.abs(X_comp) <= 1e-17] = 0
         e_comp = np.reshape(hbm_ref.X - X_comp, (5, -1), order='F')
+
+        results_to_csv[k, 0] = hbm.fourier.N_HBM
+        results_to_csv[k, 1] = np.linalg.norm(hbm.residual(update=False))
+        results_to_csv[k, 2:] = X_comp
 
         e_hbm[:, k] = np.max(np.abs(x_time - hbm_ref.x_time()), axis=1)
         e_hbm_fourier[:,k] = np.linalg.norm(e_comp, axis=1)
@@ -264,18 +289,20 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
         # Drazin inverse analysis
         drazin_ratios[k] = analyze_drazin(hbm, ax_drazin, tol_drazin=tol_drazin)
 
+    np.savetxt(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\X_{description}.csv", results_to_csv, delimiter=";",header=header_csv)
+
     ax_drazin.axhline(tol_drazin, linestyle='--')
     ax_drazin.set_xlabel('n*(2*N+1)')
     ax_drazin.set_ylabel('magnitude of eigenvalue')
     ax_drazin.set_title(f"Drazin eigenvalues {description}")
-    tikzplotlib.save(f"plots/drazin_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz")
 
     _, ax_drazin_ratio = plt.subplots(1,1)
     ax_drazin_ratio.plot(Ns_HBM, drazin_ratios, '-x')
     ax_drazin_ratio.axhline(4/5, linestyle='--')
     ax_drazin_ratio.axhline(3/5, linestyle='--')
     ax_drazin_ratio.set_title(f"Drazin ratio {description}")
-    tikzplotlib.save(f"plots/drazin_ratio_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_ratio_{description}.tikz")
 
     # Plot Floquet multipliers
     _, ax = plt.subplots(1,1)
@@ -287,7 +314,7 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_aspect('equal')
     ax.set_title(description)
     ax.legend(loc='upper left')
-    tikzplotlib.save(f"plots/FMs_conv_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz")
 
     # Plot HBM convergence in time
     _, ax = plt.subplots(1,1)
@@ -297,7 +324,7 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_xlabel('N')
     ax.set_ylabel('error HBM')
     ax.set_title(f"HBM convergence {description}")
-    tikzplotlib.save(f"plots/HBM_error_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz")
 
     # Plot HBM convergence in freq domain
     _, ax = plt.subplots(1,1)
@@ -307,7 +334,7 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_xlabel('N')
     ax.set_ylabel('error HBM FCs')
     ax.set_title(f"HBM FC convergence {description}")
-    tikzplotlib.save(f"plots/HBM_FC_error_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz")
 
     # Plot FM convergence
     _, ax = plt.subplots(1,1)
@@ -317,7 +344,10 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_xlabel('N')
     ax.set_ylabel('error FMs')
     ax.set_title(f"FM convergence {description}")
-    tikzplotlib.save(f"plots/FMs_error_{description}.tikz")
+    tikzplotlib.save(f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz")
+
+    print('done')
+    print("==================================================================================================================================================")
 
 def analyze_drazin(
     hbm: HBMEquationDAE,
@@ -376,7 +406,7 @@ def plot_everything():
 
     smoothings = [np.inf]
 
-    for name_case in ['A', 'B', 'C', 'Schuetz_1', 'Schuetz_2']:
+    for name_case in ['C']:
         hbm = None
 
         for k, N_HBM in enumerate(Ns_HBM):
@@ -536,7 +566,7 @@ def solve_friction(
 
     g = oscillator.lam_crit / (oscillator.mu * oscillator.masses[-1])
 
-    warmstart = (smoothing == np.inf)
+    warmstart = (smoothing == np.inf and initial_guess is None)
     if initial_guess is None:
         initial_guess = np.zeros(2 * fourier.N_HBM + 1)
 
@@ -629,7 +659,6 @@ def plot_solve_friction():
                 axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
             axs[k].set_xlabel("time")
             axs[k].set_ylabel(f"x[{k}]")
-
 
 class FrictionDirect(AbstractEquation):
     """Substituted formulation of the friction oscillator, solving only for Lambda and inferring the rest."""
@@ -780,11 +809,14 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    
-    for name_case in ['Schuetz_2']:
-        for smoothing in [20, np.inf]:
-            plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
-            convergence_study_N(name_case, Ns_HBM=(40,),L_DFT=4096, smoothing=smoothing)
+    N_min = 1
+    N_max = 100
+    Ns = [int(N) for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 20)))]
+    # Ns = Ns + [N_max + k for k in range(1, 11)]
+    for name_case in ['Schuetz2']:# , 'A', 'B', 'C', 'D']:
+        for smoothing in [30, np.inf]:
+            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
+            convergence_study_N(name_case, Ns_HBM=Ns,L_DFT=8192, smoothing=smoothing)
     # plot_everything()
     # plot_frc()
-    plt.show()
+    # plt.show()
