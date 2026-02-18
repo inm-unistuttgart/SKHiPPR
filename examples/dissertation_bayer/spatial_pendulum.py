@@ -319,7 +319,11 @@ def iterate_FMs(hbm="constr", epsilon=0.5, description=None):
     if type(hbm) == str:
         pend = init_pendulum(pend_case=hbm, L_sol=1024)[0]
         hbm = init_hbm(
-            pend, x_sol=None, fourier_ref=Fourier(n_dof=6, N_HBM=5, L_DFT=1024)
+            pend,
+            epsilon=epsilon,
+            x_sol=None,
+            fourier_ref=Fourier(n_dof=6, N_HBM=5, L_DFT=1024),
+            stability_method_class=KoopmanHillDAE,
         )
 
     solver = NewtonSolver(verbose=False, max_iterations=20)
@@ -331,7 +335,7 @@ def iterate_FMs(hbm="constr", epsilon=0.5, description=None):
         sys = EquationSystem(equations=[hbm], unknowns=["X"])
         sys.equations[0].delta = 0
         sys.equations[0].epsilon = 0.5
-        sys_equations[0].g = -2
+        sys.equations[0].g = -2
         results = []
         for k, branch_point in enumerate(
             pseudo_arclength_continuator(
@@ -342,7 +346,7 @@ def iterate_FMs(hbm="constr", epsilon=0.5, description=None):
                 stepsize_range=(0.05, 0.05),
                 continuation_parameter="g",
                 verbose=True,
-                num_steps=10000,
+                num_steps=1,
             )
         ):
             FMs = branch_point.equations[0].stability_method.determine_eigenvalues(
@@ -497,13 +501,13 @@ def init_pendulum(
 def init_hbm(pend, x_sol, fourier_ref: Fourier, stability_method_class=None):
 
     fourier = fourier_ref.__replace__(n_dof=pend.n_dof)
-    if stability_method_class is None:
-        stability_method_class = lambda fourier: None
 
     if x_sol is None:
         x_sol = np.zeros((fourier.n_dof, fourier.L_DFT))
 
     if type(pend) == SpatialPendulumWithMassInverted:
+        if stability_method_class is None:
+            stability_method_class = KoopmanHillProjection
         hbm = HBMEquation(
             ode=pend,
             omega=pend.omega,
@@ -511,7 +515,10 @@ def init_hbm(pend, x_sol, fourier_ref: Fourier, stability_method_class=None):
             initial_guess=fourier.DFT(x_sol),
             stability_method=stability_method_class(fourier),
         )
+
     else:
+        if stability_method_class is None:
+            stability_method_class = KoopmanHillDAE
         hbm = HBMEquationDAE(
             dae=pend,
             omega=pend.omega,
@@ -519,6 +526,7 @@ def init_hbm(pend, x_sol, fourier_ref: Fourier, stability_method_class=None):
             initial_guess=fourier.DFT(x_sol),
             stability_method=stability_method_class(fourier),
         )
+
     return hbm
 
 
