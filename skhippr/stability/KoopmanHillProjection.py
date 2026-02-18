@@ -554,7 +554,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         return np.real(funda_mat)
 
 
-def drazin(A, tol=0):
+def drazin(A, tol=0, ax_plot=None):
     """Compute the Drazin inverse of a matrix A.
 
     Parameters
@@ -572,6 +572,9 @@ def drazin(A, tol=0):
     n = A.shape[0]
 
     T, Z, n_cutoff = schur(A, output="complex", sort=lambda x: abs(x) > tol)
+
+    if ax_plot is not None:
+        ax_plot.semilogy(n, np.abs(np.diag(T)), "x", label="Schur eigenvalues")
 
     R = T[:n_cutoff, :n_cutoff]
     N = T[n_cutoff:, n_cutoff:]
