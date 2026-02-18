@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tikzplotlib
 import warnings
+from scipy.linalg import (
+    lu_factor,
+    lu_solve,
+)
 
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
@@ -17,6 +21,7 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillSubharmonic,
     KoopmanHillDAE,
+    drazin,
 )
 
 
@@ -223,7 +228,7 @@ def plot_and_export_hbm(name_case='C', smoothing=np.inf, N_HBM=160, L_DFT=2**14)
     ax.legend()
     tikzplotlib.save(f"plots/forcelaw_{description}.tikz")
 
-def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14):
+def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14, tol_drazin=1e-7):
 
     N_max = Ns_HBM[-1]
     description = f"{name_case}-Nmax{N_max}-smoothing{smoothing}-L{L_DFT}"
@@ -235,6 +240,9 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     e_hbm_fourier = np.zeros((5, len(Ns_HBM)))
     e_stab = np.zeros((5, len(Ns_HBM)))
     FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
+
+    drazin_ratios = np.zeros(len(Ns_HBM))
+    _, ax_drazin = plt.subplots(1,1)
 
     for k, N_HBM in enumerate(Ns_HBM):
         if k < len(Ns_HBM)-1:
@@ -253,13 +261,29 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
         FMs_all[:, k] = FMs
         e_stab[:, k] = np.abs(FMs - FM_ref)
 
+        # Drazin inverse analysis
+        drazin_ratios[k] = analyze_drazin(hbm, ax_drazin, tol_drazin=tol_drazin)
+
+    ax_drazin.axhline(tol_drazin, linestyle='--')
+    ax_drazin.set_xlabel('n*(2*N+1)')
+    ax_drazin.set_ylabel('magnitude of eigenvalue')
+    ax_drazin.set_title(f"Drazin eigenvalues {description}")
+    tikzplotlib.save(f"plots/drazin_{description}.tikz")
+
+    _, ax_drazin_ratio = plt.subplots(1,1)
+    ax_drazin_ratio.plot(Ns_HBM, drazin_ratios, '-x')
+    ax_drazin_ratio.axhline(4/5, linestyle='--')
+    ax_drazin_ratio.axhline(3/5, linestyle='--')
+    ax_drazin_ratio.set_title(f"Drazin ratio {description}")
+    tikzplotlib.save(f"plots/drazin_ratio_{description}.tikz")
+
     # Plot Floquet multipliers
     _, ax = plt.subplots(1,1)
     phis = np.linspace(0, 2*np.pi, 250)
     ax.plot(np.cos(phis), np.sin(phis))
-    ax.plot(np.real(FM_ref), np.imag(FM_ref), 'o', label=f"ref(N={N_max})")
     for l in range(FMs_all.shape[0]):
         ax.plot(np.real(FMs_all[l, :]), np.imag(FMs_all[l, :]), '-x', label=f"FM {l}")
+    ax.plot(np.real(FM_ref), np.imag(FM_ref), 'o', label=f"ref(N={N_max})")
     ax.set_aspect('equal')
     ax.set_title(description)
     ax.legend()
@@ -285,16 +309,6 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_title(f"HBM FC convergence {description}")
     tikzplotlib.save(f"plots/HBM_FC_error_{description}.tikz")
 
-    # Plot HBM convergence in FCs
-    _, ax = plt.subplots(1,1)
-    for l in range(e_hbm.shape[0]):
-        ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
-    ax.legend()
-    ax.set_xlabel('N')
-    ax.set_ylabel('error HBM')
-    ax.set_title(f"HBM convergence {description}")
-    tikzplotlib.save(f"plots/HBM_error_{description}.tikz")
-
     # Plot FM convergence
     _, ax = plt.subplots(1,1)
     for l in range(e_stab.shape[0]):
@@ -305,6 +319,36 @@ def convergence_study_N(name_case='C', smoothing=np.inf, Ns_HBM=(30, 40, 50), L_
     ax.set_title(f"FM convergence {description}")
     tikzplotlib.save(f"plots/FMs_error_{description}.tikz")
 
+def analyze_drazin(
+    hbm: HBMEquationDAE,
+    ax=None,
+    tol_cond=1e6,
+    tol_drazin=1e-7,
+):
+
+    
+    hill_matrix = hbm.hill_matrix(update=True)
+    mass_matrix = hbm.M()
+
+    # Copy&pasted from KoopmanHillDAE.generalized_exponential()
+    a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
+    success = False
+    for a in a_vals:
+        pencil = a * mass_matrix - hill_matrix
+        if np.linalg.cond(pencil) < tol_cond:
+            success = True
+            # print(f"N = {N}: a = {a}")
+            break
+    if not success:
+        raise RuntimeError(
+            f"Could not find suitable scaling factor 'a' for Drazin inverse with condition < {tol_cond}."
+        )
+
+    pencil_lu = lu_factor(a * mass_matrix - hill_matrix)
+    pencil_M = lu_solve(pencil_lu, mass_matrix)
+    _, ratio = drazin(pencil_M, tol_drazin, ax_plot=ax)
+    # print(f"Ratio of Drazin inverse: {ratio}")
+    return ratio
 
 def sort_FMs(FMs, significant_digits=2):
     # reference: https://gist.github.com/ttamg/3f65227fd580b3d8dc8ba91e01507280
@@ -736,9 +780,9 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    for name_case in ['C']:
+    for name_case in ['A', 'B', 'C']:
         # plot_and_export_hbm(name_case=name_case, smoothing=np.inf, N_HBM=40, L_DFT=2048)
-        convergence_study_N(name_case, Ns_HBM=range(1,50),L_DFT=512)
+        convergence_study_N(name_case, Ns_HBM=range(1,21),L_DFT=512, smoothing=np.inf)
     # plot_everything()
     # plot_frc()
     plt.show()
