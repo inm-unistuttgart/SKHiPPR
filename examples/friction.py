@@ -21,15 +21,8 @@ from skhippr.stability.KoopmanHillProjection import (
 
 def plot_solution():
 
-    # solver = ScipyRootSolver(
-    #     tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
-    # )
     solver = ScipyRootSolver(
-        tolerance=1e-8,
-        max_iterations=10000000,
-        verbose=True,
-        use_fprime=True,
-        method="lm",
+        tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
     )
 
     # BA Schütz case 1 (p. 44)
@@ -63,14 +56,15 @@ def plot_solution():
     omega = 0.299
     phases = [0.5 * np.pi, 0]
     mu = 0.9
-    smoothing = 10
     prox_parameter = 1
     normal_force = 10.5
     g = normal_force / masses[1]
 
     # warm-start from smoothed oscillator
-    Ns_HBM = [40]
+    Ns_HBM = [40, 100, 160]
     L_DFT = 4096
+
+    smoothings = [np.inf]
 
     dae_smooth = SmoothedFrictionOscillator(
         stiffnesses=stiffnesses,
@@ -80,7 +74,7 @@ def plot_solution():
         mu=mu,
         forcing_amplitudes=forcings,
         forcing_phases=phases,
-        smoothing=smoothing,
+        smoothing=smoothings[0],
     )
 
     dae_nonsmooth = FrictionOscillator(
@@ -95,22 +89,54 @@ def plot_solution():
     )
 
     for k, N_HBM in enumerate(Ns_HBM):
-        for l, dae in enumerate([dae_smooth, dae_nonsmooth]):
+        for l, alpha in enumerate(smoothings):
+
+            if alpha == np.inf:
+                dae = dae_nonsmooth
+            else:
+                dae = dae_smooth
+                dae.smoothing = alpha
 
             if k + l == 0:
-                initial_guess = 0.1 * np.random.rand(dae.n_dof * (2 * N_HBM + 1))
+                initial_guess_lambda = None
             else:
-                initial_guess = np.zeros(dae.n_dof * (2 * N_HBM + 1))
+                X_old = hbm.X
+                X_old = np.reshape(X_old, (dae.n_dof, -1), order="F")
+                Lambda_old = X_old[-1, :]
 
-                idx_cos_end = dae.n_dof * (hbm.fourier.N_HBM + 1)
-                idx_sin_start = dae.n_dof * (N_HBM + 1)
-                idx_sin_end = dae.n_dof * (N_HBM + 1 + hbm.fourier.N_HBM)
-                initial_guess[:idx_cos_end] = hbm.X[:idx_cos_end]
-                initial_guess[idx_sin_start:idx_sin_end] = hbm.X[idx_cos_end:]
+                initial_guess_lambda = np.zeros(2 * N_HBM + 1)
+
+                idx_cos_end = hbm.fourier.N_HBM + 1
+                idx_sin_start = N_HBM + 1
+                idx_sin_end = N_HBM + 1 + hbm.fourier.N_HBM
+                initial_guess_lambda[:idx_cos_end] = Lambda_old[:idx_cos_end]
+                initial_guess_lambda[idx_sin_start:idx_sin_end] = Lambda_old[
+                    idx_cos_end:
+                ]
 
             fourier = Fourier(
                 N_HBM=N_HBM, L_DFT=L_DFT, n_dof=dae.n_dof, real_formulation=True
             )
+
+            # Solve with substituted formulation
+            equ_lambda = solve_friction(
+                oscillator=dae,
+                fourier=fourier,
+                omega=omega,
+                smoothing=alpha,
+                solver=solver,
+                initial_guess=initial_guess_lambda,
+            )
+
+            X, dX = equ_lambda.FC_dX()
+            initial_guess = np.vstack(((X, dX, equ_lambda.Lambda))).flatten(order="F")
+
+            if fourier.real_formulation:
+                initial_guess = np.real(initial_guess)
+            else:
+                raise ValueError(
+                    "Complex formulation not implemented here for initial guess!."
+                )
 
             hbm = HBMEquationDAE(
                 dae,
@@ -121,11 +147,6 @@ def plot_solution():
                     fourier, tol=1e-4, autonomous=False, tol_drazin=1e-6
                 ),
             )
-
-            try:
-                alpha = dae.smoothing
-            except AttributeError:
-                alpha = "inf"
 
             print(
                 f"N = {N_HBM}, alpha = {alpha}: -- Residual before solving: {np.linalg.norm(hbm.residual(update=True), np.inf)}"
@@ -545,7 +566,7 @@ class FrictionDirect(AbstractEquation):
 
 
 if __name__ == "__main__":
-    plot_solve_friction()
-    # plot_solution()
+    # plot_solve_friction()
+    plot_solution()
     # plot_frc()
     plt.show()
