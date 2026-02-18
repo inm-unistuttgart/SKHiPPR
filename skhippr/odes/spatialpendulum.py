@@ -56,9 +56,9 @@ class AbstractSpatialPendulum(AbstractDAE):
         self.epsilon = epsilon
         self.omega = omega
         self.K_r_SP = 0.5 * np.array(shape_cuboid)
-        self.I_normal = np.array([0, 0, 1])  # self.K_r_SP / np.linalg.norm(self.K_r_SP)
+        self.I_normal = np.array([0, 0, 1])
 
-        self.I_gravity = -9.81 * self.I_normal
+        self.I_gravity = -9.81 * np.array([0, 0, 1])
 
     """ Extract angles and their derivatives from x"""
 
