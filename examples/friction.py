@@ -18,6 +18,84 @@ from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillDAE,
 )
 
+def init_oscillator(name_case='A', smoothing=np.inf):
+    masses = [1, 1]
+    stiffnesses = [1, 1]
+    dampings = [0.02, 0.02]
+    omega = 0.299
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    prox_parameter = 1
+
+    match name_case:
+        case 'A':
+            omega = 0.618
+            phases = [0.5 * np.pi, 0]
+            forcings = [20, 0]
+            normal_force = 8
+            g = normal_force / masses[1]
+        case 'B':
+            omega = 0.293
+            phases = [0.5 * np.pi, 0]
+            forcings = [20, 0]
+            normal_force = 8
+            g = normal_force / masses[1]
+        case 'C':
+            omega = 0.299
+            phases = [0.5 * np.pi, 0]
+            forcings = [20, 0]
+            normal_force = 10.5
+            g = normal_force / masses[1]
+        case 'D':
+            omega = 0.308
+            phases = [0.5 * np.pi, 0]
+            forcings = [20, 0]
+            normal_force = 10.5
+            g = normal_force / masses[1]
+        
+        case 'Schuetz_1':
+            g = 10
+            omega = 2*np.pi
+            forcings = [20, 50]
+            phases = [-0.5 * np.pi, np.pi]
+            mu = 4
+
+        case 'Schuetz_2':
+            g = 10
+            omega = 2*np.pi
+            phases = [0.5*np.pi, 0]
+            smoothing = 40
+            prox_parameter=10
+
+        case _:
+            raise ValueError(f"Case {name_case} not defined!")
+
+    if smoothing == np.inf:
+        dae = FrictionOscillator(
+            stiffnesses=stiffnesses,
+            dampings=dampings,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcings,
+            forcing_phases=phases,
+            prox_parameter=prox_parameter,
+        )
+    else:
+        dae = SmoothedFrictionOscillator(
+            stiffnesses=stiffnesses,
+            dampings=dampings,
+            masses=masses,
+            g=g,
+            mu=mu,
+            forcing_amplitudes=forcings,
+            forcing_phases=phases,
+            smoothing=smoothing,
+        )
+        
+    dae.omega = omega
+    return dae
+
 
 def plot_solution():
 
@@ -25,77 +103,17 @@ def plot_solution():
         tolerance=1e-8, max_iterations=1000, verbose=True, use_fprime=True, method="lm"
     )
 
-    # BA Schütz case 1 (p. 44)
-    # masses = [1, 1]
-    # g = 10
-    # stiffnesses = [1, 1]
-    # dampings = [0.02, 0.02]
-    # forcings = [20, 50]
-    # omega = 2 * np.pi
-    # phases = [-0.5 * np.pi, np.pi]
-    # mu = 4
-    # smoothing = 10
-
-    # # BA Schütz case 2 (p. 50)
-    # masses = [1, 1]
-    # g = 10
-    # stiffnesses = [1, 1]
-    # dampings = [0.02, 0.02]
-    # forcings = [20, 10]
-    # omega = 2 * np.pi
-    # phases = [0.5 * np.pi, 0]
-    # mu = 0.9
-    # smoothing = 40
-    # prox_parameter = 10
-
-    # # Legrand
-    masses = [1, 1]
-    stiffnesses = [1, 1]
-    dampings = [0.02, 0.02]
-    forcings = [20, 0]
-    omega = 0.299
-    phases = [0.5 * np.pi, 0]
-    mu = 0.9
-    prox_parameter = 1
-    normal_force = 10.5
-    g = normal_force / masses[1]
+    
 
     Ns_HBM = [40]
     L_DFT = 2**13
 
     smoothings = [np.inf]
 
-    dae_smooth = SmoothedFrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        smoothing=smoothings[0],
-    )
-
-    dae_nonsmooth = FrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        prox_parameter=prox_parameter,
-    )
-
     for k, N_HBM in enumerate(Ns_HBM):
         for l, alpha in enumerate(smoothings):
 
-            if alpha == np.inf:
-                dae = dae_nonsmooth
-            else:
-                dae = dae_smooth
-                dae.smoothing = alpha
-
+            dae = init_oscillator('C', smoothing=alpha)
             if k + l == 0:
                 initial_guess_lambda = None
             else:
@@ -121,7 +139,7 @@ def plot_solution():
             equ_lambda = solve_friction(
                 oscillator=dae,
                 fourier=fourier,
-                omega=omega,
+                omega=dae.omega,
                 smoothing=alpha,
                 solver=solver,
                 initial_guess=initial_guess_lambda,
@@ -139,7 +157,7 @@ def plot_solution():
 
             hbm = HBMEquationDAE(
                 dae,
-                omega,
+                dae.omega,
                 fourier=fourier,
                 initial_guess=initial_guess,
                 stability_method=KoopmanHillDAE(
