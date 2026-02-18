@@ -581,14 +581,15 @@ def periodic_initial_condition():
 def iterate_FMs(epsilon=0.5):
 
     hbms = compare_FMs()
-    hbm = [hbms[0], hbms[2]]
+    labels = ['constr', 'inv', 'ang']
     solver = NewtonSolver(verbose=False, max_iterations=20)
 
-    for hbm in hbms:
-        print(f"Iterating on {hbm.__class__.__name__} with delta as parameter")
+    for idx_hbm, hbm in enumerate(hbms):
+        print(f"Iterating on case {labels[idx_hbm]} with delta as parameter")
         sys = EquationSystem(equations=[hbm], unknowns=["X"])
         sys.equations[0].delta = 0
-        sys.equations[0].epsilon = epsilon
+        sys.equations[0].epsilon = 0.5
+        sys.equations[0].g = -2
         results = []
         for k, branch_point in enumerate(
             pseudo_arclength_continuator(
@@ -597,7 +598,7 @@ def iterate_FMs(epsilon=0.5):
                 solver=solver,
                 stepsize=0.05,
                 stepsize_range=(0.05, 0.05),
-                continuation_parameter="delta",
+                continuation_parameter="g",
                 verbose=True,
                 num_steps=10000,
             )
@@ -605,24 +606,24 @@ def iterate_FMs(epsilon=0.5):
             FMs = branch_point.equations[0].stability_method.determine_eigenvalues(
                 branch_point.equations[0]
             )
-            print(f"delta={branch_point.delta}, FMs: {FMs}")
-            results.append(np.array([np.squeeze(branch_point.delta), *FMs]))
+            print(f"g={branch_point.g}, FMs: {FMs}")
+            results.append(np.array([np.squeeze(branch_point.g), *FMs]))
 
             if k % 100 == 0:
 
                 # Convert results to numpy array and save as CSV
                 results_array = np.array(results)
-                filename = f"results_{hbm.__class__.__name__}_epsilon_{epsilon}.csv"
+                filename = f"results_{labels[idx_hbm]}_epsi_{branch_point.equations[0].epsilon}.csv"
                 np.savetxt(
                     filename,
                     results_array,
                     delimiter=",",
-                    header="delta,"
+                    header="g,"
                     + ",".join([f"FM_{i}" for i in range(results_array.shape[1] - 1)]),
                     comments="",
                 )
                 print(f"Results saved to {filename}")
-            if branch_point.equations[0].delta > 5:
+            if branch_point.equations[0].g > 10:
                 break
 
 
