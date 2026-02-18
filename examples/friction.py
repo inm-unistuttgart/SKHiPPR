@@ -60,9 +60,8 @@ def plot_solution():
     normal_force = 10.5
     g = normal_force / masses[1]
 
-    # warm-start from smoothed oscillator
-    Ns_HBM = [40, 100, 160]
-    L_DFT = 4096
+    Ns_HBM = [40]
+    L_DFT = 2**13
 
     smoothings = [np.inf]
 
@@ -322,7 +321,7 @@ def solve_friction(
 
     g = oscillator.lam_crit / (oscillator.mu * oscillator.masses[-1])
 
-    warmstart = initial_guess is None and smoothing == np.inf
+    warmstart = (smoothing == np.inf)
     if initial_guess is None:
         initial_guess = np.zeros(2 * fourier.N_HBM + 1)
 
