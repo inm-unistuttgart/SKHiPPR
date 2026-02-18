@@ -327,45 +327,46 @@ def iterate_FMs(hbm="constr", epsilon=0.5, description=None):
     if description is None:
         description = f"{hbm.ode.__class__.__name__}"
 
-    print(
-        f"Iterating on {hbm.__class__.__name__} with parameter delta and epsilon={epsilon}"
-    )
-    sys = EquationSystem(equations=[hbm], unknowns=["X"])
-    sys.equations[0].delta = 0
-    sys.equations[0].epsilon = epsilon
-    results = []
-    for k, branch_point in enumerate(
-        pseudo_arclength_continuator(
-            initial_direction=1,
-            initial_system=sys,
-            solver=solver,
-            stepsize=0.05,
-            stepsize_range=(0.05, 0.05),
-            continuation_parameter="delta",
-            verbose=True,
-            num_steps=3,
-        )
-    ):
-        FMs = branch_point.eigenvalues
-        print(f"delta={branch_point.delta}, FMs: {FMs}")
-        results.append(np.array([np.squeeze(branch_point.delta), *FMs]))
-
-        if k % 100 == 0:
-
-            # Convert results to numpy array and save as CSV
-            results_array = np.array(results)
-            filename = f"results_{description}_epsilon_{epsilon}.csv"
-            np.savetxt(
-                filename,
-                results_array,
-                delimiter=",",
-                header="delta,"
-                + ",".join([f"FM_{i}" for i in range(results_array.shape[1] - 1)]),
-                comments="",
+        print(f"Iterating on {description} with delta as parameter")
+        sys = EquationSystem(equations=[hbm], unknowns=["X"])
+        sys.equations[0].delta = 0
+        sys.equations[0].epsilon = 0.5
+        sys_equations[0].g = -2
+        results = []
+        for k, branch_point in enumerate(
+            pseudo_arclength_continuator(
+                initial_direction=1,
+                initial_system=sys,
+                solver=solver,
+                stepsize=0.05,
+                stepsize_range=(0.05, 0.05),
+                continuation_parameter="g",
+                verbose=True,
+                num_steps=10000,
             )
-            print(f"Results saved to {filename}")
-        if branch_point.equations[0].delta > 5:
-            break
+        ):
+            FMs = branch_point.equations[0].stability_method.determine_eigenvalues(
+                branch_point.equations[0]
+            )
+            print(f"g={branch_point.g}, FMs: {FMs}")
+            results.append(np.array([np.squeeze(branch_point.g), *FMs]))
+
+            if k % 100 == 0:
+
+                # Convert results to numpy array and save as CSV
+                results_array = np.array(results)
+                filename = f"results_{description}_epsilon_{branch_point.equations[0].epsilon}.csv"
+                np.savetxt(
+                    filename,
+                    results_array,
+                    delimiter=",",
+                    header="g,"
+                    + ",".join([f"FM_{i}" for i in range(results_array.shape[1] - 1)]),
+                    comments="",
+                )
+                print(f"Results saved to {filename}")
+            if branch_point.equations[0].g > 10:
+                break
 
 
 def precision():
