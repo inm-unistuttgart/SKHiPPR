@@ -10,7 +10,7 @@ from scipy.linalg import (
 )
 import warnings
 
-from skhippr.Fourier import Fourier
+from skhippr.Fourier import Fourier, round_to_significant_digits
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.stability.AbstractStabilityHBM import AbstractStabilityHBM
 
@@ -575,7 +575,12 @@ def drazin(A, tol=0, ax_plot=None):
 
     if ax_plot is not None:
         eigenvalues = np.diag(T)
-        ax_plot.semilogy(n*np.ones_like(eigenvalues), np.abs(eigenvalues), "x")
+        eigenvalues_plot = np.zeros_like(eigenvalues)
+        for k, eigenvalue in enumerate(eigenvalues):
+            eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
+
+        _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
+        ax_plot.semilogy(n*np.ones_like(eigenvalues[idx_unique]), np.abs(eigenvalues[idx_unique]), "x")
 
     R = T[:n_cutoff, :n_cutoff]
     N = T[n_cutoff:, n_cutoff:]

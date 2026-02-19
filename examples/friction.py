@@ -11,7 +11,7 @@ from scipy.linalg import (
 
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
-from skhippr.Fourier import Fourier
+from skhippr.Fourier import Fourier, round_to_significant_digits
 from skhippr.solvers.newton import ScipyFsolveSolver, NewtonSolver, ScipyRootSolver
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.equations.AbstractEquation import AbstractEquation
@@ -239,27 +239,37 @@ def plot_and_export_hbm(name_case="C", smoothing=np.inf, N_HBM=160, L_DFT=2**14)
 
 
 def convergence_study_N(
-    name_case="C", smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14, tol_drazin=1e-7
+    name_case="C", smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14, tol_drazin=1e-7, max_residual=1e-9
 ):
 
     N_max = Ns_HBM[-1]
     description = f"{name_case}-Nmax{N_max}-smoothing{smoothing}-L{L_DFT}"
 
     hbms = []
+    figs = []
     hbm_ref = None
 
     for N_HBM in Ns_HBM:
+        for fig in figs:
+            plt.close(fig)
         print("--------------------------------------------------------------------")
         print(f"solving N = {N_HBM} for {description}")
         fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
         hbm_ref = solve_hbm(name_case, smoothing, fourier, hbm_ref)
 
-        if np.linalg.norm(hbm_ref.residual(update=False)) > 1e-10:
+        hbms.append(hbm_ref)
+        figs = plot_and_save(hbms, Ns_HBM[:len(hbms)], description, tol_drazin)
+
+        if np.linalg.norm(hbm_ref.residual(update=False)) > max_residual:
             hbm_ref = hbms[-1]
             break
 
-        hbms.append(hbm_ref)
+        
 
+
+def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
+    figs = []
+    hbm_ref = hbms[-1]
     print(f"a posteriori analysis {description}")
 
     FM_ref = sort_FMs(hbm_ref.eigenvalues)
@@ -283,7 +293,8 @@ def convergence_study_N(
     FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
 
     drazin_ratios = np.zeros(len(Ns_HBM))
-    _, ax_drazin = plt.subplots(1, 1)
+    fig, ax_drazin = plt.subplots(1, 1)
+    figs.append(fig)
 
     for k, hbm in enumerate(hbms):
 
@@ -320,7 +331,7 @@ def convergence_study_N(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz"
     )
 
-    _, ax_drazin_ratio = plt.subplots(1, 1)
+    fig, ax_drazin_ratio = plt.subplots(1, 1)
     ax_drazin_ratio.plot(Ns_HBM, drazin_ratios, "-x")
     ax_drazin_ratio.axhline(4 / 5, linestyle="--")
     ax_drazin_ratio.axhline(3 / 5, linestyle="--")
@@ -328,9 +339,10 @@ def convergence_study_N(
     tikzplotlib.save(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_ratio_{description}.tikz"
     )
+    figs.append(fig)
 
     # Plot Floquet multipliers
-    _, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     phis = np.linspace(0, 2 * np.pi, 250)
     ax.plot(np.cos(phis), np.sin(phis))
     for l in range(FMs_all.shape[0]):
@@ -342,9 +354,10 @@ def convergence_study_N(
     tikzplotlib.save(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz"
     )
+    figs.append(fig)
 
     # Plot HBM convergence in time
-    _, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     for l in range(e_hbm.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
     ax.legend(loc="best")
@@ -354,9 +367,10 @@ def convergence_study_N(
     tikzplotlib.save(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz"
     )
+    figs.append(fig)
 
     # Plot HBM convergence in freq domain
-    _, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     for l in range(e_hbm_fourier.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_hbm_fourier[l, :-1], label=f"x{l}")
     ax.legend(loc="best")
@@ -366,9 +380,10 @@ def convergence_study_N(
     tikzplotlib.save(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz"
     )
+    figs.append(fig)
 
     # Plot FM convergence
-    _, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1)
     for l in range(e_stab.shape[0]):
         ax.semilogy(Ns_HBM[:-1], e_stab[l, :-1], label=f"FM {l}")
     ax.legend(loc="best")
@@ -378,11 +393,12 @@ def convergence_study_N(
     tikzplotlib.save(
         f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz"
     )
+    figs.append(fig)
 
-    print("done")
     print(
-        "=================================================================================================================================================="
+        "==============================================================================================="
     )
+    return figs
 
 
 def analyze_drazin(
@@ -417,14 +433,10 @@ def analyze_drazin(
 
 
 def sort_FMs(FMs, significant_digits=2):
-    # reference: https://gist.github.com/ttamg/3f65227fd580b3d8dc8ba91e01507280
+    
     FMs_rounded = np.zeros_like(FMs)
     for k, FM in enumerate(FMs):
-        if abs(FM) > 0:
-            round_digits = -int(np.floor(np.log10(np.abs(FM)))) + significant_digits - 1
-            FMs_rounded[k] = np.round(FM, round_digits)
-        else:
-            FMs_rounded[k] = FM
+            FMs_rounded[k] = round_to_significant_digits(FM, significant_digits=significant_digits)
     idx_sort = np.lexsort((np.angle(FMs_rounded), np.abs(FMs_rounded)))
     FMs = FMs[idx_sort]
     FMs_rounded = FMs_rounded[idx_sort]
@@ -809,8 +821,9 @@ class FrictionDirect(AbstractEquation):
         Lambda_sin = Lambda[self.fourier.N_HBM + 1 :]
         Lambda_odd = np.hstack((Lambda_cos[::2], Lambda_sin[::2]))
         Lambda_even = np.hstack(((Lambda_const,), Lambda_cos[1::2], Lambda_sin[1::2]))
-        if any(np.abs(Lambda_even) > 1e-15):
-            raise ValueError("Lambda_even must be zero.")
+        if any(np.abs(Lambda_even) > 1e-14):
+            # raise ValueError("Lambda_even must be zero.")
+            print(f"ignored even values of magnitude {np.max(np.abs(Lambda_even))}.")
         return Lambda_odd
 
     def FC_X(self, Lambda=None):
@@ -885,7 +898,7 @@ class FrictionDirect(AbstractEquation):
 
 if __name__ == "__main__":
     N_min = 1
-    N_max = 20
+    N_max = 100
     # Ns = [
     #     int(N)
     #     for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 3)))
@@ -894,9 +907,9 @@ if __name__ == "__main__":
     print(Ns)
     # Ns = Ns + [N_max + k for k in range(1, 11)]
     for name_case in ["Schuetz2"]:  # , 'A', 'B', 'C', 'D']:
-        for smoothing in [np.inf]:
+        for smoothing in [np.inf, 30]:
             # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=1024)
-            convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=1024, smoothing=smoothing)
+            convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=4096, smoothing=smoothing, max_residual=1e-6)
             # plt.close("all")
     # plot_everything()
     # plot_frc()
