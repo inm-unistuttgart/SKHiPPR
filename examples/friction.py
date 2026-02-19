@@ -629,8 +629,8 @@ def solve_friction(
         if solver.verbose:
             print("Solving smoothed lambda problem for warm-start...")
 
-        equ.smoothing = 10
-        solver.solve_equation(equ, unknown="Lambda")
+        equ.smoothing = 40
+        solver.solve_equation(equ, unknown="Lambda_odd")
         equ.smoothing = smoothing
 
     if solver.verbose:
@@ -638,7 +638,7 @@ def solve_friction(
             f"Solving lambda problem (smoothing = {equ.smoothing}). Residual before: {np.linalg.norm(equ.residual(update=True))}..."
         )
 
-    solver.solve_equation(equ, unknown="Lambda")
+    solver.solve_equation(equ, unknown="Lambda_odd")
 
     return equ
 
@@ -778,6 +778,40 @@ class FrictionDirect(AbstractEquation):
         self.W = np.kron(np.eye(2 * self.fourier.N_HBM + 1), W_time[:, np.newaxis])
 
         self.lam_crit = self.mu * self.masses[-1] * self.g
+        self.N_odd = int(np.ceil(self.fourier.N_HBM / 2))
+
+    @property
+    def Lambda(self):
+        Lambda_cos_odd = self.Lambda_odd[: self.N_odd]
+        Lambda_sin_odd = self.Lambda_odd[self.N_odd :]
+
+        Lambda_const = np.array([0])
+
+        Lambda_cos = np.vstack((Lambda_cos_odd, np.zeros_like(Lambda_cos_odd)))
+        Lambda_cos = np.reshape(Lambda_cos, (-1), order="F")
+        if self.fourier.N_HBM % 2 != 0:
+            Lambda_cos = Lambda_cos[:-1]
+
+        Lambda_sin = np.vstack((Lambda_sin_odd, np.zeros_like(Lambda_sin_odd)))
+        Lambda_sin = np.reshape(Lambda_sin, (-1), order="F")
+        if self.fourier.N_HBM % 2 != 0:
+            Lambda_sin = Lambda_sin[:-1]
+
+        return np.hstack((Lambda_const, Lambda_cos, Lambda_sin))
+
+    @Lambda.setter
+    def Lambda(self, value):
+        self.Lambda_odd = self.extract_odd(value)
+
+    def extract_odd(self, Lambda):
+        Lambda_const = Lambda[0]
+        Lambda_cos = Lambda[1 : self.fourier.N_HBM + 1]
+        Lambda_sin = Lambda[self.fourier.N_HBM + 1 :]
+        Lambda_odd = np.hstack((Lambda_cos[::2], Lambda_sin[::2]))
+        Lambda_even = np.hstack(((Lambda_const,), Lambda_cos[1::2], Lambda_sin[1::2]))
+        if any(np.abs(Lambda_even) > 1e-15):
+            raise ValueError("Lambda_even must be zero.")
+        return Lambda_odd
 
     def FC_X(self, Lambda=None):
         if Lambda is None:
@@ -818,7 +852,7 @@ class FrictionDirect(AbstractEquation):
         gammas = self.fourier.inv_DFT(Gamma)
         residual_time = self.constraint(gammas, lambdas)
         residual = self.fourier.DFT(residual_time)
-        return residual
+        return self.extract_odd(residual)
 
     def residual_function(self):
         return self.residual_with_argument()
@@ -852,17 +886,18 @@ class FrictionDirect(AbstractEquation):
 if __name__ == "__main__":
     N_min = 1
     N_max = 20
-    Ns = [
-        int(N)
-        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 3)))
-    ]
+    # Ns = [
+    #     int(N)
+    #     for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 3)))
+    # ]
+    Ns = np.arange(1, N_max + 1)
     print(Ns)
     # Ns = Ns + [N_max + k for k in range(1, 11)]
     for name_case in ["Schuetz2"]:  # , 'A', 'B', 'C', 'D']:
-        for smoothing in [10, 40, np.inf]:
-            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=4096)
-            convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=8192, smoothing=smoothing)
-            plt.close("all")
+        for smoothing in [np.inf]:
+            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=1024)
+            convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=1024, smoothing=smoothing)
+            # plt.close("all")
     # plot_everything()
     # plot_frc()
-    # plt.show()
+    plt.show()
