@@ -47,13 +47,14 @@ def main():
     #. A phase plot of the periodic solution with additional keyword arguments
     #. A plot of the Floquet multipliers in the complex plane, along with the unit circle for reference
     #. A plot of the Floquet exponents in the complex plane
+    #. A plot of the Hill matrix entries colored by their 2-norm
     #. A plot of the time series over a non-integer amount of periods
     #. A figure containing three of the plots as subplots.
 
     """
 
     # --- FFT, stability method and Newton solver configuration ---
-    fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=2, real_formulation=True)
+    fourier = Fourier(N_HBM=30, L_DFT=300, n_dof=2, real_formulation=True)
     stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4)
     solver = NewtonSolver(verbose=True)
 
@@ -94,7 +95,7 @@ def main():
     plot_floquet_multipliers(hbm=hbm_sys)
     plot_floquet_exponents(hbm=hbm_sys)
     plot_period(hbm=hbm_sys, n_periods=1.22)
-    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=False, s=2, logscale=True)
+    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=False, logscale=True)
 
     # --- Realisation with subplots ---
     _, axs = plt.subplots(nrows=1, ncols=3)

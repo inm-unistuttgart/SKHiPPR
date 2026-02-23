@@ -26,7 +26,6 @@ from skhippr.solvers.newton import NewtonSolver
 
 # --- Visualization ---
 from skhippr.visualization.continuation import plot_continuation
-from skhippr.visualization.cycles import plot_hill_matrix_blocks
 
 def main():
     """
@@ -114,6 +113,7 @@ def main():
         frc,
         plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:])
         )
+    
 if __name__ == "__main__":
     main()
     plt.show()
