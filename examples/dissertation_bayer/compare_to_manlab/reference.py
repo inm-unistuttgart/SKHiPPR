@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-from skhippr.solvers.newton import NewtonSolver
+from skhippr.solvers.newton import NewtonSolver, EquationSystem
+from skhippr.solvers.continuation import pseudo_arclength_continuator
 from skhippr.Fourier import Fourier
 
 from skhippr.odes.nonautonomous import Duffing
@@ -16,9 +17,68 @@ from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 from skhippr.visualization.cycles import *
 
 
-def init_csv(fourier: Fourier, filename: str):
+def iterate_reference_solution(
+    filename,
+    initial_system,
+    solver,
+    stepsize,
+    stepsize_range,
+    initial_direction,
+    continuation_parameter,
+    verbose,
+    num_steps,
+    param_range=(-np.inf, np.inf),
+    **kwargs_odesolver,
+):
 
-    errors = ["param", "arclength", "init", "pre", "FMs"]
+    with open(filename, "w", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+
+        init_csv(initial_system.equations[0].fourier, writer, continuation_parameter)
+        arclength = 0
+        X_prev = initial_system.X
+
+        for bp in pseudo_arclength_continuator(
+            initial_system,
+            solver,
+            stepsize,
+            stepsize_range,
+            initial_direction,
+            continuation_parameter,
+            verbose,
+            num_steps,
+        ):
+            arclength = arclength + np.linalg.norm(X_prev - bp.X)
+            X_prev = bp.X
+
+            to_csv(
+                writer,
+                bp.equations[0],
+                continuation_parameter,
+                arclength,
+                solver,
+                **kwargs_odesolver,
+            )
+
+            yield bp
+
+            if (
+                not param_range[0]
+                <= getattr(bp, continuation_parameter)
+                <= param_range[1]
+            ):
+                break
+
+
+def init_csv(fourier: Fourier, writer, name_param: str):
+
+    errors = [
+        name_param,
+        "arclength",
+        "shoot error init",
+        "shoot error max",
+        "shoot error FMs",
+    ]
     X_labels = [f"X 0, {l}" for l in range(fourier.n_dof)]
 
     if fourier.real_formulation:
@@ -33,25 +93,20 @@ def init_csv(fourier: Fourier, filename: str):
 
     FM_labels = [f"FM {k}" for k in range(fourier.n_dof)]
 
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f, delimiter=";")
-        writer.writerow(errors + FM_labels + X_labels)
+    writer.writerow(errors + FM_labels + X_labels)
 
 
-def to_csv(filename, hbm: HBMEquation, param, arclength, solver, **kwargs_odesolver):
+def to_csv(writer, hbm: HBMEquation, name_param, arclength, solver, **kwargs_odesolver):
     _, FMs = hbm.determine_stability(update=True)
+    param = getattr(hbm, name_param)
     X = hbm.X
     errors, _ = determine_ode_accuracy(hbm, solver, visualize=False, **kwargs_odesolver)
     row = np.hstack(
         (np.atleast_1d(param), np.atleast_1d(arclength), np.atleast_1d(errors), FMs, X),
         dtype=complex,
     )
-    with open(filename, "a", newline="") as f:
-        writer = csv.writer(
-            f,
-            delimiter=";",
-        )
-        writer.writerow([str(val)[1:-1] for val in row])
+
+    writer.writerow([str(val)[1:-1] for val in row])
 
 
 def test_csv():
@@ -97,6 +152,8 @@ def determine_ode_accuracy(
     FMs_post = eigenvalues + 1
     error_eig_post = np.min(np.abs(FMs_ref[0] - FMs_post))
 
+    hbm.eigenvalues = FMs_ref
+
     if visualize:
         ax_period = plot_period(hbm, label="hbm")
         ax_period.set_title("solutions")
@@ -124,7 +181,7 @@ def determine_ode_accuracy(
 def main():
     solver = NewtonSolver(tolerance=1e-13, verbose=True)
     ode = Duffing(t=0, x=0, omega=1, alpha=1, beta=0.1, F=0.5, delta=0.02)
-    fourier = Fourier(N_HBM=4, L_DFT=1024, n_dof=ode.n_dof)
+    fourier = Fourier(N_HBM=20, L_DFT=1024, n_dof=ode.n_dof)
 
     initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
     hbm = HBMEquation(
@@ -142,12 +199,33 @@ def main():
     #     print(f"Error {cat}: {err}")
 
     filename = "examples/dissertation_bayer/compare_to_manlab/export.csv"
-    init_csv(hbm.fourier, filename)
-    to_csv(filename, hbm, hbm.omega, 3, solver, atol=1e-14, rtol=1e-14)
-    to_csv(filename, hbm, hbm.omega, 3, solver, atol=1e-14, rtol=1e-14)
+    with open(filename, "w", newline="") as f:
+        writer = csv.writer(f, delimiter=";")
+        init_csv(hbm.fourier, writer, name_param="omega")
+        to_csv(writer, hbm, "omega", 3, solver, atol=1e-14, rtol=1e-14)
+        to_csv(writer, hbm, "omega", 3, solver, atol=1e-14, rtol=1e-14)
+
+    return hbm, solver
 
 
 if __name__ == "__main__":
     # test_csv()
-    main()
+    hbm, solver = main()
+    solver.verbose = False
+    sys = EquationSystem([hbm], ["X"])
+    for bp in iterate_reference_solution(
+        filename="examples/dissertation_bayer/compare_to_manlab/export2.csv",
+        initial_system=sys,
+        solver=solver,
+        stepsize=0.1,
+        stepsize_range=(0.001, 3),
+        initial_direction=1,
+        continuation_parameter="omega",
+        verbose=True,
+        num_steps=5,
+        atol=1e-14,
+        rtol=1e-14,
+    ):
+        pass
+
     plt.show()
