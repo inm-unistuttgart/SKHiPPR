@@ -12,7 +12,7 @@ examples.truss
     :members: main
 
 examples.duffing_visualization
----------------------
+--------------------------------
 
 .. automodule:: examples.duffing_visualization
     :members: main
@@ -40,7 +40,8 @@ examples.duffing_3d
 ---------------------
 
 .. automodule:: examples.duffing_3d
-    :members: main
+    :members: main, plot_3D_frc
+
 
 numerical convergence studies
 -------------------------------------

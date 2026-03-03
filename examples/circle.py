@@ -35,7 +35,7 @@ def main():
     #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
     #. Constructing another :py:class:`~skhippr.equations.EquationSystem.EquationSystem` by appending a second :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` subclass and solving it directly for ``y``.
     #. Using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
-    #. Plotting the results.
+    #. Plotting the results with :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Returns
     -------
@@ -176,7 +176,7 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
         branch=branch,
         plot_fun=lambda point: point.y,
         ax=ax,
-        linestyle="dotted",
+        linestyle="dotted"
     )
 
     # Make sure the plots are perfectly circular
