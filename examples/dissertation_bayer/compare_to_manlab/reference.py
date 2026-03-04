@@ -20,6 +20,8 @@ from skhippr.visualization.cycles import *
 def create_Duffing_reference():
     solver = NewtonSolver(tolerance=1e-13, verbose=False)
     ode = Duffing(t=0, x=0, omega=0.1, alpha=1, beta=0.1, F=0.5, delta=0.02)
+    del ode.eigenvalues
+    del ode.stability_method
     fourier = Fourier(N_HBM=20, L_DFT=1024, n_dof=ode.n_dof)
 
     initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
@@ -36,8 +38,8 @@ def create_Duffing_reference():
         filename=f"examples/dissertation_bayer/compare_to_manlab/Duffing_alpha_{ode.alpha}_beta_{ode.beta}_F_{ode.F}_delta_{ode.delta}.csv",
         initial_system=hbm,
         solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 3),
+        stepsize=0.0001,
+        stepsize_range=(0.0001, 3),
         initial_direction=1,
         continuation_parameter="omega",
         verbose=True,
@@ -45,7 +47,7 @@ def create_Duffing_reference():
         atol=1e-14,
         rtol=1e-14,
     ):
-        if bp.omega > 0.2:
+        if bp.omega > 0.12:
             break
 
 
@@ -68,19 +70,21 @@ def iterate_reference_solution(
 
         init_csv(initial_system.equations[0].fourier, writer, continuation_parameter)
         arclength = 0
-        X_prev = initial_system.X
 
-        for bp in pseudo_arclength_continuator(
-            initial_system,
-            solver,
-            stepsize,
-            stepsize_range,
-            initial_direction,
-            continuation_parameter,
-            verbose,
-            num_steps,
+        for k, bp in enumerate(
+            pseudo_arclength_continuator(
+                initial_system,
+                solver,
+                stepsize,
+                stepsize_range,
+                initial_direction,
+                continuation_parameter,
+                verbose,
+                num_steps,
+            )
         ):
-            arclength = arclength + np.linalg.norm(X_prev - bp.X)
+            if k > 0:
+                arclength += np.linalg.norm(X_prev - bp.X)
             X_prev = bp.X
 
             to_csv(
@@ -141,6 +145,7 @@ def to_csv(
         FM_error_measure=FM_error_measure,
         **kwargs_odesolver,
     )
+    # errors = (0, 0, 0)
     row = np.hstack(
         (np.atleast_1d(param), np.atleast_1d(arclength), np.atleast_1d(errors), FMs, X),
         dtype=complex,
