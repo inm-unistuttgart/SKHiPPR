@@ -14,10 +14,10 @@ from skhippr.visualization.continuation import plot_continuation
 
 from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 
-from examples.dissertation_bayer.compare_to_manlab.create_reference import (
+from create_reference import (
     iterate_reference_solution,
 )
-from examples.dissertation_bayer.compare_to_manlab.import_reference import (
+from import_reference import (
     import_reference,
     plot_reference_data,
     iterate_from_reference,
@@ -83,7 +83,7 @@ def get_filename(label, **kwargs):
 def create_Duffing_reference(
     ode, label, omega_max=10, num_steps=5, N_HBM=20, **kwargs_odesolver
 ):
-    solver = NewtonSolver(tolerance=1e-13, verbose=True)
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
     fourier = Fourier(N_HBM=N_HBM, L_DFT=1024, n_dof=ode.n_dof)
 
     initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
@@ -106,8 +106,8 @@ def create_Duffing_reference(
         filename=get_filename(label, N_HBM=N_HBM, **kwargs_odesolver),
         initial_system=hbm,
         solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.0001, 0.2),
+        stepsize=0.05,
+        stepsize_range=(0.0001, 0.05),
         initial_direction=initial_direction,
         continuation_parameter="omega",
         verbose=True,
