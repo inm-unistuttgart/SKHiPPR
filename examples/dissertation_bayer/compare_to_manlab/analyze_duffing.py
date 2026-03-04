@@ -20,6 +20,7 @@ from examples.dissertation_bayer.compare_to_manlab.create_reference import (
 from examples.dissertation_bayer.compare_to_manlab.import_reference import (
     import_reference,
     plot_reference_data,
+    iterate_from_reference,
 )
 
 
@@ -32,15 +33,24 @@ def main():
     atol = 1e-12
     rtol = 1e-12
 
-    create_Duffing_reference(
-        ode, label, num_steps=30, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
-    )
+    # create_Duffing_reference(
+    #     ode, label, num_steps=30, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
+    # )
 
     data = import_reference(
         filename=get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol), ode=ode
     )
 
     plot_reference_data(data, get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol))
+
+    solver = NewtonSolver(verbose=True)
+
+    hbms = []
+    for hbm in iterate_from_reference(ode, data, N_HBM, 1024, True):
+
+        solver.solve(hbm)
+        hbms.append(hbm)
+    plot_continuation(hbms, plot_fun)
 
 
 def init_duffing(exponent=3, alpha=1, beta=0.1, F=0.5, delta=0.02, omega_init=0.1):

@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 
 from create_reference import init_csv
 
+from skhippr.solvers.continuation import BranchPoint
+from skhippr.cycles.hbm import HBMSystem
+from skhippr.Fourier import Fourier
+
 
 def import_reference(filename, ode):
     df = pd.read_csv(filename, delimiter=";", dtype=complex, engine="python")
@@ -30,6 +34,19 @@ def import_reference(filename, ode):
         "FMs": FMs,
         "X": X,
     }
+
+
+def iterate_from_reference(ode, data, N_HBM, L_DFT, real_formulation):
+    fourier = Fourier(N_HBM, L_DFT, ode.n_dof, real_formulation=real_formulation)
+    initial_guess = np.zeros((2 * N_HBM + 1) * ode.n_dof)
+    hbm = HBMSystem(ode, ode.omega, fourier, initial_guess)
+    bp = BranchPoint(hbm, data["name_param"], 1)
+
+    for X, param in zip(data["X"], data["param"]):
+        bp = bp.duplicate()
+        bp.X = X
+        setattr(bp, data["name_param"], param)
+        yield bp
 
 
 def plot_reference_data(data, filename):
