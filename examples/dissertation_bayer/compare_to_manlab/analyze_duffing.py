@@ -26,16 +26,16 @@ from examples.dissertation_bayer.compare_to_manlab.import_reference import (
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=0.05
+        exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=0.05
     )
 
-    N_HBM = 40
-    atol = 1e-12
-    rtol = 1e-12
+    N_HBM = 60
+    atol = 5e-14
+    rtol = 5e-14
 
-    create_Duffing_reference(
-        ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
-    )
+    # create_Duffing_reference(
+    #     ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
+    # )
 
     data = import_reference(
         filename=get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol), ode=ode
@@ -43,11 +43,11 @@ def main():
 
     plot_reference_data(data, get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol))
 
-    solver = NewtonSolver(verbose=True)
+    solver = NewtonSolver(verbose=False)
 
     hbms = []
     for hbm in iterate_from_reference(
-        ode, data, 6, 1024, True, stability_method=KoopmanHillSubharmonic
+        ode, data, N_HBM - 1, 1024, True, stability_method=KoopmanHillSubharmonic
     ):
 
         solver.solve(hbm)
