@@ -124,6 +124,7 @@ def init_csv(fourier: Fourier, writer, name_param: str):
     FM_labels = [f"FM {k}" for k in range(fourier.n_dof)]
 
     writer.writerow(errors + FM_labels + X_labels)
+    return errors + FM_labels + X_labels
 
 
 def to_csv(
