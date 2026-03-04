@@ -154,12 +154,6 @@ def to_csv(
     writer.writerow([str(val)[1:-1] for val in row])
 
 
-def test_csv():
-    filename = "examples/dissertation_bayer/compare_to_manlab/test_csv.csv"
-    fourier = Fourier(N_HBM=3, n_dof=2, L_DFT=20)
-    init_csv(fourier, filename)
-
-
 def determine_ode_accuracy(
     hbm: HBMEquation,
     solver: NewtonSolver,
@@ -226,36 +220,6 @@ def determine_ode_accuracy(
 
     error_labels = ("init", "pre", "FMs")
     return (error_init, error_pre, error_eig_pre), error_labels
-
-
-def main():
-    solver = NewtonSolver(tolerance=1e-13, verbose=True)
-    ode = Duffing(t=0, x=0, omega=1, alpha=1, beta=0.1, F=0.5, delta=0.02)
-    fourier = Fourier(N_HBM=20, L_DFT=1024, n_dof=ode.n_dof)
-
-    initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
-    hbm = HBMEquation(
-        ode=ode,
-        omega=ode.omega,
-        fourier=fourier,
-        initial_guess=initial_guess,
-        period_k=1,
-        stability_method=KoopmanHillSubharmonic(fourier),
-    )
-    solver.solve_equation(hbm, "X")
-
-    # errors = determine_ode_accuracy(hbm, solver, visualize=True, atol=1e-14, rtol=1e-14)
-    # for err, cat in zip(errors, ["init", "pre", "post", "eig pre", "eig post"]):
-    #     print(f"Error {cat}: {err}")
-
-    filename = "examples/dissertation_bayer/compare_to_manlab/export.csv"
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f, delimiter=";")
-        init_csv(hbm.fourier, writer, name_param="omega")
-        to_csv(writer, hbm, "omega", 3, solver, atol=1e-14, rtol=1e-14)
-        to_csv(writer, hbm, "omega", 3, solver, atol=1e-14, rtol=1e-14)
-
-    return hbm, solver
 
 
 if __name__ == "__main__":
