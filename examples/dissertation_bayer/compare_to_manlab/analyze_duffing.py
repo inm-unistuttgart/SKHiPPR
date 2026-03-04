@@ -20,20 +20,21 @@ from create_reference import (
 from import_reference import (
     import_reference,
     plot_reference_data,
+    iterate_from_reference,
 )
 
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=6
+        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=0.05
     )
 
-    N_HBM = 80
-    atol = 5e-14
-    rtol = 5e-14
+    N_HBM = 40
+    atol = 1e-12
+    rtol = 1e-12
 
     create_Duffing_reference(
-        ode, label, num_steps=10000, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
+        ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
     )
 
     data = import_reference(
@@ -41,6 +42,17 @@ def main():
     )
 
     plot_reference_data(data, get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol))
+
+    solver = NewtonSolver(verbose=True)
+
+    hbms = []
+    for hbm in iterate_from_reference(
+        ode, data, 6, 1024, True, stability_method=KoopmanHillSubharmonic
+    ):
+
+        solver.solve(hbm)
+        hbms.append(hbm)
+    plot_continuation(hbms, plot_fun)
 
 
 def init_duffing(exponent=3, alpha=1, beta=0.1, F=0.5, delta=0.02, omega_init=0.1):
@@ -112,7 +124,7 @@ def create_Duffing_reference(
 
 
 def plot_fun(bp):
-    return np.max(np.abs(bp.equations[0].x_time()))
+    return np.max(np.abs(bp.equations[0].x_time()[0, :]))
 
 
 if __name__ == "__main__":
