@@ -110,6 +110,8 @@ def pseudo_arclength_continuator(
 
             last_point = next_point
             stepsize = min(1.2 * stepsize, stepsize_range[1])
+            if continuation_parameter is not None:
+                stepsize=min(stepsize, np.squeeze(getattr(next_point, continuation_parameter)*stepsize_range[1]))
 
         elif stepsize > stepsize_range[0]:
             if verbose:

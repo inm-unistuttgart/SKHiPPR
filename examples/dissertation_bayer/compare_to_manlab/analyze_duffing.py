@@ -28,12 +28,12 @@ def main():
         exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=6
     )
 
-    N_HBM = 20
+    N_HBM = 80
     atol = 5e-14
     rtol = 5e-14
 
     create_Duffing_reference(
-        ode, label, num_steps=10000, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.0001
+        ode, label, num_steps=10000, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
     )
 
     data = import_reference(
