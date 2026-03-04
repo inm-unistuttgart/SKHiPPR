@@ -543,6 +543,9 @@ def visualize_drazin(
     # tol_cond = 1e6
     # tol_drazin = 1e-7
 
+    if type(pend) == str:
+        pend, x_sol = init_pendulum(pend_case=pend, L_sol=1024)
+
     for N in Ns:
         fourier_constr = fourier_ref.__replace__(N_HBM=N)
 
@@ -557,6 +560,8 @@ def visualize_drazin(
     solver.solve_equation(equation=hbm_constr, unknown="X")
     hill_matrix = hbm_constr.hill_matrix(update=True)
     mass_matrix = hbm_constr.M()
+
+    _, ax_plot = plt.subplots(1, 1)
 
     # Copy&pasted from KoopmanHillDAE.generalized_exponential()
     a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
@@ -574,8 +579,12 @@ def visualize_drazin(
 
     pencil_lu = lu_factor(a * mass_matrix - hill_matrix)
     pencil_M = lu_solve(pencil_lu, mass_matrix)
-    pencil_drazin, ratio = drazin(pencil_M, tol_drazin, ax=True)
+    pencil_drazin, ratio = drazin(pencil_M, tol_drazin, ax=ax_plot)
     print(f"Ratio of Drazin inverse: {ratio}")
+
+    ax_plot.axhline(tol_drazin, color="r", linestyle="--", label="tol_drazin")
+    ax_plot.set_xlabel("size of A")
+    ax_plot.set_ylabel("magnitude of Drazin eigenvalues")
 
 
 if __name__ == "__main__":
@@ -587,10 +596,16 @@ if __name__ == "__main__":
 
     # test_angle_to_constr()
     # compare_FMs()
-    iterate_FMs("ang")
-    iterate_FMs("constr")
+    # iterate_FMs("ang")
+    # iterate_FMs("constr")
     # periodic_initial_condition()
     # iterate_FMs()
     # precision()
-    # visualize_drazin()
+    visualize_drazin(
+        "constr",
+        x_sol=None,
+        Ns=range(1, 21),
+        fourier_ref=Fourier(n_dof=15, N_HBM=10, L_DFT=1024),
+        solver=NewtonSolver(verbose=True, max_iterations=20),
+    )
     plt.show()

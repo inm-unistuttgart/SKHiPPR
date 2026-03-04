@@ -218,90 +218,63 @@ def continue_from_continuation_curve(
                         break
     return responses
 
-
 def plot_all_responses(
     initial_response: list[BranchPoint], other_responses: list[list[BranchPoint]]
 ):
-    ax = plot_3D_frc(initial_response, "Initial response", plot_stability=True)
+    ax1 = plot_3D_frc(initial_response, title="Initial Response")
+
+    ax2 = plot_3D_frc(initial_response, title="All Responses")
     for response in other_responses:
-        ax = plot_3D_frc(response, ax=ax, plot_stability=True) # added ax =
+        ax2 = plot_3D_frc(response, ax=ax2)
 
 
 def plot_3D_frc(
-    list_of_points: Iterable[BranchPoint], label="", ax=None, plot_stability=True
+    list_of_points: Iterable[BranchPoint], ax=None, **plot_kwargs
 ):
     """
     Plot a 3D curve of branch points with stability information.
 
     Visualize a list of BranchPoint objects in 3D space, where the axes represent
     the frequency (``omega``), forcing amplitude (``F``), and the maximum absolute value of the first
-    state variable (``|x_1|``). Points can be colored according to their stability.
+    state variable (``|x_1|``). 
+    
+    Illustrates creating a 3D ``plot_fun`` that can be passed to :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Parameters
     ----------
     list_of_points : Iterable[BranchPoint]
         A continuation curve to plot. Every :py:class:`~skhippr.cycles.continuation.BranchPoint` must have the attributes ``point.F`` and ``point.omega``.
-    label : str, optional
-        Label for the curve. Defaults to ``""``.
     ax : matplotlib.axes._subplots.Axes3DSubplot, optional
         Existing 3D axes to plot on. If ``None``, a new figure and axes are created. Defaults to ``None``.
-    plot_stability : bool, optional
-        Whether to highlight stable and unstable points with different colors. Defaults to ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``plot_continuation``.
 
     Returns
     -------
     ax: matplotlib.axes._subplots.Axes3DSubplot
         The 3D axes with the plotted data.
     """
-    # if ax is None:
-    #     fig = plt.figure()
-    #     ax = fig.add_subplot(111, projection="3d")
-
     def plot_fun(point: BranchPoint) -> np.ndarray:
-        omega = np.squeeze(point.equations[0].omega)
-        F = np.squeeze(point.equations[0].F)
+        omega = point.equations[0].omega
+        F = point.equations[0].F
         amplitude = np.max(np.abs(point.equations[0].x_time()[0, :]))
-        return np.array([omega, F, amplitude])
-    
+        
+        # --- Returns the shapes: ``(1,)``, ``(1,)``, ``()`` --- 
+        # This is a valid configuration for ``plot_continuation``, since ``np.squeeze(element)``would return the same shape for each.
+        # Another functional output would be: ``return (omega, F, amplitude)``.
+        return (omega, F, amplitude)
+
     ax = plot_continuation(
         branch = list_of_points, 
         plot_fun = plot_fun,
         ax = ax,
+        **plot_kwargs, 
+        xlabel= "omega",
+        ylabel="F",
+        zlabel="|x_1|"
         )
-    
-    ax.set_xlabel("omega")
-    ax.set_ylabel("F")
-    ax.set_zlabel("|x_1|")
-    return ax
-    
-    # stable = np.array([point.stable for point in list_of_points])
-    # omegas = np.array(
-    #     [np.squeeze(point.equations[0].omega) for point in list_of_points]
-    # )
-    # Fs = np.array([np.squeeze(point.equations[0].F) for point in list_of_points])
-    # amplitudes = np.array(
-    #     [np.max(np.abs(point.equations[0].x_time()[0, :])) for point in list_of_points]
-    # )
-    
-    # ax.plot(omegas, Fs, amplitudes, label=label)
-    # if plot_stability:
-    #     ax.plot(
-    #         omegas[stable],
-    #         Fs[stable],
-    #         amplitudes[stable],
-    #         "r.",
-    #         label="stable",
-    #         markersize=1,
-    #     )
-    #     ax.plot(
-    #         omegas[~stable],
-    #         Fs[~stable],
-    #         amplitudes[~stable],
-    #         "b.",
-    #         label="unstable",
-    #         markersize=1,
-    #     )
 
+    return ax
 
 def visualize_solution(system: HBMSystem):
     """

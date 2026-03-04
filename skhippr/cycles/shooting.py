@@ -6,6 +6,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from skhippr.equations.AbstractEquation import AbstractEquation
+from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.cycles.AbstractCycleEquation import AbstractCycleEquation
 from skhippr.stability.AbstractStabilityMethod import StabilityEquilibrium
 from skhippr.equations.EquationSystem import EquationSystem
@@ -20,7 +21,7 @@ class ShootingBVP(AbstractCycleEquation):
 
     def __init__(
         self,
-        ode: Callable[[float, np.ndarray], tuple[np.ndarray, dict[str, np.ndarray]]],
+        ode: AbstractODE,
         T: float,
         period_k: int = 1,
         **kwargs_odesolver,
@@ -218,7 +219,7 @@ class ShootingSystem(EquationSystem):
 
     def __init__(
         self,
-        ode: Callable[[float, np.ndarray], tuple[np.ndarray, dict[str, np.ndarray]]],
+        ode: AbstractODE,
         T: float,
         period_k: int = 1,
         **kwargs_odesolver,

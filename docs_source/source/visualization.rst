@@ -32,4 +32,4 @@ visualization.continuation
 ----------------------------
 
 .. automodule:: skhippr.visualization.continuation
-    :members:
+    :members: plot_continuation, _to_array
