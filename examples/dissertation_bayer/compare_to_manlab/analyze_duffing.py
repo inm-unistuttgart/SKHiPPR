@@ -26,16 +26,16 @@ from examples.dissertation_bayer.compare_to_manlab.import_reference import (
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=0.1, F=0.5, delta=0.02, omega_init=10
+        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=0.05
     )
 
-    N_HBM = 20
+    N_HBM = 40
     atol = 1e-12
     rtol = 1e-12
 
-    # create_Duffing_reference(
-    #     ode, label, num_steps=30, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
-    # )
+    create_Duffing_reference(
+        ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
+    )
 
     data = import_reference(
         filename=get_filename(label, N_HBM=N_HBM, atol=atol, rtol=rtol), ode=ode
@@ -46,7 +46,9 @@ def main():
     solver = NewtonSolver(verbose=True)
 
     hbms = []
-    for hbm in iterate_from_reference(ode, data, N_HBM, 1024, True):
+    for hbm in iterate_from_reference(
+        ode, data, 6, 1024, True, stability_method=KoopmanHillSubharmonic
+    ):
 
         solver.solve(hbm)
         hbms.append(hbm)
@@ -105,7 +107,7 @@ def create_Duffing_reference(
         initial_system=hbm,
         solver=solver,
         stepsize=0.1,
-        stepsize_range=(0.0001, 0.1),
+        stepsize_range=(0.0001, 0.2),
         initial_direction=initial_direction,
         continuation_parameter="omega",
         verbose=True,
@@ -122,7 +124,7 @@ def create_Duffing_reference(
 
 
 def plot_fun(bp):
-    return np.max(np.abs(bp.equations[0].x_time()))
+    return np.max(np.abs(bp.equations[0].x_time()[0, :]))
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ def import_reference(filename, ode):
     error_FMs = df[columns[4]].values
     FMs = np.array([df[columns[4 + k]].values for k in range(ode.n_dof)]).T
     X = df[[col for col in columns if col.startswith("X")]].values
+    real_formulation = "c" in columns[5 + 2 * ode.n_dof]
 
     return {
         "name_param": columns[0],
@@ -33,18 +34,35 @@ def import_reference(filename, ode):
         "error_FMs": error_FMs,
         "FMs": FMs,
         "X": X,
+        "real_formulation": real_formulation,
     }
 
 
-def iterate_from_reference(ode, data, N_HBM, L_DFT, real_formulation):
-    fourier = Fourier(N_HBM, L_DFT, ode.n_dof, real_formulation=real_formulation)
+def iterate_from_reference(
+    ode, data, N_HBM, L_DFT, real_formulation, stability_method=None
+):
+
+    fourier_new = Fourier(N_HBM, L_DFT, ode.n_dof, real_formulation=real_formulation)
+    if stability_method is not None:
+        stability_method = stability_method(fourier_new)
     initial_guess = np.zeros((2 * N_HBM + 1) * ode.n_dof)
-    hbm = HBMSystem(ode, ode.omega, fourier, initial_guess)
+    hbm = HBMSystem(
+        ode, ode.omega, fourier_new, initial_guess, stability_method=stability_method
+    )
     bp = BranchPoint(hbm, data["name_param"], 1)
+
+    X_0 = data["X"][0, :]
+    N_ref = int((len(X_0) / ode.n_dof - 1) / 2)
+    fourier_ref = Fourier(
+        N_HBM=N_ref,
+        L_DFT=L_DFT,
+        n_dof=ode.n_dof,
+        real_formulation=data["real_formulation"],
+    )
 
     for X, param in zip(data["X"], data["param"]):
         bp = bp.duplicate()
-        bp.X = X
+        bp.X = fourier_new.DFT(fourier_ref.inv_DFT(X))
         setattr(bp, data["name_param"], param)
         yield bp
 
