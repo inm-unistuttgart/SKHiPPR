@@ -9,12 +9,44 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator
 from skhippr.Fourier import Fourier
 
 from skhippr.odes.nonautonomous import Duffing
-from skhippr.cycles.hbm import HBMEquation
+from skhippr.cycles.hbm import HBMEquation, HBMSystem
 from skhippr.cycles.shooting import ShootingBVP
 
 from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 
 from skhippr.visualization.cycles import *
+
+
+def create_Duffing_reference():
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
+    ode = Duffing(t=0, x=0, omega=0.1, alpha=1, beta=0.1, F=0.5, delta=0.02)
+    fourier = Fourier(N_HBM=20, L_DFT=1024, n_dof=ode.n_dof)
+
+    initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
+    hbm = HBMSystem(
+        ode=ode,
+        omega=ode.omega,
+        fourier=fourier,
+        initial_guess=initial_guess,
+        period_k=1,
+        stability_method=KoopmanHillSubharmonic(fourier),
+    )
+
+    for bp in iterate_reference_solution(
+        filename=f"examples/dissertation_bayer/compare_to_manlab/Duffing_alpha_{ode.alpha}_beta_{ode.beta}_F_{ode.F}_delta_{ode.delta}.csv",
+        initial_system=hbm,
+        solver=solver,
+        stepsize=0.1,
+        stepsize_range=(0.001, 3),
+        initial_direction=1,
+        continuation_parameter="omega",
+        verbose=True,
+        num_steps=5,
+        atol=1e-14,
+        rtol=1e-14,
+    ):
+        if bp.omega > 0.2:
+            break
 
 
 def iterate_reference_solution(
@@ -27,7 +59,7 @@ def iterate_reference_solution(
     continuation_parameter,
     verbose,
     num_steps,
-    param_range=(-np.inf, np.inf),
+    FM_error_measure=None,
     **kwargs_odesolver,
 ):
 
@@ -57,17 +89,11 @@ def iterate_reference_solution(
                 continuation_parameter,
                 arclength,
                 solver,
+                FM_error_measure=FM_error_measure,
                 **kwargs_odesolver,
             )
 
             yield bp
-
-            if (
-                not param_range[0]
-                <= getattr(bp, continuation_parameter)
-                <= param_range[1]
-            ):
-                break
 
 
 def init_csv(fourier: Fourier, writer, name_param: str):
@@ -96,11 +122,25 @@ def init_csv(fourier: Fourier, writer, name_param: str):
     writer.writerow(errors + FM_labels + X_labels)
 
 
-def to_csv(writer, hbm: HBMEquation, name_param, arclength, solver, **kwargs_odesolver):
+def to_csv(
+    writer,
+    hbm: HBMEquation,
+    name_param,
+    arclength,
+    solver,
+    FM_error_measure=None,
+    **kwargs_odesolver,
+):
     _, FMs = hbm.determine_stability(update=True)
     param = getattr(hbm, name_param)
     X = hbm.X
-    errors, _ = determine_ode_accuracy(hbm, solver, visualize=False, **kwargs_odesolver)
+    errors, _ = determine_ode_accuracy(
+        hbm,
+        solver,
+        visualize=False,
+        FM_error_measure=FM_error_measure,
+        **kwargs_odesolver,
+    )
     row = np.hstack(
         (np.atleast_1d(param), np.atleast_1d(arclength), np.atleast_1d(errors), FMs, X),
         dtype=complex,
@@ -116,10 +156,15 @@ def test_csv():
 
 
 def determine_ode_accuracy(
-    hbm: HBMEquation, solver: NewtonSolver, visualize=False, **kwargs_odesolver
+    hbm: HBMEquation,
+    solver: NewtonSolver,
+    visualize=False,
+    FM_error_measure=None,
+    **kwargs_odesolver,
 ):
     """Determine how accurate a HBM solution is by comparing it to a close-by shooting solution. Returns a 3-tuple of the errors and a 3-tuple of strings describing the type of error."""
-
+    if FM_error_measure is None:
+        FM_error_measure = lambda FMs, FMs_ref: np.min(np.abs(FMs_ref[0] - FMs))
     x_time = hbm.x_time()
     ts = hbm.fourier.time_samples(omega=hbm.omega)
     T = 2 * np.pi / hbm.omega
@@ -142,7 +187,7 @@ def determine_ode_accuracy(
 
     _, eigenvalues = shoot.determine_stability(update=True)
     FMs_pre = eigenvalues + 1
-    error_eig_pre = np.min(np.abs(FMs_ref[0] - FMs_pre))
+    error_eig_pre = FM_error_measure(FMs_pre, FMs_ref)
 
     solver.solve_equation(shoot, "x")
     x_ode_post_solve = shoot.x_time(t_eval=ts)
@@ -150,7 +195,7 @@ def determine_ode_accuracy(
 
     _, eigenvalues = shoot.determine_stability(update=False)
     FMs_post = eigenvalues + 1
-    error_eig_post = np.min(np.abs(FMs_ref[0] - FMs_post))
+    error_eig_post = FM_error_measure(FMs_post, FMs_ref)
 
     hbm.eigenvalues = FMs_ref
 
@@ -209,23 +254,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # test_csv()
-    hbm, solver = main()
-    solver.verbose = False
-    sys = EquationSystem([hbm], ["X"])
-    for bp in iterate_reference_solution(
-        filename="examples/dissertation_bayer/compare_to_manlab/export2.csv",
-        initial_system=sys,
-        solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 3),
-        initial_direction=1,
-        continuation_parameter="omega",
-        verbose=True,
-        num_steps=5,
-        atol=1e-14,
-        rtol=1e-14,
-    ):
-        pass
-
+    create_Duffing_reference()
     plt.show()
