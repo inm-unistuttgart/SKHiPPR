@@ -189,15 +189,15 @@ def determine_ode_accuracy(
     FMs_pre = eigenvalues + 1
     error_eig_pre = FM_error_measure(FMs_pre, FMs_ref)
 
-    solver.solve_equation(shoot, "x")
-    x_ode_post_solve = shoot.x_time(t_eval=ts)
-    error_post = np.max(np.linalg.norm(x_time - x_ode_post_solve, ord=2, axis=0))
+    # solver.solve_equation(shoot, "x")
+    # x_ode_post_solve = shoot.x_time(t_eval=ts)
+    # error_post = np.max(np.linalg.norm(x_time - x_ode_post_solve, ord=2, axis=0))
 
-    _, eigenvalues = shoot.determine_stability(update=False)
-    FMs_post = eigenvalues + 1
-    error_eig_post = FM_error_measure(FMs_post, FMs_ref)
+    # _, eigenvalues = shoot.determine_stability(update=False)
+    # FMs_post = eigenvalues + 1
+    # error_eig_post = FM_error_measure(FMs_post, FMs_ref)
 
-    hbm.eigenvalues = FMs_ref
+    # hbm.eigenvalues = FMs_ref
 
     if visualize:
         ax_period = plot_period(hbm, label="hbm")
@@ -209,7 +209,8 @@ def determine_ode_accuracy(
         markers = ["x", "+"]
 
         for k, (x_ode, FMs) in enumerate(
-            zip([x_ode_pre_solve, x_ode_post_solve], [FMs_pre, FMs_post])
+            # zip([x_ode_pre_solve, x_ode_post_solve], [FMs_pre, FMs_post])
+            zip([x_ode_pre_solve], [FMs_pre])
         ):
             ax_period.plot(ts, x_ode[0, :], label=labels[k])
             ax_error.semilogy(ts, np.abs(x_ode[0, :] - x_time[0, :]), label=labels[k])

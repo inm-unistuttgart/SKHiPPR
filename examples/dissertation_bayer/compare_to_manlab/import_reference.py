@@ -1,7 +1,7 @@
 import csv
 import pandas as pd
 import numpy as np
-from collections import defaultdict
+import tikzplotlib
 
 import matplotlib.pyplot as plt
 
@@ -32,13 +32,14 @@ def import_reference(filename, ode):
     }
 
 
-def plot_reference_data(data):
+def plot_reference_data(data, filename):
 
     _, ax = plt.subplots(1, 1)
     ax.plot(data["arclength"], data["param"])
     ax.set_xlabel("arclength")
     ax.set_ylabel(data["name_param"])
     ax.set_title(f"{data["name_param"]} vs arclength")
+    tikzplotlib.save(f"{filename}_arclength.tikz")
 
     _, ax = plt.subplots(nrows=1, ncols=1)
     ax.semilogy(data["arclength"], data["error_time"], label="error time")
@@ -46,3 +47,4 @@ def plot_reference_data(data):
     ax.legend()
     ax.set_xlabel("arclength")
     ax.set_ylabel("error")
+    tikzplotlib.save(f"{filename}_error.tikz")
