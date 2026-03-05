@@ -49,23 +49,27 @@ def iterate_from_reference(
     hbm = HBMSystem(
         ode, ode.omega, fourier_new, initial_guess, stability_method=stability_method
     )
-    bp = BranchPoint(hbm, data["name_param"], 1)
+    bp_init = BranchPoint(hbm, data["name_param"], 1)
+    X = data["X"][0, :]
+    N_ref = int((len(X) / ode.n_dof - 1) / 2)
+    fourier_ref = Fourier(N_ref, L_DFT, ode.n_dof)
 
     for X, param in zip(data["X"], data["param"]):
-        bp = bp.duplicate()
-        bp.X = change_N_HBM(X, fourier_new=fourier_new)
+        bp = bp_init.duplicate()
+        bp.X = change_N_HBM(X, fourier_new=fourier_new, fourier_old=fourier_ref)
         setattr(bp, data["name_param"], param)
         yield bp
 
 
-def change_N_HBM(X, fourier_new):
+def change_N_HBM(X, fourier_new, fourier_old=None):
     N_ref = int((len(X) / fourier_new.n_dof - 1) / 2)
-    fourier_old = Fourier(
-        N_HBM=N_ref,
-        L_DFT=fourier_new.L_DFT,
-        n_dof=fourier_new.n_dof,
-        real_formulation=True,
-    )
+    if fourier_old is None:
+        fourier_old = Fourier(
+            N_HBM=N_ref,
+            L_DFT=fourier_new.L_DFT,
+            n_dof=fourier_new.n_dof,
+            real_formulation=True,
+        )
     return fourier_new.DFT(fourier_old.inv_DFT(X))
 
 

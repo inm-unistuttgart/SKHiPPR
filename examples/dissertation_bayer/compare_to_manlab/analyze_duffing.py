@@ -30,12 +30,12 @@ from comptime_measurements import measure_time_to_hill
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=5
+        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=5
     )
 
-    N_HBM = 60
-    atol = 5e-14
-    rtol = 5e-14
+    N_HBM = 120
+    atol = 1e-14
+    rtol = 1e-14
 
     # create_Duffing_reference(
     #     ode, label, num_steps=10, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0
@@ -62,26 +62,33 @@ def main():
     ):
 
         solver.solve(hbm)
+
         hbms.append(hbm)
 
-    #     if k >= 1:
-    #         X_ext_prev = np.hstack((data["X"][k - 1, :], data["param"][k - 1]))
-    #         X_ext_ref = np.hstack((data["X"][k, :], data["param"][k]))
-    #         hill_matrices, times, other = measure_time_to_hill(
-    #             hbm, X_ext_ref, X_ext_prev, solver
-    #         )
+        if k >= 31:
+            pass
 
-    #         labels = times.keys()
-    #         for l, label in enumerate(labels):
-    #             comptimes[l, k] = times[label]
+        if k >= 1 and hbm.solved:
+            X_ext_prev = np.hstack((data["X"][k - 1, :], data["param"][k - 1]))
+            X_ext_ref = np.hstack((data["X"][k, :], data["param"][k]))
 
-    # _, ax = plt.subplots(1, 1)
-    # for l, label in enumerate(labels):
-    #     ax.semilogy(data["arclength"], comptimes[l, :], label=label)
-    # ax.set_title("times over arclength")
-    # ax.set_xlabel("arclength")
-    # ax.set_ylabel("comp. time")
-    # ax.legend()
+            hill_matrices, times, other = measure_time_to_hill(
+                hbm, X_ext_ref, X_ext_prev, solver
+            )
+            labels = times.keys()
+            for l, label in enumerate(labels):
+                comptimes[l, k] = times[label]
+        else:
+            # Newton solver failed
+            comptimes[:, k] = np.nan
+
+    _, ax = plt.subplots(1, 1)
+    for l, label in enumerate(labels):
+        ax.semilogy(data["arclength"], comptimes[l, :], label=label)
+    ax.set_title("times over arclength")
+    ax.set_xlabel("arclength")
+    ax.set_ylabel("comp. time")
+    ax.legend()
     plot_continuation(hbms, plot_fun)
 
 
