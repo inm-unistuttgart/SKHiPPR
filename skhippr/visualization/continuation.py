@@ -60,6 +60,7 @@ def plot_continuation(
         if (
             getattr(bp, "equation_determining_stability", None) is None
             or bp.equation_determining_stability.stability_method is None
+            or bp.stable is None
         ):
             stability_defined = False
             break
