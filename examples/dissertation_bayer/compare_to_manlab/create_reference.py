@@ -154,7 +154,7 @@ def to_csv(
         dtype=complex,
     )
 
-    writer.writerow([str(val)[1:-1] for val in row])
+    writer.writerow([str(complex(val)).strip("()") for val in row])
 
 
 def determine_ode_accuracy(

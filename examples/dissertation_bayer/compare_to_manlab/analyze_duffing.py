@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 import tikzplotlib
+from tqdm import tqdm
 
 from skhippr.solvers.newton import NewtonSolver
 from skhippr.Fourier import Fourier
@@ -29,7 +30,7 @@ from comptime_measurements import measure_time_to_hill
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=0.05
+        exponent=5, alpha=1, beta=1, F=1, delta=0.05, omega_init=5
     )
 
     N_HBM = 60
@@ -37,7 +38,7 @@ def main():
     rtol = 5e-14
 
     # create_Duffing_reference(
-    #     ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
+    #     ode, label, num_steps=10, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0
     # )
 
     data = import_reference(
@@ -49,31 +50,38 @@ def main():
     solver = NewtonSolver(verbose=False)
 
     hbms = []
-    for k, hbm in enumerate(
-        iterate_from_reference(
-            ode, data, 60, 1024, True, stability_method=KoopmanHillSubharmonic
-        )
+    comptimes = np.zeros((6, len(data["arclength"])))
+
+    for k, hbm in tqdm(
+        enumerate(
+            iterate_from_reference(
+                ode, data, 10, 1024, True, stability_method=KoopmanHillSubharmonic
+            )
+        ),
+        total=len(data["arclength"]),
     ):
 
         solver.solve(hbm)
         hbms.append(hbm)
 
-        comptimes = np.zeros((6, len(data["arclength"])))
+    #     if k >= 1:
+    #         X_ext_prev = np.hstack((data["X"][k - 1, :], data["param"][k - 1]))
+    #         X_ext_ref = np.hstack((data["X"][k, :], data["param"][k]))
+    #         hill_matrices, times, other = measure_time_to_hill(
+    #             hbm, X_ext_ref, X_ext_prev, solver
+    #         )
 
-        if k >= 1:
-            X_ext_prev = np.hstack((data["X"][k - 1, :], data["param"][k - 1]))
-            X_ext_ref = np.hstack((data["X"][k, :], data["param"][k]))
-            hill_matrices, times, other = measure_time_to_hill(
-                hbm, X_ext_ref, X_ext_prev, solver
-            )
+    #         labels = times.keys()
+    #         for l, label in enumerate(labels):
+    #             comptimes[l, k] = times[label]
 
-            labels = times.keys()
-            for l, label in enumerate(labels):
-                comptimes[l, k] = times[label]
-
-    _, ax = plt.subplots(1, 1)
-    for l, label in enumerate(labels):
-        ax.plot(data["arclength"], comptimes[l, :], label=label)
+    # _, ax = plt.subplots(1, 1)
+    # for l, label in enumerate(labels):
+    #     ax.semilogy(data["arclength"], comptimes[l, :], label=label)
+    # ax.set_title("times over arclength")
+    # ax.set_xlabel("arclength")
+    # ax.set_ylabel("comp. time")
+    # ax.legend()
     plot_continuation(hbms, plot_fun)
 
 
@@ -128,8 +136,8 @@ def create_Duffing_reference(
         filename=get_filename(label, N_HBM=N_HBM, **kwargs_odesolver),
         initial_system=hbm,
         solver=solver,
-        stepsize=0.05,
-        stepsize_range=(0.0001, 0.05),
+        stepsize=0.1,
+        stepsize_range=(0.0001, 0.1),
         initial_direction=initial_direction,
         continuation_parameter="omega",
         verbose=True,
@@ -146,6 +154,8 @@ def create_Duffing_reference(
 
 
 def plot_fun(bp):
+    if np.linalg.norm(bp.residual_function(update=True)) > 1e-4:
+        return np.nan
     return np.max(np.abs(bp.equations[0].x_time()[0, :]))
 
 
