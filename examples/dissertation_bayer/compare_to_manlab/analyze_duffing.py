@@ -21,7 +21,10 @@ from import_reference import (
     import_reference,
     plot_reference_data,
     iterate_from_reference,
+    change_N_HBM,
 )
+
+from comptime_measurements import measure_time_to_hill
 
 
 def main():
@@ -46,12 +49,31 @@ def main():
     solver = NewtonSolver(verbose=False)
 
     hbms = []
-    for hbm in iterate_from_reference(
-        ode, data, N_HBM - 1, 1024, True, stability_method=KoopmanHillSubharmonic
+    for k, hbm in enumerate(
+        iterate_from_reference(
+            ode, data, 60, 1024, True, stability_method=KoopmanHillSubharmonic
+        )
     ):
 
         solver.solve(hbm)
         hbms.append(hbm)
+
+        comptimes = np.zeros((6, len(data["arclength"])))
+
+        if k >= 1:
+            X_ext_prev = np.hstack((data["X"][k - 1, :], data["param"][k - 1]))
+            X_ext_ref = np.hstack((data["X"][k, :], data["param"][k]))
+            hill_matrices, times, other = measure_time_to_hill(
+                hbm, X_ext_ref, X_ext_prev, solver
+            )
+
+            labels = times.keys()
+            for l, label in enumerate(labels):
+                comptimes[l, k] = times[label]
+
+    _, ax = plt.subplots(1, 1)
+    for l, label in enumerate(labels):
+        ax.plot(data["arclength"], comptimes[l, :], label=label)
     plot_continuation(hbms, plot_fun)
 
 
