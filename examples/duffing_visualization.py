@@ -64,7 +64,7 @@ def main():
 
     # --- Instantiation of the ODE at initial point ---
     ode = Duffing(t=0, x=[1.0, 0.0], alpha=1, beta=2, delta=0.16, F=F, omega=omega)
-
+    
     # --- Initial guess in time and frequency domain ---
     ts = fourier.time_samples(omega)
     x0_samples = np.array([np.cos(ts * omega), -omega * np.sin(ts * omega)])
@@ -95,7 +95,7 @@ def main():
     plot_floquet_multipliers(hbm=hbm_sys)
     plot_floquet_exponents(hbm=hbm_sys)
     plot_period(hbm=hbm_sys, n_periods=1.22)
-    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=False, logscale=True)
+    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=None, logscale=True)
 
     # --- Realisation with subplots ---
     _, axs = plt.subplots(nrows=1, ncols=3)

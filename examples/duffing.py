@@ -25,7 +25,14 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoi
 from skhippr.solvers.newton import NewtonSolver
 
 # --- Visualization ---
-from skhippr.visualization.continuation import plot_continuation
+from skhippr.visualization.continuation import plot_continuation, plot_floquet_multiplier_continuation, plot_floquet_exponent_continuation
+from skhippr.visualization.cycles import animate_phase, animate_period, animate_floquet_multipliers, animate_floquet_exponents
+from skhippr.visualization.data_export import (
+    save_animation,
+    save_pdf,
+    save_png,
+    save_tikz
+)
 
 def main():
     """
@@ -109,11 +116,21 @@ def main():
 
     # --- Plot the continuation curve using SKHiPPR visualization functions---
     # Passing a scalar_measure is optional, the default will call unknowns[0][0] on each BranchPoint object
-    plot_continuation(
+    ax = plot_continuation(
         frc,
         plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:])
         )
-    
+    plot_floquet_multiplier_continuation(frc)
+    plot_floquet_exponent_continuation(frc)
+    _, animation = animate_floquet_multipliers(frc)
+    _, animation2 = animate_floquet_exponents(frc)
+    #save_pdf(ax, "testSaves/continuationPlot")
+    #save_tikz(ax, "testSaves\\continuationPlot")
+    #save_png(ax,"continuationplot")
+    #save_animation(animation, "animationGifTest.gif")
+    #save_animation(animation, "animation_mp4_test.mp4")
+    return animation, animation2
+
 if __name__ == "__main__":
-    main()
+    animations = main()
     plt.show()
