@@ -1,0 +1,42 @@
+% This file was created with tikzplotlib v0.10.1.post13.
+\begin{tikzpicture}
+
+\definecolor{darkgrey176}{RGB}{176,176,176}
+\definecolor{steelblue31119180}{RGB}{31,119,180}
+
+\begin{axis}[
+tick align=outside,
+tick pos=left,
+x grid style={darkgrey176},
+xmin=0.0499999999999999, xmax=20.95,
+xtick style={color=black},
+y grid style={darkgrey176},
+ymin=0.378, ymax=0.422,
+ytick style={color=black}
+]
+\addplot [semithick, steelblue31119180]
+table {%
+1 0.4
+2 0.4
+3 0.4
+4 0.4
+5 0.4
+6 0.4
+7 0.4
+8 0.4
+9 0.4
+10 0.4
+11 0.4
+12 0.4
+13 0.4
+14 0.4
+15 0.4
+16 0.4
+17 0.4
+18 0.4
+19 0.4
+20 0.4
+};
+\end{axis}
+
+\end{tikzpicture}
