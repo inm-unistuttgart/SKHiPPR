@@ -35,7 +35,9 @@ class AbstractStabilityHBM(AbstractStabilityMethod):
         self.autonomous = autonomous
 
     @abstractmethod
-    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation) -> np.ndarray:
+    def fundamental_matrix(
+        self, t_over_period: float, hbm: HBMEquation | np.ndarray, omega=None
+    ) -> np.ndarray:
         """
         Compute the fundamental matrix at a given normalized time for a specified periodic solution.
 
@@ -45,7 +47,7 @@ class AbstractStabilityHBM(AbstractStabilityMethod):
         t_over_period : float
             Normalized time over the period (typically between 0 and 1).
         hbm : :py:class:`~skhippr.cycles.hbm.HBMEquation`
-            The (solved) :py:class:`~skhippr.cycles.hbm.HBMEquation` of whose solution the fundamental matrix is sought.
+            The (solved) :py:class:`~skhippr.cycles.hbm.HBMEquation` of whose solution the fundamental matrix is sought. Alternatively, a Hill matrix (numpy array) whose size and construction matches `self.fourier.`
 
         Returns
         -------
@@ -54,13 +56,15 @@ class AbstractStabilityHBM(AbstractStabilityMethod):
         """
         ...
 
-    def determine_eigenvalues(self, hbm: HBMEquation) -> np.ndarray:  # type:ignore
+    def determine_eigenvalues(
+        self, hbm: HBMEquation | np.ndarray, omega=None
+    ) -> np.ndarray:  # type:ignore
         """
-        Determine the Floquet multipliers of the periodic solution (eigenvalues of the monodromy matrix) for the periodic solution encoded in the given :py:class:`~skhippr.cycles.hbm.hbmProblem`.
+        Determine the Floquet multipliers of the periodic solution (eigenvalues of the monodromy matrix) for the periodic solution encoded in the given :py:class:`~skhippr.cycles.hbm.hbmProblem`, or alternatively for a Hill matrix passed as numpy array.
 
         """
 
-        monodromy = self.fundamental_matrix(t_over_period=1, hbm=hbm)
+        monodromy = self.fundamental_matrix(t_over_period=1, hbm=hbm, omega=omega)
         floquet_multipliers = np.linalg.eigvals(monodromy)
         return floquet_multipliers
 

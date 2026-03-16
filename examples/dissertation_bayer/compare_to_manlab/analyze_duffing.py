@@ -13,7 +13,12 @@ from skhippr.odes.nonautonomous import Duffing
 from skhippr.visualization.continuation import plot_continuation
 
 
-from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillSubharmonic,
+    KoopmanHillProjection,
+)
+from skhippr.stability.ClassicalHill import ClassicalHill
+from skhippr.stability.SinglePass import SinglePassRK4
 
 from create_reference import (
     iterate_reference_solution,
@@ -25,7 +30,7 @@ from import_reference import (
     change_N_HBM,
 )
 
-from comptime_measurements import measure_time_to_hill
+from comptime_measurements import measure_time_to_hill, measure_stability_method
 
 
 def main():
@@ -33,9 +38,13 @@ def main():
         exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=5
     )
 
-    N_HBM = 120
-    atol = 1e-14
-    rtol = 1e-14
+    # N_HBM = 120
+    # atol = 1e-14
+    # rtol = 1e-14
+
+    N_HBM = 20
+    atol = 1e-07
+    rtol = 1e-07
 
     # create_Duffing_reference(
     #     ode, label, num_steps=10, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0
@@ -49,13 +58,31 @@ def main():
 
     solver = NewtonSolver(verbose=False)
 
+    N_examine = 10
+    L_examine = 1024
+    fourier = Fourier(N_examine, L_examine, ode.n_dof, real_formulation=True)
+
+    stability_methods = {
+        "dir": KoopmanHillProjection(fourier),
+        "subh": KoopmanHillSubharmonic(fourier),
+        "imag": ClassicalHill(fourier, "imaginary"),
+        "RK4": SinglePassRK4(fourier),
+    }
+
     hbms = []
-    comptimes = np.zeros((6, len(data["arclength"])))
+    comptimes = dict()
+    FM_errors = {method: dict() for method in stability_methods.keys()}
+    FM_times = {method: dict() for method in stability_methods.keys()}
 
     for k, hbm in tqdm(
         enumerate(
             iterate_from_reference(
-                ode, data, 10, 1024, True, stability_method=KoopmanHillSubharmonic
+                ode,
+                data,
+                N_examine,
+                L_examine,
+                True,
+                stability_method=KoopmanHillSubharmonic,
             )
         ),
         total=len(data["arclength"]),
@@ -75,20 +102,57 @@ def main():
             hill_matrices, times, other = measure_time_to_hill(
                 hbm, X_ext_ref, X_ext_prev, solver
             )
-            labels = times.keys()
-            for l, label in enumerate(labels):
-                comptimes[l, k] = times[label]
+            for label, time in times.items():
+                try:
+                    comptimes[label][k] = time
+                except KeyError:
+                    comptimes[label] = np.zeros(len(data["param"]))
+                    comptimes[label][k] = time
+
+            for name_method, method in stability_methods.items():
+                for label, mat in hill_matrices.items():
+                    time, error, _ = measure_stability_method(
+                        mat, method, data["FMs"], FM_error_measure
+                    )
+                    try:
+                        FM_errors[name_method][label][k] = error
+                    except KeyError:
+                        FM_errors[name_method][label] = np.nan(len(data["param"]))
+                        FM_times[name_method][label] = np.nan(len(data["param"]))
+                        FM_errors[name_method][label][k] = error
+
+                    FM_times[name_method][label][k] = time
         else:
             # Newton solver failed
-            comptimes[:, k] = np.nan
+            for label in comptimes.keys():
+                comptimes[label][k] = np.nan
 
+    # Plot computation times
     _, ax = plt.subplots(1, 1)
-    for l, label in enumerate(labels):
-        ax.semilogy(data["arclength"], comptimes[l, :], label=label)
+    for label, times in comptimes.items():
+        ax.semilogy(data["arclength"], times, label=label)
+
+    for name_method in FM_times.keys():
+        for label, times in FM_times[name_method].items():
+            ax.semilogy(data["arclength"], times, label=f"FM {name_method}, {label}")
+
     ax.set_title("times over arclength")
     ax.set_xlabel("arclength")
     ax.set_ylabel("comp. time")
     ax.legend()
+
+    # Plot error
+    _, ax = plt.subplots(1, 1)
+
+    for name_method in FM_errors.keys():
+        for label, errors in FM_errors[name_method].items():
+            ax.semilogy(data["arclength"], errors, label=f"FM {name_method}, {label}")
+
+    ax.set_title("errors over arclength")
+    ax.set_xlabel("error")
+    ax.set_ylabel("comp. time")
+    ax.legend()
+
     plot_continuation(hbms, plot_fun)
 
 
@@ -164,6 +228,10 @@ def plot_fun(bp):
     if np.linalg.norm(bp.residual_function(update=True)) > 1e-4:
         return np.nan
     return np.max(np.abs(bp.equations[0].x_time()[0, :]))
+
+
+def FM_error_measure(FMs, FMs_ref):
+    return np.min(np.abs(FMs_ref[0] - FMs))
 
 
 if __name__ == "__main__":

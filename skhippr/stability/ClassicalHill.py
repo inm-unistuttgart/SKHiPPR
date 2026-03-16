@@ -37,11 +37,11 @@ class ClassicalHill(AbstractStabilityHBM):
                 f"Unknown sorting method {sorting_method}. Allowed values: 'imaginary', 'symmetry'."
             )
 
-    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation):
+    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation, omega=None):
         raise NotImplementedError("Not implemented yet for classical Hill")
 
     def hill_EVP(
-        self, hbm: HBMEquation, visualize: bool = False
+        self, hbm: HBMEquation | np.ndarray, visualize: bool = False, omega=None
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Solves the eigenvalue problem for the Hill matrix and performs sorting to identify the Floquet exponents.
@@ -79,8 +79,10 @@ class ClassicalHill(AbstractStabilityHBM):
         The function currently does not explicitly handle the case for negative real Floquet multipliers specially, being error-prone in this case.
 
         """
-
-        hill_matrix = hbm.hill_matrix()
+        if isinstance(hbm, np.ndarray):
+            hill_matrix = hbm
+        else:
+            hill_matrix = hbm.hill_matrix()
         FE_all, eigenvectors_all = np.linalg.eig(hill_matrix)
         indices = np.argsort(
             [
@@ -107,7 +109,7 @@ class ClassicalHill(AbstractStabilityHBM):
         return floquet_exponents, eigenvectors
 
     @override
-    def determine_eigenvalues(self, hbm: HBMEquation) -> np.ndarray:
+    def determine_eigenvalues(self, hbm: HBMEquation, omega=None) -> np.ndarray:
         """
         Determine the eigenvalues (Floquet multipliers) for the given periodic solution.
 
@@ -127,8 +129,11 @@ class ClassicalHill(AbstractStabilityHBM):
             Array of Floquet multipliers corresponding to the computed Floquet multipliers, converted from Floquet exponents.
         """
 
+        if omega is None:
+            omega = hbm.omega
+
         floquet_exponents, _ = self.hill_EVP(hbm, visualize=False)
-        floquet_mult = np.exp(floquet_exponents * 2 * np.pi / hbm.omega)
+        floquet_mult = np.exp(floquet_exponents * 2 * np.pi / omega)
         return floquet_mult
 
     def _imaginary_part_criterion(self, eigenpair: tuple[float, np.ndarray]) -> float:

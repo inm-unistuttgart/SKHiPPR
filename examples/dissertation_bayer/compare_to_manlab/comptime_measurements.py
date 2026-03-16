@@ -94,3 +94,12 @@ def measure_time_to_hill(bp: BranchPoint, X_ext_ref, X_ext_prev, solver: NewtonS
         "solved": solved,
     }
     return hill_matrices, times, other
+
+
+def measure_stability_method(
+    hill_matrix, omega, stability_method, FMs_ref, FM_error_measure
+):
+    start = time.monotonic_ns()
+    FMs = stability_method.determine_eigenvalues(hbm=hill_matrix, omega=omega)
+    stop = time.monotonic_ns()
+    return stop - start, FM_error_measure(FMs, FMs_ref), FMs
