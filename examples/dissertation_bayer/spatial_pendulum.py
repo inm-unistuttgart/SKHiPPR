@@ -546,46 +546,55 @@ def visualize_drazin(
     if type(pend) == str:
         pend, x_sol = init_pendulum(pend_case=pend, L_sol=1024)
 
+    _, ax_plot = plt.subplots(1, 1)
+    ratios = []
+
     for N in Ns:
         fourier_constr = fourier_ref.__replace__(N_HBM=N)
 
-    hbm_constr = HBMEquationDAE(
-        dae=pend,
-        omega=pend.omega,
-        fourier=fourier_constr,
-        initial_guess=fourier_constr.DFT(x_sol),
-        stability_method=None,
-    )
-
-    solver.solve_equation(equation=hbm_constr, unknown="X")
-    hill_matrix = hbm_constr.hill_matrix(update=True)
-    mass_matrix = hbm_constr.M()
-
-    _, ax_plot = plt.subplots(1, 1)
-
-    # Copy&pasted from KoopmanHillDAE.generalized_exponential()
-    a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
-    success = False
-    for a in a_vals:
-        pencil = a * mass_matrix - hill_matrix
-        if np.linalg.cond(pencil) < tol_cond:
-            success = True
-            print(f"N = {N}: a = {a}")
-            break
-    if not success:
-        raise RuntimeError(
-            f"Could not find suitable scaling factor 'a' for Drazin inverse with condition < {tol_cond}."
+        hbm_constr = HBMEquationDAE(
+            dae=pend,
+            omega=pend.omega,
+            fourier=fourier_constr,
+            initial_guess=fourier_constr.DFT(x_sol),
+            stability_method=None,
         )
 
-    pencil_lu = lu_factor(a * mass_matrix - hill_matrix)
-    pencil_M = lu_solve(pencil_lu, mass_matrix)
-    pencil_drazin, ratio = drazin(pencil_M, tol_drazin, ax=ax_plot)
-    print(f"Ratio of Drazin inverse: {ratio}")
+        solver.solve_equation(equation=hbm_constr, unknown="X")
+        hill_matrix = hbm_constr.hill_matrix(update=True)
+        mass_matrix = hbm_constr.M()
+
+
+        # Copy&pasted from KoopmanHillDAE.generalized_exponential()
+        a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
+        success = False
+        for a in a_vals:
+            pencil = a * mass_matrix - hill_matrix
+            if np.linalg.cond(pencil) < tol_cond:
+                success = True
+                print(f"N = {N}: a = {a}")
+                break
+        if not success:
+            raise RuntimeError(
+                f"Could not find suitable scaling factor 'a' for Drazin inverse with condition < {tol_cond}."
+            )
+
+        pencil_lu = lu_factor(a * mass_matrix - hill_matrix)
+        pencil_M = lu_solve(pencil_lu, mass_matrix)
+        pencil_drazin, ratio = drazin(pencil_M, tol_drazin, ax_plot=ax_plot)
+        print(f"Ratio of Drazin inverse: {ratio}")
+        ratios.append(ratio)
 
     ax_plot.axhline(tol_drazin, color="r", linestyle="--", label="tol_drazin")
     ax_plot.set_xlabel("size of A")
     ax_plot.set_ylabel("magnitude of Drazin eigenvalues")
+    tikzplotlib.save('pendulum_drazin.tikz')
 
+    _, ax_ratio = plt.subplots(1,1)
+    ax_ratio.plot(Ns, ratios)
+    ax_plot.set_xlabel('N')
+    ax_plot.set_ylabel('Drazin ratio')
+    tikzplotlib.save('pendulum_drazin_ratio.tikz')
 
 if __name__ == "__main__":
     # only_constr()
