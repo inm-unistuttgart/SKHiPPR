@@ -318,6 +318,8 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
             The computed fundamental matrix as a NumPy array.
 
         """
+        if omega is None:
+            omega = hbm.omega
         # print(f"omega={omega}]")
         C = self.C_time(t_over_period)
         C_subh = self.C_subh_time(t_over_period=t_over_period)

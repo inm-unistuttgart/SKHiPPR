@@ -4,15 +4,15 @@ import tikzplotlib
 import time
 
 from import_reference import import_reference, iterate_from_reference
-from comptime_measurements import measure_stability_method
 
 
 def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, solver):
     data = import_reference(filename, ode)
     real_formulation = data["real_formulation"]
-    error_stats = np.zeros(4, len(Ns_HBM))
+    error_stats = np.zeros((5, len(Ns_HBM)))
 
     for k, N in enumerate(Ns_HBM):
+        print(f"{k}/{len(Ns_HBM)}: N_HBM={N}")
         errors_FM_before = []
         errors_FM_after = []
         comptimes = []
@@ -26,19 +26,30 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
                 stability_method=stability_method_generator,
             )
         ):
+            bp.omega = data["param"][l]
             FMs_ref = data["FMs"][l, :]
-            FMs_before = bp.equations[0].determine_stability(update=True)[0]
+            FMs_before = bp.equations[0].determine_stability(update=True)[1]
             errors_FM_before.append(FM_error_measure(FMs_before, FMs_ref))
 
+            solved = True
             start = time.monotonic_ns()
-            solver.solve_equation(bp.equations[0], "X")
+            try:
+                solver.solve_equation(bp.equations[0], "X")
+            except RuntimeError:
+                solved = False
             stop = time.monotonic_ns()
-            errors_FM_after.append(FM_error_measure(bp.eigenvalues, FMs_ref))
+            if solved:
+                errors_FM_after.append(FM_error_measure(bp.eigenvalues, FMs_ref))
+            else:
+                errors_FM_after.append(np.nan)
             comptimes.append((stop - start) * 1e-9)
+
         error_stats[0, k] = np.median(errors_FM_before)
         error_stats[1, k] = np.min(errors_FM_before)
         error_stats[2, k] = np.max(errors_FM_before)
-        error_stats[3, k] = np.median(errors_FM_after)
+        error_stats[3, k] = np.nanmedian(
+            errors_FM_after,
+        )
         error_stats[4, k] = np.median(comptimes)
 
     return error_stats
@@ -46,13 +57,14 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
 
 def plot_step_1(error_stats, Ns_HBM=None):
     _, ax = plt.subplots(1, 1)
-    labels = ["mean", "min", "max", "HBM + stab median"]
-    for k in len(labels):
+    labels = ["median", "min", "max", "HBM + stab median"]
+    for k in range(len(labels)):
         ax.plot(error_stats[-1, :], error_stats[k, :], label=f"{labels[k]} error")
     ax.set_xlabel("HBM + stab comp time")
     ax.set_ylabel("max FM error")
     ax.set_yscale("log")
     ax.legend()
+    return ax
 
 
 def FM_error_measure(FMs, FMs_ref):

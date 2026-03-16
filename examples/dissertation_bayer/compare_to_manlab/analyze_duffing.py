@@ -12,6 +12,8 @@ from skhippr.odes.nonautonomous import Duffing
 
 from skhippr.visualization.continuation import plot_continuation
 
+from analyze_and_plot import *
+
 
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillSubharmonic,
@@ -234,6 +236,75 @@ def FM_error_measure(FMs, FMs_ref):
     return np.min(np.abs(FMs_ref[0] - FMs))
 
 
+def step_1(
+    exponent=5, alpha=1, beta=1, F=0.5, delta=0.02, Nmax=120, atol=1e-13, rtol=1e-13
+):
+    ode, label = init_duffing(exponent, alpha, beta, F, delta)
+    filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
+
+    error_stats = compute_step_1(
+        ode,
+        filename=filename,
+        Ns_HBM=[5, 10, 15],
+        L_DFT=1024,
+        stability_method_generator=KoopmanHillSubharmonic,
+        solver=NewtonSolver(tolerance=1e-13, verbose=False),
+    )
+
+    ax = plot_step_1(error_stats)
+    return ax, error_stats, filename
+
+
+def iterate_step_1(
+    exponent=5,
+    alpha=1,
+    beta=1,
+    F=0.5,
+    delta=0.02,
+    Nmax=120,
+    atol=1e-13,
+    rtol=1e-13,
+    labels_stabmethod=(KoopmanHillSubharmonic,),
+):
+    for label_stab in labels_stabmethod:
+        match label_stab:
+            case "subh":
+                stability_method_generator = KoopmanHillSubharmonic
+            case "dir":
+                stability_method_generator = KoopmanHillProjection
+            case "imag":
+                stability_method_generator = lambda fourier: ClassicalHill(
+                    fourier, "imaginary"
+                )
+            case "RK4":
+                stability_method_generator = SinglePassRK4
+            case _:
+                raise ValueError(f"Unknown stability method {label_stab}")
+
+        ax, error_stats, filename = step_1(
+            exponent=exponent,
+            alpha=alpha,
+            beta=beta,
+            F=F,
+            delta=delta,
+            Nmax=Nmax,
+            atol=atol,
+            rtol=rtol,
+        )
+        ax.set_title(f"step 1 FM errors for {label_stab}")
+        tikzplotlib.save(f"{filename}_stab_{label_stab}.tikz")
+
+
 if __name__ == "__main__":
-    main()
+    iterate_step_1(
+        exponent=5,
+        alpha=1,
+        beta=1,
+        F=3,
+        delta=0.25,
+        Nmax=40,
+        atol=1e-12,
+        rtol=1e-12,
+        labels_stabmethod=["subh", "dir", "imag", "RK4"],
+    )
     plt.show()
