@@ -26,15 +26,15 @@ from import_reference import (
 
 def main():
     ode, label = init_duffing(
-        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=0.05
+        exponent=5, alpha=1, beta=1, F=3, delta=0.25, omega_init=5
     )
 
-    N_HBM = 40
-    atol = 1e-12
-    rtol = 1e-12
+    N_HBM = 120
+    atol = 1e-14
+    rtol = 1e-14
 
     create_Duffing_reference(
-        ode, label, num_steps=200, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=8
+        ode, label, num_steps=10000, N_HBM=N_HBM, atol=atol, rtol=rtol, omega_max=0.1
     )
 
     data = import_reference(
