@@ -6,6 +6,9 @@ Supported arguments are an instance of :py:class:`~skhippr.cycles.hbm.HBMEquatio
 
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
 :py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
+
+This module also offers functions for visualizing matrices by their spectral norm. Namely :py:func:`~skhippr.visualization.cycles.plot_matrix_block_norm` which subdivides a matrix into subblocks and creates a scatter plot colored by the 2-norm of each block,
+as well as :py:func:`~skhippr.visualization.cycles.plot_hill_matrix_blocks` which uses the prior function to visualize the Hill matrix of a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
 """
 
 import numpy as np
@@ -200,15 +203,20 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
 
 def plot_hill_matrix_blocks(
     hbm: HBMEquation | EquationSystem,
-    real_formulation=None,
+    real_formulation=False,
     ax=None,
+    logscale=False,
+    vmax=None,
+    vmin=None,
     **plot_kwargs,
 ):
     """
-    Plot the Hill matrix as a grid of blocks, colored by their 2-norm.
+    Plot the Hill matix as a grid of blocks, colored and sized by its properties.
     This function computes the Hill matrix of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`,
-    segments it into n_dof x n_dof blocks, and creates a scatter plot where each block is represented
-    as a dot. The color of each dot is determined by the 2-norm (spectral norm) of the corresponding block.
+    partitions it into ``n_dof`` x ``n_dof`` sub-blocks and creates a scatter plot where each
+    block is visualized as a dot. 
+    The color represents the block`s 2-norm (spectral norm) and the scatter point size is automatically 
+    adjusted to the number of blocks, ensuring visually balanced scaling across different matrix and problem sizes.
 
     Parameters
     ----------
@@ -216,32 +224,52 @@ def plot_hill_matrix_blocks(
         The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    real_formulation : bool, optional
+        If ``True``, the Hill matrix is built using the real-valued form of the HBM equations. The plot axes ticks display ``0``, ``1c``, ``...``, ``Nc``, ``1s``, ``...``, ``Ns`` when ``True`` and ``-N``, ``...``, ``N`` otherwise.
+    logscale : bool, optional
+        If ``True``, uses logarithmic color scaling via :py:class:`matplotlib.colors.LogNorm`.
+    vmax, vmin : float, optional
+        Colorbar value limits passed to :py:class:`~matplotlib.colors.LogNorm` when ``logscale=True``.
+        If ``None``, limits are determined automatically.
     **plot_kwargs
-        Additional keyword arguments passed to ``ax.scatter()``.
+        Additional keyword arguments passed to :py:func:`matplotlib.axes.Axes.scatter`.
 
     Returns
     -------
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
-
-    Notes
-    -----
-    The Hill matrix is partitioned into blocks of size n_dof x n_dof, arranged in a 2D grid.
-    Each block's position in the plot corresponds to its position in the Hill matrix, and its
-    color represents the spectral norm (2-norm) of that block.
-
     """
-    # Compute Hill matrix
     hbm = _get_equation_helper(hbm=hbm)
     H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
     n_dof = hbm.fourier.n_dof
-    if hbm.fourier.real_formulation:
+
+    if real_formulation:
         index = range(2 * hbm.fourier.N_HBM + 1)
     else:
         index = range(-hbm.fourier.N_HBM, hbm.fourier.N_HBM + 1)
-    ax = plot_matrix_block_norm(H, n_dof, ax=ax, index=index, **plot_kwargs)
-    return ax
 
+    ax, _ = plot_matrix_block_norm(
+        H,
+        n_dof,
+        ax=ax,
+        index=index,
+        logscale=logscale,
+        vmax=vmax,
+        vmin=vmin,
+        **plot_kwargs
+    )
+    N = hbm.fourier.N_HBM
+    step = max(1, len(index) // 15)
+    tick_locs = index[::step]
+    if real_formulation:
+        labels = ['0'] + [f'{i}c' for i in range(1, N+1)] + [f'{i}s' for i in range(1, N+1)]
+        tick_labels = labels[::step]
+    else:
+        tick_labels = [str(loc) for loc in tick_locs]
+    ax.set_xticks(tick_locs, labels=tick_labels, fontsize=10)
+    ax.set_yticks(tick_locs, labels=tick_labels, fontsize=10)
+
+    return ax
 
 def plot_matrix_block_norm(
     matrix: np.ndarray,
@@ -254,26 +282,29 @@ def plot_matrix_block_norm(
     **plot_kwargs,
 ):
     """
-    Plot a given square matrix as a grid of blocks, colored by their 2-norm.
+    Plot a square matrix as a grid of color-coded blocks, where each block's color corresponds to 
+    its 2-norm and its poistion reflects its placement within the matrix.
 
     Parameters
     ----------
     matrix : np.ndarray
-        The matrix to be plotted.
+        The square matrix to be visualized.
     block_size : int
-        The size of each block (assumed square).
+        The dimension of each sub-block.
     ax : matplotlib.axes.Axes, optional
-        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot.
+        If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
     index : array-like, optional
-        Labels for block indices along both axes. If ``None``, uses
-        ``range(matrix.shape[0] // block_size)``.
+        Custom tick labels or coordinate indices.
+        If ``None``, uses ``range(matrix.shape[0] // block_size)``.
     logscale : bool, optional
-        If ``True``, use logarithmic color scaling with :py:class:`~matplotlib.colors.LogNorm`.
+        If ``True``, use logarithmic color scaling via :py:class:`~matplotlib.colors.LogNorm`.
     vmax, vmin : float, optional
         Colorbar value limits passed to :py:class:`~matplotlib.colors.LogNorm`
         when ``logscale=True``. If ``None``, limits are determined automatically.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.scatter()``.
+        The plot title can also be passed here via the dictionary key ``title``.
 
     Returns
     -------
@@ -281,21 +312,35 @@ def plot_matrix_block_norm(
         The :py:class:`~matplotlib.axes.Axes` object with the plotted matrix blocks.
     sc : matplotlib.collections.PathCollection
         The scatter plot collection object (for accessing colorbar, etc.).
+    
+    Notes
+    -----
+    Each matrix block is represented as a dot located by its (row, column) indices, colored by the 2-norm of that block.
+    If no explicit point size (``s``) is specified, the scatter points are automatically sized based on the total number of blocks.
+    This ensures proportional visualization of each dot in the scatter plot depending on matrix dimension.
+    The scatter point size is bounded to guarantee clarity for both small and large block grids.
     """
     if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError(
             f"Input matrix must be 2-D and square but has shape {matrix.shape}"
         )
+
     if index is None:
-        index = range(matrix.shape[0] // block_size)
-    num_blocks = len(index)
+        num_blocks = matrix.shape[0] // block_size
+        index = range(num_blocks)
+    else:
+        num_blocks = len(index)
+
     if num_blocks * block_size != matrix.shape[0]:
         raise ValueError(
-            f"Matrix size ({matrix.shape[0]}) not given by block size ({block_size}) times number of blocks ({num_blocks})"
+            f"Matrix size ({matrix.shape[0]}) not given by block size "
+            f"({block_size}) times number of blocks ({num_blocks})"
         )
+
     x_positions = []
     y_positions = []
     norm_values = []
+    
     for i in range(num_blocks):
         for j in range(num_blocks):
             block = matrix[
@@ -306,6 +351,7 @@ def plot_matrix_block_norm(
             x_positions.append(index[j])
             y_positions.append(index[i])
             norm_values.append(norm)
+
     if isinstance(ax, str):
         title = ax
     else:
@@ -316,13 +362,26 @@ def plot_matrix_block_norm(
         ax.set_ylabel("Row index")
         ax.set_title(title)
         ax.invert_yaxis()
+
     x_positions = np.array(x_positions)
     y_positions = np.array(y_positions)
     norm_values = np.array(norm_values)
-    scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
+
+    title = plot_kwargs.pop("title", None)
+
+    if "s" not in plot_kwargs:
+        base_size = 13000.0
+        s_min, s_max = 1.0, 200.0
+        auto_s = base_size / max(num_blocks**2, 1)
+        auto_s = max(s_min, min(s_max, auto_s))
+        plot_kwargs["s"] = auto_s
+        plot_kwargs["s"] = auto_s
+
+    scatter_defaults = {"cmap": "viridis", "alpha": 0.8}
     if logscale:
         scatter_defaults["norm"] = LogNorm(vmax=vmax, vmin=vmin, clip=False)
     scatter_defaults.update(plot_kwargs)
+
     sc = ax.scatter(
         x_positions,
         y_positions,
@@ -334,6 +393,12 @@ def plot_matrix_block_norm(
         cbar.formatter = plt.matplotlib.ticker.LogFormatterMathtext(base=10)
         cbar.update_ticks()
     cbar.set_label("2-norm of block")
+    
+    if title is None:
+        ax.set_title("Block Matrix Norms")
+    else:
+        ax.set_title(title)
+        
     return ax, sc
 
 

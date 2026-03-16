@@ -76,7 +76,9 @@ class SinglePassRK(AbstractStabilityHBM):
             self.samples_per_step / fourier.L_DFT
         )  # normalized step size: one period is at tau=1
 
-    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation) -> np.ndarray:
+    def fundamental_matrix(
+        self, t_over_period: float, hbm: HBMEquation | np.ndarray, omega=None
+    ) -> np.ndarray:
         """
         Computes the fundamental matrix for a given normalized time.
 
@@ -98,8 +100,12 @@ class SinglePassRK(AbstractStabilityHBM):
 
         """
 
-        J_samples = hbm.ode_samples(self.fourier)
-        T = 2 * np.pi / hbm.omega
+        if isinstance(hbm, np.ndarray):
+            J_samples = self.fourier.matrix_inv_DFT(hbm)
+        else:
+            J_samples = hbm.ode_samples(self.fourier)
+            omega = hbm.omega
+        T = 2 * np.pi / omega
         dt = self.h0 * T
         A = self.A * dt
         b = self.b * dt

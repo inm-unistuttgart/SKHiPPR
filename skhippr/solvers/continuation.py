@@ -110,6 +110,13 @@ def pseudo_arclength_continuator(
 
             last_point = next_point
             stepsize = min(1.2 * stepsize, stepsize_range[1])
+            if continuation_parameter is not None:
+                stepsize = min(
+                    stepsize,
+                    np.squeeze(
+                        getattr(next_point, continuation_parameter) * stepsize_range[1]
+                    ),
+                )
 
         elif stepsize > stepsize_range[0]:
             if verbose:
@@ -155,7 +162,7 @@ class BranchPoint(EquationSystem):
         )
         self.tangent = None
 
-    def determine_tangent(self):
+    def determine_tangent(self, update=False, update_tol=1e-10):
         """
         Compute, normalize and store the tangent vector at the branch point.
 
@@ -169,12 +176,15 @@ class BranchPoint(EquationSystem):
             If the solution has not converged and the tangent would thus be meaningless.
 
         """
-        if not self.solved:
+        if (
+            not self.solved
+            and np.linalg.norm(self.residual_function(update=update)) > update_tol
+        ):
             raise RuntimeError(
                 "Cannot determine tangent at branch point: Branch point not reached (system not solved)."
             )
 
-        jac = self.jacobian(update=False)
+        jac = self.jacobian(update=update)
         rhs = np.zeros(jac.shape[0])
         rhs[-1] = 1
         tangent = np.linalg.solve(jac, rhs)

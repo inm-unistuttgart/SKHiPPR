@@ -33,5 +33,7 @@ __pycache__/
 
 # Documentation
 docs_source/build/*
-examples/dissertation_bayer/plots/mathieu_spurious.tikz
+
+# Plots
 plots/
+*.tikz
