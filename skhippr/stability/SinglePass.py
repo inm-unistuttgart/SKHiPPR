@@ -54,7 +54,7 @@ class SinglePassRK(AbstractStabilityHBM):
             # L = fft.next_fast_len(self.samples_per_step * self.steps_per_period)
             L = self.samples_per_step * self.steps_per_period
             if L != fourier.L_DFT:
-                fourier = replace(fourier, L_DFT=L)
+                fourier = fourier.__replace__(L_DFT=L)
 
         else:
             self.steps_per_period = fourier.L_DFT / self.samples_per_step  # type:ignore

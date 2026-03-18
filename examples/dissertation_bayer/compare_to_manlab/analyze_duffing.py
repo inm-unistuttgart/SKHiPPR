@@ -21,7 +21,7 @@ from skhippr.stability.KoopmanHillProjection import (
 )
 from skhippr.stability.ClassicalHill import ClassicalHill
 
-# from skhippr.stability.SinglePass import SinglePassRK4
+from skhippr.stability.SinglePass import SinglePassRK4
 
 from create_reference import (
     iterate_reference_solution,
@@ -318,9 +318,9 @@ if __name__ == "__main__":
         F=3,
         delta=0.25,
         Nmax=120,
-        Ns_hbm=range(1, 10),
+        Ns_HBM=range(1, 10),
         atol=1e-14,
         rtol=1e-14,
-        labels_stabmethod=["dir", "subh", "imag"],
+        labels_stabmethod=["RK4"],
     )
     plt.show()
