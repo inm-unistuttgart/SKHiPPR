@@ -20,6 +20,7 @@ from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,
 )
 from skhippr.stability.ClassicalHill import ClassicalHill
+
 # from skhippr.stability.SinglePass import SinglePassRK4
 
 from create_reference import (
@@ -237,17 +238,28 @@ def FM_error_measure(FMs, FMs_ref):
 
 
 def step_1(
-    exponent=5, alpha=1, beta=1, F=0.5, delta=0.02, Nmax=120, atol=1e-13, rtol=1e-13
+    exponent=5,
+    alpha=1,
+    beta=1,
+    F=0.5,
+    delta=0.02,
+    Nmax=120,
+    Ns_HBM=None,
+    atol=1e-13,
+    rtol=1e-13,
+    stability_method_generator=KoopmanHillSubharmonic,
 ):
+    if Ns_HBM is None:
+        Ns_HBM = range(1, Nmax)
     ode, label = init_duffing(exponent, alpha, beta, F, delta)
     filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
 
     error_stats = compute_step_1(
         ode,
         filename=filename,
-        Ns_HBM=range(1, Nmax),
+        Ns_HBM=Ns_HBM,
         L_DFT=1024,
-        stability_method_generator=KoopmanHillSubharmonic,
+        stability_method_generator=stability_method_generator,
         solver=NewtonSolver(tolerance=1e-13, verbose=False),
     )
 
@@ -288,8 +300,10 @@ def iterate_step_1(
             F=F,
             delta=delta,
             Nmax=Nmax,
+            Ns_HBM=range(1, 10),
             atol=atol,
             rtol=rtol,
+            stability_method_generator=stability_method_generator,
         )
         ax.set_title(f"step 1 FM errors for {label_stab}")
         tikzplotlib.save(f"{filename}_stab_{label_stab}.tikz")

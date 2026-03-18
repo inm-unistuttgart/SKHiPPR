@@ -44,6 +44,11 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
                 errors_FM_after.append(np.nan)
             comptimes.append((stop - start) * 1e-9)
 
+            # DEBUG
+            if l > 10:
+                print(f"DEBUGGING: stopped after {100} points on branch")
+                break
+
         error_stats[0, k] = np.median(errors_FM_before)
         error_stats[1, k] = np.min(errors_FM_before)
         error_stats[2, k] = np.max(errors_FM_before)
