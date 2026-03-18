@@ -274,6 +274,7 @@ def iterate_step_1(
     F=0.5,
     delta=0.02,
     Nmax=120,
+    Ns_HBM=None,
     atol=1e-13,
     rtol=1e-13,
     labels_stabmethod=(KoopmanHillSubharmonic,),
@@ -300,7 +301,7 @@ def iterate_step_1(
             F=F,
             delta=delta,
             Nmax=Nmax,
-            Ns_HBM=range(1, 10),
+            Ns_HBM=Ns_HBM,
             atol=atol,
             rtol=rtol,
             stability_method_generator=stability_method_generator,
@@ -317,8 +318,9 @@ if __name__ == "__main__":
         F=3,
         delta=0.25,
         Nmax=120,
+        Ns_hbm=range(1, 10),
         atol=1e-14,
         rtol=1e-14,
-        labels_stabmethod=["dir"],
+        labels_stabmethod=["dir", "subh", "imag"],
     )
     plt.show()

@@ -21,7 +21,7 @@ def import_reference(filename, ode):
     error_init = np.real(df[columns[2]].values)
     error_time = np.real(df[columns[3]].values)
     error_FMs = df[columns[4]].values
-    FMs = np.array([df[columns[4 + k]].values for k in range(ode.n_dof)]).T
+    FMs = np.array([df[columns[4 + k]].values for k in range(1, ode.n_dof + 1)]).T
     X = df[[col for col in columns if col.startswith("X")]].values
     real_formulation = "c" in columns[5 + 2 * ode.n_dof]
 
@@ -83,8 +83,8 @@ def plot_reference_data(data, filename):
     tikzplotlib.save(f"{filename}_arclength.tikz")
 
     _, ax = plt.subplots(nrows=1, ncols=1)
-    ax.semilogy(data["arclength"], data["error_time"], label="error time")
-    ax.semilogy(data["arclength"], data["error_FMs"], label="error FMs")
+    ax.loglog(data["arclength"], data["error_time"], label="error time")
+    ax.loglog(data["arclength"], data["error_FMs"], label="error FMs")
     ax.legend()
     ax.set_xlabel("arclength")
     ax.set_ylabel("error")

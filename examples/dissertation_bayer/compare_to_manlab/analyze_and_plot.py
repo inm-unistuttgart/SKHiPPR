@@ -44,10 +44,10 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
                 errors_FM_after.append(np.nan)
             comptimes.append((stop - start) * 1e-9)
 
-            # DEBUG
-            # if l > 100:
-            #     print(f"DEBUGGING: stopped after {l} points on branch")
-            #     break
+            # # DEBUG
+            if l > 100:
+                print(f"DEBUGGING: stopped after {l} points on branch")
+                break
 
         error_stats[0, k] = np.median(errors_FM_before)
         error_stats[1, k] = np.min(errors_FM_before)
@@ -83,4 +83,8 @@ def FM_error_measure(FMs, FMs_ref):
 
     idx_max_FM = np.argmax(np.abs(FMs_pos))
     idx_max_FM_ref = np.argmax(np.abs(FMs_ref_pos))
-    return np.abs(FMs_ref_pos[idx_max_FM_ref] - FMs_pos[idx_max_FM])
+
+    err = np.abs(FMs_ref_pos[idx_max_FM_ref] - FMs_pos[idx_max_FM])
+    if err > 1:
+        pass
+    return err
