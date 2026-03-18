@@ -2,7 +2,7 @@ from typing import Any
 import numpy as np
 from fractions import Fraction
 from math import lcm
-from copy import replace
+# from copy import replace
 from scipy import fft
 
 from skhippr.cycles.hbm import HBMEquation
