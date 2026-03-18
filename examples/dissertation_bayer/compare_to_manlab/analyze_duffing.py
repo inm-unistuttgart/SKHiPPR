@@ -20,7 +20,7 @@ from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,
 )
 from skhippr.stability.ClassicalHill import ClassicalHill
-from skhippr.stability.SinglePass import SinglePassRK4
+# from skhippr.stability.SinglePass import SinglePassRK4
 
 from create_reference import (
     iterate_reference_solution,
@@ -245,7 +245,7 @@ def step_1(
     error_stats = compute_step_1(
         ode,
         filename=filename,
-        Ns_HBM=[5, 10, 15],
+        Ns_HBM=range(1, Nmax),
         L_DFT=1024,
         stability_method_generator=KoopmanHillSubharmonic,
         solver=NewtonSolver(tolerance=1e-13, verbose=False),
@@ -302,9 +302,9 @@ if __name__ == "__main__":
         beta=1,
         F=3,
         delta=0.25,
-        Nmax=40,
-        atol=1e-12,
-        rtol=1e-12,
-        labels_stabmethod=["subh", "dir", "imag", "RK4"],
+        Nmax=120,
+        atol=1e-14,
+        rtol=1e-14,
+        labels_stabmethod=["subh", "dir", "imag"],
     )
     plt.show()
