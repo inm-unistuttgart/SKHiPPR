@@ -32,12 +32,12 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
             errors_FM_before.append(FM_error_measure(FMs_before, FMs_ref))
 
             solved = True
-            start = time.monotonic_ns()
+            start = time.perf_counter_ns()
             try:
                 solver.solve_equation(bp.equations[0], "X")
             except RuntimeError:
                 solved = False
-            stop = time.monotonic_ns()
+            stop = time.perf_counter_ns()
             if solved:
                 errors_FM_after.append(FM_error_measure(bp.eigenvalues, FMs_ref))
             else:
