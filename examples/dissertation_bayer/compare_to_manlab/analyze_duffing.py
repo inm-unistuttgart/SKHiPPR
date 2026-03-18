@@ -319,6 +319,6 @@ if __name__ == "__main__":
         Nmax=120,
         atol=1e-14,
         rtol=1e-14,
-        labels_stabmethod=["subh", "dir", "imag"],
+        labels_stabmethod=["dir"],
     )
     plt.show()

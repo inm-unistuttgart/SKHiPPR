@@ -45,9 +45,9 @@ def compute_step_1(ode, filename, Ns_HBM, L_DFT, stability_method_generator, sol
             comptimes.append((stop - start) * 1e-9)
 
             # DEBUG
-            if l > 10:
-                print(f"DEBUGGING: stopped after {100} points on branch")
-                break
+            # if l > 100:
+            #     print(f"DEBUGGING: stopped after {l} points on branch")
+            #     break
 
         error_stats[0, k] = np.median(errors_FM_before)
         error_stats[1, k] = np.min(errors_FM_before)
@@ -78,6 +78,9 @@ def FM_error_measure(FMs, FMs_ref):
             f"FMs and FMs_ref have lengths {len(FMs)} and {len(FMs_ref)}, but should be equal."
         )
 
-    idx_max_FM = np.argmax(np.abs(FMs))
-    idx_max_FM_ref = np.argmax(np.abs(FMs_ref))
-    return np.abs(FMs_ref[idx_max_FM_ref] - FMs[idx_max_FM])
+    FMs_ref_pos = FMs_ref[np.imag(FMs_ref) >= 0]
+    FMs_pos = FMs[np.imag(FMs) >= 0]
+
+    idx_max_FM = np.argmax(np.abs(FMs_pos))
+    idx_max_FM_ref = np.argmax(np.abs(FMs_ref_pos))
+    return np.abs(FMs_ref_pos[idx_max_FM_ref] - FMs_pos[idx_max_FM])
