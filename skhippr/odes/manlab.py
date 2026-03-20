@@ -40,12 +40,12 @@ class HingedHinged(AbstractODE):
 
         self.n_modes = n_dof // 2
         self.mode_numbers = np.arange(1, self.n_modes + 1, dtype=float)
-        self.omega = np.pi**2 * self.mode_numbers**2
+        self.omegas = np.pi**2 * self.mode_numbers**2
 
         self.xi = np.asarray(xi)
         self.epsilon = epsilon
         self.F = np.asarray(F)
-        self.forcing_omega = forcing_omega
+        self.omega = forcing_omega
 
         if self.xi.shape[0] != self.n_modes:
             raise ValueError(
@@ -68,11 +68,11 @@ class HingedHinged(AbstractODE):
         self.check_dimensions(t, x)
 
         q, dq = np.split(x, 2, axis=0)
-        omega_view = self._mode_view(q, self.omega)
+        omega_view = self._mode_view(q, self.omegas)
         F_view = self._mode_view(q, self.F)
 
         nbar = 0.5 * np.sum(omega_view * q**2, axis=0)
-        forcing = F_view * np.cos(self.forcing_omega * t)
+        forcing = F_view * np.cos(self.omega * t)
 
         ddq = np.zeros_like(q)
         ddq -= 2 * self._mode_view(q, self.xi) * omega_view * dq
@@ -101,8 +101,8 @@ class HingedHinged(AbstractODE):
                 return self.df_depsilon(t, x)
             case "F":
                 return self.df_dF(t, x)
-            case "forcing_omega":
-                return self.df_dforcing_omega(t, x)
+            case "omega":
+                return 0
             case _:
                 raise NotImplementedError(
                     f"Derivative w.r.t {variable} not implemented in closed form."
@@ -117,7 +117,7 @@ class HingedHinged(AbstractODE):
 
         n = self.n_modes
         q, _ = np.split(x, 2, axis=0)
-        omega_view = self._mode_view(q, self.omega)
+        omega_view = self._mode_view(q, self.omegas)
         nbar = 0.5 * np.sum(omega_view * q**2, axis=0)
 
         df_dx = np.zeros((2 * n, *x.shape), dtype=x.dtype)
@@ -134,16 +134,16 @@ class HingedHinged(AbstractODE):
             for i in range(n):
                 df_dx[n + j, i, ...] = (
                     -self.epsilon
-                    * self.omega[j]
-                    * self.omega[i]
+                    * self.omegas[j]
+                    * self.omegas[i]
                     * q[j, ...]
                     * q[i, ...]
                 )
 
             df_dx[n + j, j, ...] += (
-                -self.omega[j] ** 2
-                - self.epsilon * self.omega[j] * nbar
-                - self.epsilon * self.omega[j] ** 2 * q[j, ...] ** 2
+                -self.omegas[j] ** 2
+                - self.epsilon * self.omegas[j] * nbar
+                - self.epsilon * self.omegas[j] ** 2 * q[j, ...] ** 2
             )
 
         return df_dx
@@ -158,7 +158,7 @@ class HingedHinged(AbstractODE):
 
         df_dxi = np.zeros((2 * n, n, *x.shape[1:]), dtype=x.dtype)
         for j in range(n):
-            df_dxi[n + j, j, ...] = -2 * self.omega[j] * dq[j, ...]
+            df_dxi[n + j, j, ...] = -2 * self.omegas[j] * dq[j, ...]
 
         return df_dxi
 
@@ -169,11 +169,11 @@ class HingedHinged(AbstractODE):
 
         n = self.n_modes
         q, _ = np.split(x, 2, axis=0)
-        nbar = 0.5 * np.sum(self._mode_view(q, self.omega) * q**2, axis=0)
+        nbar = 0.5 * np.sum(self._mode_view(q, self.omegas) * q**2, axis=0)
 
         df_dep = np.zeros((2 * n, 1, *x.shape[1:]), dtype=x.dtype)
         for j in range(n):
-            df_dep[n + j, 0, ...] = -self.omega[j] * q[j, ...] * nbar
+            df_dep[n + j, 0, ...] = -self.omegas[j] * q[j, ...] * nbar
 
         return df_dep
 
@@ -186,7 +186,7 @@ class HingedHinged(AbstractODE):
 
         n = self.n_modes
         df_dF = np.zeros((2 * n, n, *x.shape[1:]), dtype=x.dtype)
-        cos_term = np.cos(self.forcing_omega * t)
+        cos_term = np.cos(self.omega * t)
         for j in range(n):
             df_dF[n + j, j, ...] = cos_term
 
@@ -201,7 +201,7 @@ class HingedHinged(AbstractODE):
 
         n = self.n_modes
         df_dom = np.zeros((2 * n, 1, *x.shape[1:]), dtype=x.dtype)
-        base = -t * np.sin(self.forcing_omega * t)
+        base = -t * np.sin(self.omega * t)
         for j in range(n):
             df_dom[n + j, 0, ...] = self.F[j] * base
 
