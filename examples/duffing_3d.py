@@ -7,6 +7,7 @@ continuation along both excitation frequency and excitation amplitude.
 from collections.abc import Iterable
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerTuple # for legend label grouping
 from tqdm import tqdm  # for the progress bar
 
 # --- Fourier configuration ---
@@ -34,7 +35,7 @@ from skhippr.visualization.cycles import (
     plot_phase
 )
 from skhippr.visualization.continuation import plot_continuation
-
+from skhippr.visualization.data_export import save_tikz, save_pdf
 
 def main():
     """
@@ -117,7 +118,39 @@ def main():
     )
 
     # --- Plot results ---
-    plot_all_responses(response_F, responses_omega + responses_F)
+    ax = plot_all_responses(
+        responses_omega,
+        stable_label = "stable $\omega$ responses",
+        unstable_label="unstable $\omega$ responses"
+        )
+    
+    ax = plot_all_responses(
+        responses_F,
+        ax=ax,
+        stable_color = "k",
+        unstable_color = "y",
+        stable_label = "stable F responses",
+        unstable_label = "unstable F responses"
+        #linestyle = "dotted"
+        )
+    
+    clean_legend(ax=ax)
+
+
+def clean_legend(ax):
+    handles, labels = ax.get_legend_handles_labels()
+    seen = set()
+    unique_handles = []
+    unique_labels  = []
+
+    for handle, lable in zip(handles, labels):
+        color = handle.get_color()
+        if (color,lable) not in seen:
+            seen.add((color,lable))
+            unique_handles.append(handle)
+            unique_labels.append(lable)
+
+    ax.legend(unique_handles, unique_labels, loc="best")
 
 
 def initial_force_response(
@@ -219,14 +252,14 @@ def continue_from_continuation_curve(
     return responses
 
 def plot_all_responses(
-    initial_response: list[BranchPoint], other_responses: list[list[BranchPoint]]
+    responses: list[list[BranchPoint]],
+    ax = None,
+    **plot_kwargs
 ):
-    ax1 = plot_3D_frc(initial_response, title="Initial Response")
-
-    ax2 = plot_3D_frc(initial_response, title="All Responses")
-    for response in other_responses:
-        ax2 = plot_3D_frc(response, ax=ax2)
-
+    for response in responses:
+        ax = plot_3D_frc(response, ax=ax, **plot_kwargs)
+    ax.set_title("Responses")
+    return ax
 
 def plot_3D_frc(
     list_of_points: Iterable[BranchPoint], ax=None, **plot_kwargs
@@ -262,7 +295,7 @@ def plot_3D_frc(
         # --- Returns the shapes: ``(1,)``, ``(1,)``, ``()`` --- 
         # This is a valid configuration for ``plot_continuation``, since ``np.squeeze(element)``would return the same shape for each.
         # Another functional output would be: ``return (omega, F, amplitude)``.
-        return (omega, F, amplitude)
+        return omega, F, amplitude
 
     ax = plot_continuation(
         branch = list_of_points, 
@@ -273,7 +306,8 @@ def plot_3D_frc(
         ylabel="F",
         zlabel="|x_1|"
         )
-
+    save_pdf(ax, "3d_continuation")
+    save_tikz(ax, "3d_continuation")
     return ax
 
 def visualize_solution(system: HBMSystem):

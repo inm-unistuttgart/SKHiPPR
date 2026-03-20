@@ -76,11 +76,12 @@ def main():
         # break if F exceeds maximum
         if branch_point.F > 0.5:
             break
-       
+
     # --- Plot the continuation curve ---
     plot_continuation(
         branch,
-        marker = "x"
+        marker = "x",
+        stable_label = "heyho"
         )
 
 if __name__ == "__main__":

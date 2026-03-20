@@ -37,3 +37,8 @@ docs_source/build/*
 # Plots
 plots/
 *.tikz
+*.pdf
+*.gif
+*.mp4
+*.png
+*.tex
