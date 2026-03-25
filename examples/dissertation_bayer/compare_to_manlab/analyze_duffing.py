@@ -261,6 +261,7 @@ def step_1(
         L_DFT=1024,
         stability_method_generator=stability_method_generator,
         solver=NewtonSolver(tolerance=1e-13, verbose=False),
+        early_break=100,
     )
 
     ax = plot_step_1(error_stats)
