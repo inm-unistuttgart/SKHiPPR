@@ -5,6 +5,9 @@ import time
 import tqdm
 
 from import_reference import import_reference, iterate_from_reference
+from skhippr.solvers.continuation import pseudo_arclength_continuator
+from skhippr.equations.EquationSystem import EquationSystem
+from skhippr.stability.AbstractStabilityHBM import AbstractStabilityHBM
 
 
 def compute_step_1(
@@ -64,7 +67,7 @@ def compute_config_1_and_2(
                 stability_method=stability_method_generator,
             )
         ),
-        total=len(data["param"]),
+        total=min(early_break, len(data["param"])),
     ):
         bp.omega = data["param"][l]
         FMs_ref = data["FMs"][l, :]
@@ -104,8 +107,127 @@ def plot_step_1(error_stats, Ns_HBM=None):
     return ax
 
 
-def compute_step_2(ode, filename, N_HBM, L_DFT, stability_method_generator, solver):
-    pass
+def compute_step_2(
+    ode,
+    data,
+    N_HBM,
+    L_DFT,
+    stability_method_generator,
+    solver,
+    early_break=np.inf,
+    continuation_verbose=False,
+    stepsize_range=(0.001, 0.1),
+):
+    real_formulation = data["real_formulation"]
+
+    # Determine step 2 error
+    _, errors_FM_after, _ = compute_config_1_and_2(
+        ode,
+        data,
+        N_HBM,
+        L_DFT,
+        stability_method_generator,
+        solver,
+        real_formulation=real_formulation,
+        early_break=early_break,
+    )
+
+    error_median_after = np.nanmedian(errors_FM_after)
+
+    bp = next(
+        iterate_from_reference(
+            ode=ode,
+            data=data,
+            N_HBM=N_HBM,
+            L_DFT=L_DFT,
+            real_formulation=real_formulation,
+            stability_method=stability_method_generator,
+        )
+    )
+    # Create EquationSystem from the branch point, removing the previous anchor equation.
+    initial_system = EquationSystem(
+        equations=bp.equations[:-1],
+        unknowns=bp.unknowns[:-1],
+        equation_determining_stability=bp.equation_determining_stability,
+    )
+
+    # Determine step 3 time and error
+    start = time.perf_counter_ns()
+
+    frc = []
+    for bp in pseudo_arclength_continuator(
+        initial_system=initial_system,
+        solver=solver,
+        stepsize=0.1,
+        stepsize_range=stepsize_range,
+        continuation_parameter="omega",
+        initial_direction=-1,
+        verbose=continuation_verbose,
+        num_steps=np.inf,
+    ):
+        frc.append(bp)
+        if bp.omega < data["param"][-1]:
+            break
+    stop = time.perf_counter_ns()
+    comptime_total = (stop - start) * 1e-9
+    comptime_per_bp = comptime_total / len(frc)
+
+    return error_median_after, comptime_total, comptime_per_bp, len(frc)
+
+
+def iterate_and_plot_step_2(
+    ode,
+    filename,
+    dict_Ns: dict[str, tuple[AbstractStabilityHBM, int]],
+    L_DFT,
+    solver,
+    early_break=np.inf,
+    axs=None,
+    continuation_verbose=False,
+    stepsize_range=(0.001, 0.1),
+):
+
+    if axs is None:
+        axs = []
+        _, ax1 = plt.subplots(1, 1)
+        ax1.set_xlabel("comp. time per bp")
+        ax1.set_ylabel("median FM error (CII)")
+        axs.append(ax1)
+        _, ax2 = plt.subplots(1, 1)
+        ax2.set_xlabel("total comp. time")
+        ax2.set_ylabel("median FM error (CII)")
+        axs.append(ax2)
+
+    data = import_reference(filename, ode)
+
+    for label, (stability_method_generator, N_HBM) in dict_Ns.items():
+        print(label)
+        error_median_after, comptime_total, comptime_per_bp, num_points = (
+            compute_step_2(
+                ode=ode,
+                data=data,
+                N_HBM=N_HBM,
+                L_DFT=L_DFT,
+                stability_method_generator=stability_method_generator,
+                solver=solver,
+                early_break=early_break,
+                continuation_verbose=continuation_verbose,
+                stepsize_range=stepsize_range,
+            )
+        )
+        axs[0].scatter(
+            comptime_per_bp,
+            error_median_after,
+            label=f"{label}, N = {N_HBM}, {num_points} points",
+        )
+        axs[1].scatter(comptime_total, error_median_after, label=label)
+
+    for ax in axs:
+        ax.set_yscale("log")
+        # ax.set_xscale("log")
+        ax.legend()
+
+    return axs
 
 
 def FM_error_measure(FMs, FMs_ref):

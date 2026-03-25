@@ -261,7 +261,7 @@ def step_1(
         L_DFT=1024,
         stability_method_generator=stability_method_generator,
         solver=NewtonSolver(tolerance=1e-13, verbose=False),
-        early_break=100,
+        early_break=np.inf,
     )
 
     ax = plot_step_1(error_stats)
@@ -308,20 +308,64 @@ def iterate_step_1(
             stability_method_generator=stability_method_generator,
         )
         ax.set_title(f"step 1 FM errors for {label_stab}")
-        tikzplotlib.save(f"{filename}_stab_{label_stab}.tikz")
+        # tikzplotlib.save(f"{filename}_stab_{label_stab}.tikz")
+
+
+def step_2(
+    exponent=5,
+    alpha=1,
+    beta=1,
+    F=3,
+    delta=0.25,
+    Nmax=120,
+    L_DFT=1024,
+    atol=1e-14,
+    rtol=1e-14,
+    continuation_verbose=False,
+    stepsize_range=(0.001, 0.1),
+):
+
+    ode, label = init_duffing(exponent, alpha, beta, F, delta)
+    filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
+
+    dict_Ns = {
+        "subh": (KoopmanHillSubharmonic, 10),
+        "dir": (KoopmanHillProjection, 30),
+        "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
+        "RK4": (SinglePassRK4, 10),
+    }
+
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
+
+    axs = iterate_and_plot_step_2(
+        ode=ode,
+        filename=filename,
+        dict_Ns=dict_Ns,
+        L_DFT=L_DFT,
+        solver=solver,
+        early_break=1000,
+        axs=None,
+        continuation_verbose=continuation_verbose,
+        stepsize_range=stepsize_range,
+    )
+
+    for ax in axs:
+        ax.set_title(f"step 2 FM errors for {label}")
+        tikzplotlib.save(f"{filename}_step_2_stab.tikz")
 
 
 if __name__ == "__main__":
-    iterate_step_1(
-        exponent=5,
-        alpha=1,
-        beta=1,
-        F=3,
-        delta=0.25,
-        Nmax=120,
-        Ns_HBM=range(1, 10),
-        atol=1e-14,
-        rtol=1e-14,
-        labels_stabmethod=["RK4"],
-    )
+    # iterate_step_1(
+    #     exponent=5,
+    #     alpha=1,
+    #     beta=1,
+    #     F=3,
+    #     delta=0.25,
+    #     Nmax=120,
+    #     Ns_HBM=range(1, 10),
+    #     atol=1e-14,
+    #     rtol=1e-14,
+    #     labels_stabmethod=["RK4"],
+    # )
+    step_2(continuation_verbose=True, stepsize_range=(0.001, 0.3))
     plt.show()
