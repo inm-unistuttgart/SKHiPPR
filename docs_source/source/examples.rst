@@ -40,7 +40,7 @@ examples.duffing_3d
 ---------------------
 
 .. automodule:: examples.duffing_3d
-    :members: main, plot_3D_frc
+    :members: main, plot_all_responses
 
 
 numerical convergence studies

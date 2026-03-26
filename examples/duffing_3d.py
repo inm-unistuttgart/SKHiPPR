@@ -131,26 +131,7 @@ def main():
         unstable_color = "y",
         stable_label = "stable F responses",
         unstable_label = "unstable F responses"
-        #linestyle = "dotted"
         )
-    
-    clean_legend(ax=ax)
-
-
-def clean_legend(ax):
-    handles, labels = ax.get_legend_handles_labels()
-    seen = set()
-    unique_handles = []
-    unique_labels  = []
-
-    for handle, lable in zip(handles, labels):
-        color = handle.get_color()
-        if (color,lable) not in seen:
-            seen.add((color,lable))
-            unique_handles.append(handle)
-            unique_labels.append(lable)
-
-    ax.legend(unique_handles, unique_labels, loc="best")
 
 
 def initial_force_response(
@@ -256,18 +237,10 @@ def plot_all_responses(
     ax = None,
     **plot_kwargs
 ):
-    for response in responses:
-        ax = plot_3D_frc(response, ax=ax, **plot_kwargs)
-    ax.set_title("Responses")
-    return ax
-
-def plot_3D_frc(
-    list_of_points: Iterable[BranchPoint], ax=None, **plot_kwargs
-):
     """
     Plot a 3D curve of branch points with stability information.
 
-    Visualize a list of BranchPoint objects in 3D space, where the axes represent
+    Visualize a list of continuation branches in 3D space, where the axes represent
     the frequency (``omega``), forcing amplitude (``F``), and the maximum absolute value of the first
     state variable (``|x_1|``). 
     
@@ -275,8 +248,8 @@ def plot_3D_frc(
 
     Parameters
     ----------
-    list_of_points : Iterable[BranchPoint]
-        A continuation curve to plot. Every :py:class:`~skhippr.cycles.continuation.BranchPoint` must have the attributes ``point.F`` and ``point.omega``.
+    responses : Iterable[Iterable[BranchPoint]]
+        An :py:class:`collections.abc.Iterable" of several continuation curves to plot. Every :py:class:`~skhippr.cycles.continuation.BranchPoint` must have the attributes ``point.F`` and ``point.omega``.
     ax : matplotlib.axes._subplots.Axes3DSubplot, optional
         Existing 3D axes to plot on. If ``None``, a new figure and axes are created. Defaults to ``None``.
     **plot_kwargs
@@ -296,9 +269,10 @@ def plot_3D_frc(
         # This is a valid configuration for ``plot_continuation``, since ``np.squeeze(element)``would return the same shape for each.
         # Another functional output would be: ``return (omega, F, amplitude)``.
         return omega, F, amplitude
-
-    ax = plot_continuation(
-        branch = list_of_points, 
+    
+    for response in responses:
+        ax = plot_continuation(
+        branch = response, 
         plot_fun = plot_fun,
         ax = ax,
         **plot_kwargs, 
@@ -306,8 +280,7 @@ def plot_3D_frc(
         ylabel="F",
         zlabel="|x_1|"
         )
-    save_pdf(ax, "3d_continuation")
-    save_tikz(ax, "3d_continuation")
+    ax.set_title("Responses")
     return ax
 
 def visualize_solution(system: HBMSystem):

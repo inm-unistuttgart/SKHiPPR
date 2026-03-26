@@ -2,7 +2,7 @@
 The :py:mod:`~skhippr.visualization.data_export` module provides standardized functions 
 for exporting data created with SKHiPPR visualization functions.
 File names must use valid characters accepted by the OS of the user. Eg. Windows users may not use characters such as ``<,>,",/'' etc..
-Since single ``\`` is a escape character in python strings, Windows users must use ``\\`` or `/`.
+Since single ``\`` is an escape character in python strings, Windows users must use ``\\`` or `/`.
 
 It provides the functions :py:func:`~skhippr.visualization.data_export.save_png`, 
 :py:func:`~skhippr.visualization.data_export.save_pdf`, 
@@ -11,7 +11,6 @@ It provides the functions :py:func:`~skhippr.visualization.data_export.save_png`
 """
 
 from pathlib import Path
-from typing import Tuple
 from matplotlib.axes import Axes
 from matplotlib.animation import FuncAnimation
 
@@ -38,7 +37,7 @@ def save_png(
     bbox_inches : str, default 'tight'
         How to calculate the bounding box for the saved figure. 'tight' removes 
         excess whitespace.
-    transparent : bool, default False
+    transparent : bool, optional
         Whether to save the figure with a transparent background.
 
     Returns
@@ -113,6 +112,7 @@ def save_tikz(
 ):
     """
     Save the figure containing the given axes as TikZ/LaTeX code.
+    Imports tikzplotlib locally, which means tikzplotlib must be installed.
 
     Parameters
     ----------
@@ -128,10 +128,6 @@ def save_tikz(
     -------
     str
         The absolute filepath where the TikZ file was saved.
-
-    Notes
-    -----
-    Requires the ``tikzplotlib`` package.
     """
     import tikzplotlib
 
@@ -165,6 +161,7 @@ def save_animation(
     Save an animation from the given axes or an existing animation object.
 
     This function is designed to handle the :py:class:`~matplotlib.animation.FuncAnimation` object returned by functions like :py:func:`~skhippr.visualization.animate_period`.
+    For video formats like MP4, MOV and AVI outputs, FFmpeg must be installed.
 
     Parameters
     ----------
@@ -182,7 +179,6 @@ def save_animation(
 
     Notes
     -----
-    - For video formats like MP4, MOV and AVI outputs, FFmpeg must be installed.
     - For GIF output, the ``pillow`` library is used.
 
     Examples

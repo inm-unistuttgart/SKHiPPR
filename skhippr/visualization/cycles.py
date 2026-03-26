@@ -6,6 +6,8 @@ Supported arguments are an instance of :py:class:`~skhippr.cycles.hbm.HBMEquatio
 
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
 :py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
+The corresponding animation functions :py:func:`~skhippr.visualization.cycles.animate_period`, :py:func:`~skhippr.visualization.cycles.animate_phase`, :py:func:`~skhippr.visualization.cycles.animate_floquet_multipliers` and :py:func:`~skhippr.visualization.cycles.animate_floquet_exponents`
+create animations analog to the plotting functions but require :py:class:`collections.abc.Iterable` objects containing solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances instead.
 
 This module also offers functions for visualizing matrices by their spectral norm. Namely :py:func:`~skhippr.visualization.cycles.plot_matrix_block_norm` which subdivides a matrix into subblocks and creates a scatter plot colored by the 2-norm of each block,
 as well as :py:func:`~skhippr.visualization.cycles.plot_hill_matrix_blocks` which uses the former function to visualize the Hill matrix of a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
@@ -86,6 +88,41 @@ def animate_period(
     repeat: bool = True,
     **plot_kwargs,
     ):
+    """
+    Create an animated time series visualization for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances over a given number of periods.
+
+    Parameters
+    ----------
+    hbm_set : Iterable[HBMEquation | EquationSystem]
+        An iterable containing either :py:class:`~skhippr.cycles.hbm.HBMEquation` objects or :py:class:`~skhippr.equations.EquationSystem.EquationSystem` objects that contain a :py:class:`~skhippr.cycles.hbm.HBMEquation`. 
+        Each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, an 
+        :py:class:`~matplotlib.axes.Axes` instance will be created.
+    idx : int, optional
+        The index of the state to be plotted across all equations.
+    n_periods : float, optional
+        The number of periods for which each time series is animated. May be non-integer.
+    interval : int, optional
+        The delay between frames in milliseconds. Default is 30 ms.
+    repeat : bool, optional
+        Whether to repeat the animation. Default is ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the animated period response.
+    animation : matplotlib.animation.FuncAnimation
+        The animation object that controls the visualization.
+        
+    Notes
+    -----
+    The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
+    garbage collector from deleting it, causing the animation to stop.
+    """
+    
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
@@ -196,6 +233,41 @@ def animate_phase(
     repeat: bool = True,
     **plot_kwargs
 ):
+    """
+    Create an animated phase plane visualization for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances.
+
+    This function generates a sequence of phase plots, where each frame displays the trajectory of a different equation from the input set.
+
+    Parameters
+    ----------
+    hbm_set : iterable of HBMEquation or EquationSystem
+        An iterable containing either :py:class:`~skhippr.cycles.hbm.HBMEquation` objects or :py:class:`~skhippr.equations.EquationSystem.EquationSystem` objects that contain a :py:class:`~skhippr.cycles.hbm.HBMEquation`. 
+        Each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, 
+        a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    idx : Sequence[int], optional
+        Exactly two indices of the states to be considered for the phase plane 
+        (e.g., ``(0, 1)`` for an x-y phase plot). Default is ``(0, 1)``.
+    interval : int, optional
+        The delay between frames in milliseconds. Default is 30 ms.
+    repeat : bool, optional
+        Whether to repeat the animation loop. Default is ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the animated phase plot.
+    animation : matplotlib.animation.FuncAnimation
+        The animation object controlling the visualization loop.
+        
+    Notes
+    -----
+    The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
+    garbage collector from deleting it, causing the animation to stop.
+    """
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
@@ -226,7 +298,6 @@ def animate_phase(
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        #ax.set_aspect("equal", adjustable='datalim')
 
     def _update(frame_idx: int):
         x_vals, y_vals = trajectories[frame_idx]
@@ -301,10 +372,46 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
 def animate_floquet_multipliers(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
+    show_full_range: bool = False,
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs
     ):
+    """
+    Create an animated visualization of Floquet multipliers for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances on the complex plane.
+    Each frame displays the multipliers for one equation.
+    If no :py:class:`~matplotlib.axes.Axes` object is passed, the function will create one as well as a unit circle to visualize stability.
+
+    Parameters
+    ----------
+    hbm_set : iterable of HBMEquation or EquationSystem
+        An iterable containing either :py:class:`~skhippr.cycles.hbm.HBMEquation` objects or :py:class:`~skhippr.equations.EquationSystem.EquationSystem` objects that contain a :py:class:`~skhippr.cycles.hbm.HBMEquation`. 
+        The Floquet multipliers of each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, 
+        a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    show_full_range: bool, optional
+        Whether to show the full data range. If ``False`` the axis limits are set to show the unit circle clearly.
+    interval : int, optional
+        The delay between frames in milliseconds. Default is 30 ms.
+    repeat : bool, optional
+        Whether to repeat the animation loop. Default is ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``. Note that the 
+        default marker is set to 'x' unless overridden.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the animated plot.
+    animation : matplotlib.animation.FuncAnimation
+        The animation object controlling the visualization loop.
+
+    Notes
+    -----
+    The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
+    garbage collector from deleting it, causing the animation to stop.
+    """
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
@@ -321,8 +428,22 @@ def animate_floquet_multipliers(
     
     sc, = ax.plot([], [], **plot_kwargs)
     
-    ax.set_xlim(np.real(all_multipliers).min(), np.real(all_multipliers).max())
-    ax.set_ylim(np.imag(all_multipliers).min(), np.imag(all_multipliers).max())
+    if show_full_range:
+        min_real_value = np.real(all_multipliers).min()
+        max_real_value = np.real(all_multipliers).max()
+        min_imag_value = np.imag(all_multipliers).min()
+        max_imag_value = np.imag(all_multipliers).max()
+        ax.set_xlim(
+            min_real_value if min_real_value < -1.2 else -1.2,
+            max_real_value if max_real_value > 1.2 else 1.2
+            )
+        ax.set_ylim(
+            min_imag_value if min_imag_value < -1.2 else -1.2,
+            max_imag_value if max_imag_value > 1.2 else 1.2
+            )
+    else: 
+        ax.set_ylim(-1.2, 1.2)
+        ax.set_xlim(-1.2,1.2)
     
     theta = np.linspace(0, 2 * np.pi, 400)
     unit_x = np.cos(theta)
@@ -393,7 +514,7 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
     lambdas = np.asarray(floquet_multipliers)
     floquet_exponents = np.log(lambdas) / equation.T_solution
     
-    title = plot_kwargs.pop("title", "Floquet multipliers")
+    title = plot_kwargs.pop("title", "Floquet exponents")
     xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
     
@@ -412,10 +533,46 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
 def animate_floquet_exponents(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
+    show_full_range: bool = True,
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs
     ):
+    """
+    Create an animated visualization of Floquet exponents for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances in the complex plane.
+    Each frame displays the exponents for one equation.
+    If no :py:class:`~matplotlib.axes.Axes` object is passed, the function will create one as well as the imaginary axis to visualize stability.
+
+    Parameters
+    ----------
+    hbm_set : iterable of HBMEquation or EquationSystem
+       An iterable containing either :py:class:`~skhippr.cycles.hbm.HBMEquation` objects or :py:class:`~skhippr.equations.EquationSystem.EquationSystem` objects that contain a :py:class:`~skhippr.cycles.hbm.HBMEquation`. 
+       The Floquet exponents of each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    show_full_range: bool, optional
+        Whether to show the full data range. If ``False`` the axis limits are set to show the data range of the first :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+    interval : int, optional
+        The delay between frames in milliseconds. Default is 30 ms.
+    repeat : bool, optional
+        Whether to repeat the animation loop. Default is ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``. Note that the 
+        default marker is set to 'x' unless overridden.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the animated plot.
+    animation : matplotlib.animation.FuncAnimation
+        The animation object controlling the visualization loop.
+
+    Notes
+    -----
+    The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
+    garbage collector from deleting it, causing the animation to stop.
+
+    """
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
@@ -434,7 +591,21 @@ def animate_floquet_exponents(
     title = plot_kwargs.pop("title", "Floquet exponents")
     xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
-
+    sc, = ax.plot([], [], **plot_kwargs)
+    
+    if show_full_range:
+        min_real_value = np.real(all_exponents).min()
+        max_real_value = np.real(all_exponents).max()
+        min_imag_value = np.imag(all_exponents).min()
+        max_imag_value = np.imag(all_exponents).max()
+        ax.set_xlim(
+            min_real_value if min_real_value < -1.2 else -1.2,
+            max_real_value if max_real_value > 1.2 else 1.2
+            )
+        ax.set_ylim(
+            min_imag_value if min_imag_value < -1.2 else -1.2,
+            max_imag_value if max_imag_value > 1.2 else 1.2
+            )
     sc = ax.scatter(
         np.real(all_exponents[0]),
         np.imag(all_exponents[0]),
@@ -445,13 +616,12 @@ def animate_floquet_exponents(
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        #ax.set_aspect("equal")
         
     def _update(frame_idx: int):
-        current_multipliers = all_exponents[frame_idx]
-        sc.set_offsets(np.column_stack((np.real(current_multipliers), np.imag(current_multipliers))))
+        current_exponents = all_exponents[frame_idx]
+        sc.set_offsets(np.column_stack((np.real(current_exponents), np.imag(current_exponents))))
         ax.set_title(
-            f"Floquet multipliers - frame {frame_idx + 1}/{len(all_exponents)}"
+            f"Floquet exponents - frame {frame_idx + 1}/{len(all_exponents)}"
         )
         return (sc,)
 
