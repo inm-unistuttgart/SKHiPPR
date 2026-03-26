@@ -29,7 +29,11 @@ from skhippr.visualization.cycles import (
     plot_phase,
     plot_hill_matrix_blocks,
 )
-
+from skhippr.visualization.data_export import (
+    save_png,
+    save_pdf,
+    save_tikz
+)
 
 def main():
     """
@@ -51,6 +55,7 @@ def main():
     #. A plot of the time series over a non-integer amount of periods
     #. A figure containing three of the plots as subplots.
 
+    Then demonstrates saving one of the plots using SKHiPPR visualization export functions.
     """
 
     # --- FFT, stability method and Newton solver configuration ---
@@ -95,7 +100,7 @@ def main():
     plot_floquet_multipliers(hbm=hbm_sys)
     plot_floquet_exponents(hbm=hbm_sys)
     plot_period(hbm=hbm_sys, n_periods=1.22)
-    plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=None, logscale=True)
+    ax = plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=None, logscale=True)
 
     # --- Realisation with subplots ---
     _, axs = plt.subplots(nrows=1, ncols=3)
@@ -114,6 +119,15 @@ def main():
     axs[1].axis("equal")
     axs[2] = plot_floquet_exponents(hbm=hbm_sys, ax=axs[2])
     axs[2].set_title("Floquet exponents")
+
+    # --- Save the hill matrix visualization plot ---
+    # The relative path for saving a file can be given if the filepath string starts without a "/".
+    # Forward slashes "/" can be used regardless of operating system. 
+    save_pdf(axes=ax, filepath="duffing_plots/hill_matrix.pdf")
+    save_png(axes=ax, filepath="duffing_plots/hill_matrix.png")
+    
+    # --- Saving using save_tikz requires tikzplotlib to be installed which is imported locally ---
+    # save_tikz(axes=ax, filepath="duffing_plots/hill_matrix.tex")
 
 
 if __name__ == "__main__":

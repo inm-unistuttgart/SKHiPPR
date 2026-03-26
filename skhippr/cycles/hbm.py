@@ -382,7 +382,7 @@ class HBMEquation(AbstractCycleEquation):
         used.
         * If neither is provided, all possible combinations of decay parameters are considered.
         At each time instant, the combination of ``(a, b)`` that produces the lowest bound is used.
-
+        
         Parameters
         ----------
 

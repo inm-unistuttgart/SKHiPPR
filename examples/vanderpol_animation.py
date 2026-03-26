@@ -2,7 +2,6 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.animation import FuncAnimation
 
 # ODE
 from skhippr.odes.autonomous import Vanderpol
@@ -26,7 +25,7 @@ from skhippr.solvers.continuation import BranchPoint
 # Visualization
 from skhippr.visualization.cycles import animate_period, animate_floquet_multipliers, animate_phase, animate_floquet_exponents
 from skhippr.visualization.continuation import plot_continuation
-
+from skhippr.visualization.data_export import save_animation
 
 
 def main():
@@ -38,16 +37,17 @@ def main():
     #. Continuation of the HBM system w.r.t. nu using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and a :py:class:`~skhippr.solvers.newton.NewtonSolver`
     #. Analysis of the resulting branch of solutions, extracting time series, amplitudes, Floquet multipliers, and stability
     #. Visualization of the results, including an animation of the phase portrait and Floquet multipliers, as well as plots of amplitude and frequency w.r.t. nu
+    #. Saving the animation by passing a relative path as a string.
     """
 
     print("Van der Pol oscillator: continuation w.r.t. nu")
 
-    # setup
+    # --- Setup ---
     newton_solver = NewtonSolver(verbose=True)
     ode = Vanderpol(x=[2.0, 0.0], nu=0.1)
     hbm_system: EquationSystem = setup_hbm_system(ode, newton_solver)
 
-    # continuation
+    # --- Continuation ---
     branch: list[BranchPoint] = []
     nu_range = (ode.nu, 10)
     newton_solver.verbose = False
@@ -66,11 +66,11 @@ def main():
         if not nu_range[0] <= branch_point.nu <= nu_range[1]:
             break
 
-    # visualization
+    # --- Create animations from the HBMEquations in the continuation branch ---
     ax, animation0 = animate_phase(branch)
-    #_, animation1 = animate_period(branch)
+    _, animation1 = animate_period(branch)
     _, animation2 = animate_floquet_multipliers(branch)
-    #_, animation3 = animate_floquet_exponents(branch)
+    _, animation3 = animate_floquet_exponents(branch)
     plot_continuation(
         branch=branch,
         plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:]),
@@ -79,8 +79,13 @@ def main():
         branch,
         plot_fun = lambda point: point.omega
     )
-    #return animation0, animation1, animation2
-    return animation2, animation0
+    
+    # --- Export animations ---
+    # Animations can be saved as a .gif and as video files such as .mp4.
+    # Video formats require the user to have FFmpeg installed.
+    save_animation(animation0, "vanderpol_animations/phase_animation.gif")
+    
+    return animation0, animation1, animation2, animation3
 
 
 def setup_hbm_system(ode: AbstractODE, solver: NewtonSolver = None):
@@ -109,6 +114,5 @@ def generate_initial_condition(fourier, omega_0):
 
 
 if __name__ == "__main__":
-    #animation2, animation0, animation1 = main()
-    animation3, a = main()
+    animations = main()
     plt.show()

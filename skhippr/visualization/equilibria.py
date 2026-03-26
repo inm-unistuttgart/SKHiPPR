@@ -44,7 +44,9 @@ def plot_equilibrium(
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-        
+    title = plot_kwargs.pop("title", "Equilibria")
+    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
+    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
     kwargs = {"marker" : "x"}
     kwargs.update(plot_kwargs)
 
@@ -52,9 +54,9 @@ def plot_equilibrium(
     x = np.asarray(equation.x)
     ax.plot(x[idx[0]], x[idx[1]], **kwargs)
     if generated_ax:
-        ax.set_title("Equilibria")
-        ax.set_xlabel("x1")
-        ax.set_ylabel("x2")
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
     return ax
 
 
@@ -80,7 +82,10 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-        
+    
+    title = plot_kwargs.pop("title", "Equilibria eigenvalues")
+    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
+    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
     kwargs = {"marker" : "x"}
     kwargs.update(plot_kwargs)
     
@@ -90,9 +95,9 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
         np.real(eigenvalues), np.imag(eigenvalues), **kwargs
     )
     if generated_ax:
-        ax.set_title("Equilibria eigenvalues")
-        ax.set_xlabel("Re($\\lambda$)")
-        ax.set_ylabel("Im($\\lambda$)")
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
         ax.legend(loc="best")
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
     return ax
