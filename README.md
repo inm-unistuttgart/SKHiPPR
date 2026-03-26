@@ -2,7 +2,7 @@
 
 SKHiPPR [ˈski-pr] is a Python toolbox with focus on **S**tability using the **K**oopman-**Hi**ll **P**rojection method for **P**eriodic solutions and **R**esonance curves.
 
-> SKHiPPR is a continuation toolbox developed by Fabia Bayer as part of a research project in close cooperation with Remco Leine at the Institute for Nonlinear Mechanics, University of Stuttgart, Germany. In this project, we investigate the properties of a Koopman-based Hill stability method for periodic solutions.   
+> SKHiPPR is a continuation toolbox developed by Fabia Bayer with help from Nathan Keller as part of a research project in close cooperation with Remco Leine at the Institute for Nonlinear Mechanics, University of Stuttgart, Germany. In this project, we investigate the properties of a Koopman-based Hill stability method for periodic solutions.   
 > For more information about the Koopman-Hill projection method, please see the following references:
 > - Bayer and Leine (2023): *Sorting-free Hill-based stability analysis of periodic solutions through Koopman analysis*. Nonlinear Dyn 111, 8439–8466, https://doi.org/10.1007/s11071-023-08247-7.
 > - Bayer et al. (2024): *Koopman-Hill Stability Computation of Periodic Orbits in Polynomial Dynamical Systems Using a Real-Valued Quadratic Harmonic Balance Formulation*. International Journal of Non-Linear Mechanics, 167, 104894, https://doi.org/10.1016/j.ijnonlinmec.2024.104894.
