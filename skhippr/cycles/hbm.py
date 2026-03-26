@@ -375,14 +375,14 @@ class HBMEquation(AbstractCycleEquation):
 
         Notes
         -----
-
+        
         * If both ``_as`` and ``bs`` are provided, exponential decay parameters are not computed from the Hill matrix and the given parameters are used directly.
         * If only one of them is provided, all applicable exponential
         decay parameter combinations are computed and the ones closest to the provided values are
         used.
         * If neither is provided, all possible combinations of decay parameters are considered.
         At each time instant, the combination of ``(a, b)`` that produces the lowest bound is used.
-        
+
         Parameters
         ----------
 

@@ -15,7 +15,7 @@ The continuation visualization functions require a collection of :py:class:`skhi
 The supported equations and equation systems are indicated in the documentation of each respective class.
 Standard plotting variables like ``title``, ``xlabel`` and ``ylabel`` may be passed to each visualization function as a keyword argument.
 
-All plots created with the provided functions including 2D-plots, 3D-plots and animations can be exported with functions provided in the :py:mod:`~skhippr.visualization.data-export` module.
+All plots created with the provided functions including 2D-plots, 3D-plots and animations can be exported with functions provided in the :py:mod:`~skhippr.visualization.data_export` module.
 
 .. contents::
 

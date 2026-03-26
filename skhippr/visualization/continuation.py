@@ -299,7 +299,7 @@ def plot_floquet_exponent_continuation(
         alphas = np.log(multipliers) / T
         all_exponents.append(alphas)
 
-    num_exponents = len(all_exponents[-1])    
+    num_exponents = len(all_exponents[-1])
     all_exponents = np.array(all_exponents)
     
     generated_ax = False

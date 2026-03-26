@@ -7,7 +7,7 @@ Supported arguments are an instance of :py:class:`~skhippr.cycles.hbm.HBMEquatio
 It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
 :py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
 The corresponding animation functions :py:func:`~skhippr.visualization.cycles.animate_period`, :py:func:`~skhippr.visualization.cycles.animate_phase`, :py:func:`~skhippr.visualization.cycles.animate_floquet_multipliers` and :py:func:`~skhippr.visualization.cycles.animate_floquet_exponents`
-create animations analog to the plotting functions but require  :py:class:`collections.abc.Iterable` objects containing solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances instead.
+create animations analog to the plotting functions but require :py:class:`collections.abc.Iterable` objects containing solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances instead.
 
 This module also offers functions for visualizing matrices by their spectral norm. Namely :py:func:`~skhippr.visualization.cycles.plot_matrix_block_norm` which subdivides a matrix into subblocks and creates a scatter plot colored by the 2-norm of each block,
 as well as :py:func:`~skhippr.visualization.cycles.plot_hill_matrix_blocks` which uses the former function to visualize the Hill matrix of a :py:class:`~skhippr.cycles.hbm.HBMEquation`.

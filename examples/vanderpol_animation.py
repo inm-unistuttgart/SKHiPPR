@@ -83,7 +83,7 @@ def main():
     # --- Export animations ---
     # Animations can be saved as a .gif and as video files such as .mp4.
     # Video formats require the user to have FFmpeg installed.
-    save_animation(animation0, "vanderpol_animations/phase_animation.gif")
+    save_animation(animation0, "plots/vanderpol_animations/phase_animation.gif")
     
     return animation0, animation1, animation2, animation3
 
