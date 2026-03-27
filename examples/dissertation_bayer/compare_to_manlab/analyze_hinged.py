@@ -121,10 +121,10 @@ def plot_fun(bp, x_eval=0.75):
     ode = bp.equations[0].ode
     omega_normalized = bp.omega / ode.omegas[0]
     x_time = bp.equations[0].x_time()
-    phis = np.sqrt(2) * np.sin(ode.mode_numbers * x_eval)
+    phis = np.sqrt(12) * np.sqrt(2) * np.sin(np.pi * ode.mode_numbers * x_eval)
     q_phi = x_time[: ode.n_modes, :] * phis[:, np.newaxis]
     w = np.sum(q_phi, axis=0)
-    return (omega_normalized, np.max(w))
+    return (omega_normalized, np.max(np.abs(w)))
 
 
 if __name__ == "__main__":
