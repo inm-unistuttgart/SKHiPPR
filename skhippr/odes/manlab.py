@@ -63,8 +63,8 @@ class HingedHinged(AbstractODE):
         self.phase_forcing = np.asarray(phase_forcing)
         x_forcing = np.asarray(x_forcing)
 
-        self.Q = amp_forcing[:, np.newaxis] * np.sin(
-            self.mode_numbers[np.newaxis, :] * x_forcing[:, np.newaxis]
+        self.Q = amp_forcing[np.newaxis, :] * np.sin(
+            self.mode_numbers[:, np.newaxis] * x_forcing[np.newaxis, :]
         )
 
         self.D = np.diag(2 * self.xi * self.omegas)
