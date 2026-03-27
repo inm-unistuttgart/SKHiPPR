@@ -129,7 +129,7 @@ class HBMEquation(AbstractCycleEquation):
         #     self.ode.t = ts
         #     self.ode.x = x_samp
         #     Js = self.ode.derivative(variable="x")
-        except:
+        except Exception as whatisthiserror:
             # Vectorization not working, determine sample by sample
             Js = np.zeros((x_samp.shape[0], *x_samp.shape))
             for k, t in enumerate(ts):
@@ -392,7 +392,7 @@ class HBMEquation(AbstractCycleEquation):
 
         Notes
         -----
-        
+
         * If both ``_as`` and ``bs`` are provided, exponential decay parameters are not computed from the Hill matrix and the given parameters are used directly.
         * If only one of them is provided, all applicable exponential
         decay parameter combinations are computed and the ones closest to the provided values are

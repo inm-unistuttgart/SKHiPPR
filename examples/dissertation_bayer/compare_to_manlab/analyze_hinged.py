@@ -59,7 +59,7 @@ def init_hinged(n_modes=10, xi_0=0.005, omega_0_normalized=0.6):
     phase_forcing = np.array([0.0, 0.0])
     x_forcing = np.array([0.25, 0.75])
 
-    return HingedHinged(
+    ode = HingedHinged(
         t=0,
         x=np.zeros(2 * n_modes),
         xi=xis,
@@ -69,6 +69,10 @@ def init_hinged(n_modes=10, xi_0=0.005, omega_0_normalized=0.6):
         phase_forcing=phase_forcing,
         x_forcing=x_forcing,
     )
+    del ode.eigenvalues
+    del ode.stability_method
+    del ode.residual_value
+    return ode
 
 
 def init_hbm_sys(ode, fourier, stability_method=None):
@@ -135,10 +139,8 @@ def plot_fun(bp, x_eval=0.75):
 
 
 def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
-    solver = NewtonSolver(tolerance=1e-13, verbose=True)
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
     ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.1)
-    del ode.eigenvalues
-    del ode.stability_method
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
 
     hbm = init_hbm_sys(ode, fourier, stability_method=KoopmanHillSubharmonic(fourier))

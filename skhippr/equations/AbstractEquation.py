@@ -38,9 +38,7 @@ class AbstractEquation(ABC):
     #     self._residual_value = value
 
     def residual(self, update=False):
-        # if update:
-        # HACK
-        if True:
+        if update:
             # compute the residual using the attributes
             self.residual_value = self.residual_function()
             if self.residual_value.ndim > 1:
@@ -48,7 +46,8 @@ class AbstractEquation(ABC):
                     f"Residual must be a 1-D numpy array but has shape {self.residual_value.shape}"
                 )
         elif self.residual_value is None:
-            raise RuntimeError("Residual has not been computed yet!")
+            # raise RuntimeError("Residual has not been computed yet!")
+            self.residual(update=True)
         return self.residual_value
 
     @abstractmethod
