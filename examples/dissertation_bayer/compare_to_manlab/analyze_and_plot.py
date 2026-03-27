@@ -215,15 +215,16 @@ def iterate_and_plot_step_2(
                 stepsize_range=stepsize_range,
             )
         )
-        axs[0].scatter(
+        axs[0].plot(
             comptime_per_bp,
             error_median_after,
+            '*',
             label=f"{label}, N = {N_HBM}, {num_points} points",
         )
-        axs[1].scatter(comptime_total, error_median_after, label=label)
+        axs[1].plot(comptime_total, error_median_after, '*', label=label)
 
     for ax in axs:
-        ax.set_yscale("log")
+        # ax.set_yscale("log")
         # ax.set_xscale("log")
         ax.legend()
 
