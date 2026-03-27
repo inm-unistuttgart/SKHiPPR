@@ -4,6 +4,8 @@ import csv
 import tikzplotlib
 from tqdm import tqdm
 
+import datetime
+
 from skhippr.solvers.newton import NewtonSolver
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMSystem
@@ -329,10 +331,10 @@ def step_2(
     filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
 
     dict_Ns = {
-        "subh": (KoopmanHillSubharmonic, 10),
-        "dir": (KoopmanHillProjection, 30),
-        "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
-        "RK4": (SinglePassRK4, 10),
+        "subh": (KoopmanHillSubharmonic, 44),
+        "dir": (KoopmanHillProjection, 80),
+        "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 42),
+        "RK4": (SinglePassRK4, 30),
     }
 
     solver = NewtonSolver(tolerance=1e-13, verbose=False)
@@ -343,15 +345,18 @@ def step_2(
         dict_Ns=dict_Ns,
         L_DFT=L_DFT,
         solver=solver,
-        early_break=1000,
+        early_break=np.inf,
         axs=None,
         continuation_verbose=continuation_verbose,
         stepsize_range=stepsize_range,
     )
 
-    for ax in axs:
+    now = datetime.datetime.now()
+    for k, ax in enumerate(axs):
         ax.set_title(f"step 2 FM errors for {label}")
-        tikzplotlib.save(f"{filename}_step_2_stab.tikz")
+        plt.sca(ax)
+        tikzplotlib.save(f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz")
+        plt.close()
 
 
 if __name__ == "__main__":
@@ -367,5 +372,5 @@ if __name__ == "__main__":
     #     rtol=1e-14,
     #     labels_stabmethod=["RK4"],
     # )
-    step_2(continuation_verbose=True, stepsize_range=(0.001, 0.3))
+    step_2(continuation_verbose=False, stepsize_range=(0.001, 0.1))
     plt.show()
