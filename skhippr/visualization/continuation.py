@@ -3,9 +3,11 @@
 The :py:mod:`~skhippr.visualization.continuation` module provides a standardized function for visualizing :py:class:`collections.abc.Iterable` instances of :py:class:`skhippr.solvers.continuation.BranchPoint` objects that can be generated with the method :py:class:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and then collected.
 
 It provides the method :py:func:`~skhippr.visualization.continuation.plot_continuation` for making 1D plots over a continuation parameter, as well as 2D and 3D continuation plots.
+
+The functions :py:func:`~skhippr.visualization.continuation.plot_floquet_multiplier_continuation` and :py:func:`~skhippr.visualization.continuation.plot_floquet_exponent_continuation` are provided for plotting the Floquet multipliers and exponents over the continuation parameter.
 """
 
-from collections.abc import Iterable, Callable, Sequence
+from collections.abc import Iterable, Callable
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -18,6 +20,7 @@ def plot_continuation(
         [BranchPoint], Iterable[float] | float
     ] = lambda bp: bp.vector_of_unknowns[0],
     ax=None,
+    clean_legend=True,
     **plot_kwargs
 ):
     """
@@ -25,8 +28,10 @@ def plot_continuation(
 
     This function visualizes one-parameter continuation by applying ``plot_fun`` to each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
     The dimensionality of the data returned by ``plot_fun`` determines how the results are plotted:
-    - If ``plot_fun`` returns one element per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the values are plotted against the continuation parameter.
-    - If ``plot_fun`` returns two or three elements per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the returned values are interpreted directly as plotting coordinates.
+    
+    #. If ``plot_fun`` returns one element per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the values are plotted against the continuation parameter.
+    #. If ``plot_fun`` returns two or three elements per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the returned values are interpreted directly as plotting coordinates.
+    
     For each :py:class:`~skhippr.solvers.continuation.BranchPoint`, ``plot_fun`` must return either a scalar or a :py:class:`~collections.abc.Sequence` of scalar-like values (e.g. ``return a``, ``return a, b`` or ``return a, b, c``) where each value is reducible to a single numerical value via ``np.squeeze``.
     
     If stability information is available for all :py:class:`~skhippr.solvers.continuation.BranchPoint` objects contained in ``branch``, stable segments will be drawn in red, unstable ones in blue. Otherwise, the entire branch is colored black.
@@ -43,6 +48,8 @@ def plot_continuation(
         The default is ``lambda bp: bp.unknowns[0][0]``, which is the value of the first unknown of the first equation.
     ax : matplotlib.axes.Axes | mpl_toolkits.mplot3d.axes3d.Axes3D, optional
         The :py:class:`~matplotlib.axes.Axes` or :py:class:`~mpl_toolkits.mplot3d.axes3d.Axes3D` object on which to plot. If ``plot_fun`` returns a vector of length 3, the given ``ax`` must be an instance of the class :py:class:`mpl_toolkits.mplot3d.axes3d.Axes3D`. If ``None``, a new instance will be created.
+    clean_legend: bool, optional
+        Remove duplicate legend entries. Useful when plotting several continuation branches in one :py:class:`~matplotlib.axes.Axes` object.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.plot()`` or ``ax.plot3D``.
         Axes labels (``xlabel``, ``ylabel``, ``zlabel``), legend labels (``label``), plot title (``title``) and the colors reflecting stability (``stable_color``, ``unstable_color``, ``color``) of the :py:class:`~skhippr.solvers.continuation.BranchPoint` can all be passed additionaly.
@@ -56,7 +63,7 @@ def plot_continuation(
     Notes
     -----
     - When making plots without a continuation parameter, ``plot_fun`` must return the plotting coordinates explicitly.
-    - An example for a ``plot_fun`` with outputs of different shapes that all squeeze to the same length can be found in :py:func:`examples.duffing_3d.plot_3D_frc`.
+    - An example for a ``plot_fun`` with outputs of different shapes that all squeeze to the same length can be found in :py:func:`examples.duffing_3d.plot_all_responses`.
     """
     branch_list = list(branch)
 
@@ -107,7 +114,7 @@ def plot_continuation(
     else:
         stable_flags = np.full(len(branch_list), True)
 
-
+    
     stable_col = plot_kwargs.pop("stable_color", "r" if stability_defined else "k")
     stable_col = plot_kwargs.pop("color", stable_col)
     unstable_col = plot_kwargs.pop("unstable_color", "b" if stability_defined else "k")
@@ -143,9 +150,13 @@ def plot_continuation(
         ax.set_ylabel(ylabel)
         if dim == 3:
             ax.set_zlabel(zlabel)
-        if stability_defined:
-            ax.legend(loc="best")
+            
+    if stability_defined:
+        ax.legend()
+    if clean_legend:
+        _deduplicate_legend(ax)
     return ax
+
 
 
 def plot_floquet_multiplier_continuation(
@@ -157,10 +168,11 @@ def plot_floquet_multiplier_continuation(
     Plot the magnitude of all Floquet multipliers over the continuation parameter.
     
     This function specifically handles Floquet stability analysis by:
-    - Extracting all Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
-    - Plotting the absolute value of each multiplier against the continuation parameter
-    - Adding a reference line at magnitude = 1 (stability boundary)
-    - Coloring stable/unstable segments based on individual multiplier magnitudes
+    
+    #. Extracting all Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
+    #. Plotting the absolute value of each multiplier against the continuation parameter
+    #. Adding a reference line at ``magnitude = 1`` (stability boundary)
+    #. Coloring stable/unstable segments based on individual multiplier magnitudes
     
     Parameters
     ----------
@@ -207,7 +219,7 @@ def plot_floquet_multiplier_continuation(
     title = plot_kwargs.pop("title", "Floquet Multiplier Continuation")
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
-    alpha = plot_kwargs.pop("alpha", 0.7)
+    alpha = plot_kwargs.pop("alpha", 0.9)
     
     for i in range(num_multipliers):
         magnitudes_i = all_magnitudes[:, i]
@@ -218,10 +230,10 @@ def plot_floquet_multiplier_continuation(
         ys_stable = np.where(stability_i, magnitudes_i, np.nan)
         ys_unstable = np.where(~stability_i, magnitudes_i, np.nan)
         
-        ax.scatter(xs_stable, ys_stable, color=stable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
-        ax.scatter(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
     
-    ax.axhline(y=1.0, color='k', linestyle='--', linewidth=2, label="Stability boundary (|λ| = 1)")
+    ax.axhline(y=1.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, label="Stability boundary (|λ| = 1)")
     
     if generated_ax:
         ax.set_title(title)
@@ -245,11 +257,12 @@ def plot_floquet_exponent_continuation(
     Plot the real part of Floquet exponents over the continuation parameter.
     
     This function handles Floquet stability analysis by:
-    - Extracting Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
-    - Computing Floquet exponents as ``\\alpha = \log(\\lambda) / T``
-    - Plotting Re($\\alpha$) against the continuation parameter
-    - Adding a reference line at Re($\\alpha$) = 0 (stability boundary)
-    - Coloring stable/unstable segments based on individual exponent magnitudes
+    
+    #. Extracting Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
+    #. Computing Floquet exponents
+    #. Plotting the real part of the exponents against the continuation parameter
+    #. Adding a reference line at ``Re(alpha) = 0`` (stability boundary)
+    #. Coloring stable/unstable segments based on individual exponent magnitudes
     
     Parameters
     ----------
@@ -286,7 +299,7 @@ def plot_floquet_exponent_continuation(
         alphas = np.log(multipliers) / T
         all_exponents.append(alphas)
 
-    num_exponents = len(all_exponents[-1])    
+    num_exponents = len(all_exponents[-1])
     all_exponents = np.array(all_exponents)
     
     generated_ax = False
@@ -299,7 +312,7 @@ def plot_floquet_exponent_continuation(
     title = plot_kwargs.pop("title", "Floquet Exponent Continuation")
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
-    alpha = plot_kwargs.pop("alpha", 0.7)
+    alpha = plot_kwargs.pop("alpha", 0.9)
     
     for i in range(num_exponents):
         exponents_i = all_exponents[:, i]
@@ -315,7 +328,7 @@ def plot_floquet_exponent_continuation(
         ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
     
 
-    ax.axhline(y=0.0, color='k', linestyle='--', linewidth=2, alpha=0.8, 
+    ax.axhline(y=0.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, 
                label="Stability boundary (Re($\\alpha$) = 0)")
 
     if generated_ax:
@@ -346,9 +359,9 @@ def _to_array(value: float | np.ndarray | Iterable):
     value: float | np.ndarray | Iterable
         Input to be converted to 1D array. It accepts:
 
-        - Scalars and arrays with dimension 0: ``1.0`` or ``1`` as well as ``np.array(1.0)``
-        - Single-element containers: ``[1.0]``, ``(1.0,)``, ``np.array([1.0])``, ``np.array([[1.0]])``
-        - Containers where all first level elements contained squeeze to the same length: ``[[1.0]]``, ``[(1.0,)]``, ``1.0``.
+        * Scalars and arrays with dimension 0: ``1.0`` or ``1`` as well as ``np.array(1.0)``
+        * Single-element containers: ``[1.0]``, ``(1.0,)``, ``np.array([1.0])``, ``np.array([[1.0]])``
+        * Containers where all first level elements contained squeeze to the same length: ``[[1.0]]``, ``[(1.0,)]``, ``1.0``.
 
     Returns
     --------
@@ -394,3 +407,62 @@ def _get_values_and_dimension(
     value_list = [_to_array(plot_fun(bp)) for bp in branch]
     dim = value_list[0].size
     return np.array(value_list), dim
+
+
+def _get_handle_signature(handle):
+    """
+    Extract a hashable tuple representing the visual characteristics of a legend handle.
+    The signature includes color, linestyle, marker, and linewidth properties.
+
+    Parameters
+    ----------
+    handle : :py:class:`~matplotlib.lines.Line2D` | :py:class:`~matplotlib.artist.Artist`
+        A matplotlib artist handle. Must support the methods ``get_color()``, 
+        ``get_linestyle()``, ``get_marker()``, and ``get_linewidth()``.
+
+    Returns
+    -------
+    signature : :py:class:`tuple` of :py:class:`str`
+        A 4-tuple containing string representations of the handle's visual properties in the order:      
+    """
+    color = handle.get_color()
+    linestyle = handle.get_linestyle()
+    marker = handle.get_marker()
+    linewidth = handle.get_linewidth()
+    signature = (str(color), str(linestyle), str(marker), str(linewidth))
+    return signature
+
+
+def _deduplicate_legend(ax):
+    """
+    Remove duplicate legend entries based on visual signature and label.
+
+    Parameters
+    ----------
+    ax : :py:class:`~matplotlib.axes.Axes`
+        The matplotlib axes object containing the legend to be deduplicated.
+        The legend must already exist on this axes.
+    """
+    legend = ax.get_legend()
+    if legend is None:
+        return 
+    handles = legend.get_lines()
+    texts = legend.get_texts()
+    
+    if not handles:
+        return
+    seen = set()
+    unique_handles = []
+    unique_labels = []
+    
+    for handle, text in zip(handles, texts):
+        sig = _get_handle_signature(handle)
+        label = text.get_text()
+        key = (sig, label)
+        
+        if key not in seen:
+            seen.add(key)
+            unique_handles.append(handle)
+            unique_labels.append(label)
+    
+    ax.legend(unique_handles, unique_labels, loc="best")
