@@ -25,14 +25,14 @@ from skhippr.visualization.data_export import save_tikz
 
 
 def main():
-    ode = init_hinged(4, 0.005, 0.1)
+    ode = init_hinged(10, 0.005, 0.1)
     frc = compute_frc(
         ode,
-        N_HBM=10,
+        N_HBM=16,
         L_DFT=300,
         verbose=True,
         omega_max_normalized=1.8,
-        max_stepsize=0.1,
+        max_stepsize=0.4,
     )
     ax = plot_continuation(frc, plot_fun=plot_fun)
 
@@ -95,7 +95,7 @@ def compute_frc(
         fourier=fourier,
         initial_guess=X0,
         period_k=1,
-        stability_method=None,
+        stability_method=KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False),
     )
 
     frc = []
