@@ -34,6 +34,7 @@ class HingedHinged(AbstractODE):
         phase_forcing: np.ndarray,
         x_forcing: np.ndarray,
     ):
+
         n_dof = x.shape[0]
         super().__init__(autonomous=False, n_dof=n_dof)
         self.t = t
@@ -63,8 +64,20 @@ class HingedHinged(AbstractODE):
         self.phase_forcing = np.asarray(phase_forcing)
         x_forcing = np.asarray(x_forcing)
 
-        self.Q = amp_forcing[np.newaxis, :] * np.sin(
-            self.mode_numbers[:, np.newaxis] * x_forcing[np.newaxis, :]
+        # forcing -- beam parameters from Matlab script
+        h = 1e-3
+        b = 0.1
+
+        S = h * b
+        I = b * h**3 / 12
+
+        r = np.sqrt(I / S)
+
+        # note the difference between multiplying by r and dividing by h in lines 121-122 of Manlab
+        P = np.sqrt(2) * amp_forcing * r / h
+
+        self.Q = P[np.newaxis, :] * np.sin(
+            np.pi * self.mode_numbers[:, np.newaxis] * x_forcing[np.newaxis, :]
         )
 
         self.D = np.diag(2 * self.xi * self.omegas)

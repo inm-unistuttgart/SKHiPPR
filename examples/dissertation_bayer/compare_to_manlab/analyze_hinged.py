@@ -25,7 +25,7 @@ from skhippr.visualization.data_export import save_tikz
 
 
 def main():
-    ode = init_hinged(3, 0.005, 0.5)
+    ode = init_hinged(4, 0.005, 0.5)
     frc = compute_frc(
         ode,
         N_HBM=10,
