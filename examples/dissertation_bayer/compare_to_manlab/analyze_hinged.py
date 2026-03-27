@@ -24,21 +24,26 @@ from skhippr.visualization.continuation import plot_continuation
 from skhippr.visualization.data_export import save_tikz
 
 
+# --- Reference solution creation ---
+from create_reference import iterate_reference_solution
+
+
 def main():
-    ode = init_hinged(10, 0.005, 0.1)
-    frc = compute_frc(
-        ode,
-        N_HBM=16,
-        L_DFT=300,
-        verbose=True,
-        omega_max_normalized=1.8,
-        max_stepsize=0.4,
-    )
+    # ode = init_hinged(2, 0.005, 0.1)
+    # frc = compute_frc(
+    #     ode,
+    #     N_HBM=16,
+    #     L_DFT=300,
+    #     verbose=True,
+    #     omega_max_normalized=1.8,
+    #     max_stepsize=0.4,
+    # )
+    frc = create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024)
     ax = plot_continuation(frc, plot_fun=plot_fun)
 
     save_tikz(
         axes=ax,
-        filepath=f"hinged_hinged_N_{frc[0].equations[0].fourier.N_HBM}.tikz",
+        filepath=f"hinged_hinged_ref_N_{frc[0].equations[0].fourier.N_HBM}.tikz",
     )
 
     plt.show()
@@ -66,15 +71,8 @@ def init_hinged(n_modes=10, xi_0=0.005, omega_0_normalized=0.6):
     )
 
 
-def compute_frc(
-    ode, N_HBM=25, L_DFT=300, verbose=True, omega_max_normalized=1.8, max_stepsize=0.1
-):
-
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof, real_formulation=True)
-    stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
-    solver = NewtonSolver(verbose=False)
-
-    # --- Initial guess in time and frequency domain ---
+def init_hbm_sys(ode, fourier, stability_method=None):
+    """evaluate initial guess (first mode = cos(omega*t)) in time and frequency domain and return HBMSystem object."""
     ts = fourier.time_samples(ode.omega)
     c = np.cos(ode.omega * ts)
     s = np.sin(ode.omega * ts)
@@ -87,16 +85,25 @@ def compute_frc(
         ]
     )
     X0 = fourier.DFT(x0_samples)
-
-    # --- Set up the Harmonic Balance system
-    hbm = HBMSystem(
+    return HBMSystem(
         ode=ode,
         omega=ode.omega,
         fourier=fourier,
         initial_guess=X0,
         period_k=1,
-        stability_method=KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False),
+        stability_method=stability_method,
     )
+
+
+def compute_frc(
+    ode, N_HBM=25, L_DFT=300, verbose=True, omega_max_normalized=1.8, max_stepsize=0.1
+):
+
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof, real_formulation=True)
+    stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
+    solver = NewtonSolver(verbose=False)
+
+    hbm = init_hbm_sys(ode, fourier, stability_method)
 
     frc = []
     for branch_point in pseudo_arclength_continuator(
@@ -125,6 +132,39 @@ def plot_fun(bp, x_eval=0.75):
     q_phi = x_time[: ode.n_modes, :] * phis[:, np.newaxis]
     w = np.sum(q_phi, axis=0)
     return (omega_normalized, np.max(np.abs(w)))
+
+
+def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
+    solver = NewtonSolver(tolerance=1e-13, verbose=True)
+    ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.1)
+    del ode.eigenvalues
+    del ode.stability_method
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
+
+    hbm = init_hbm_sys(ode, fourier, stability_method=KoopmanHillSubharmonic(fourier))
+
+    shooting_tol = 1e-6
+
+    frc_ref = []
+
+    for bp in iterate_reference_solution(
+        filename=f"examples/dissertation_bayer/compare_to_manlab/hinged_nmodes_{ode.n_modes}_N_{fourier.N_HBM}_tol_{shooting_tol}.csv",
+        initial_system=hbm,
+        solver=solver,
+        stepsize=0.1,
+        stepsize_range=(0.001, 0.1),
+        initial_direction=1,
+        continuation_parameter="omega",
+        verbose=True,
+        num_steps=5,
+        atol=shooting_tol,
+        rtol=shooting_tol,
+    ):
+        if bp.omega / ode.omegas[0] > 1.8:
+            break
+
+        frc_ref.append(bp)
+    return frc_ref
 
 
 if __name__ == "__main__":
