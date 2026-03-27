@@ -98,14 +98,14 @@ class HingedHinged(AbstractODE):
             q = self.x[: self.n_modes, ...]
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
-        return 0.5 * np.sum(self.mode_numbers[:, np.newaxis] * q**2, axis=0)
+        return 0.5 * np.sum(self.omegas[:, np.newaxis] * q**2, axis=0)
 
     def dN_dq(self, q: np.ndarray = None) -> np.ndarray:
         if q is None:
             q = self.x[: self.n_modes, ...]
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
-        return self.mode_numbers[:, np.newaxis] * q
+        return self.omegas[:, np.newaxis] * q
 
     @override
     def dynamics(self, t=None, x=None) -> np.ndarray:

@@ -25,14 +25,14 @@ from skhippr.visualization.data_export import save_tikz
 
 
 def main():
-    ode = init_hinged(4, 0.005, 0.5)
+    ode = init_hinged(4, 0.005, 0.1)
     frc = compute_frc(
         ode,
         N_HBM=10,
         L_DFT=300,
         verbose=True,
         omega_max_normalized=1.8,
-        max_stepsize=1,
+        max_stepsize=0.1,
     )
     ax = plot_continuation(frc, plot_fun=plot_fun)
 
