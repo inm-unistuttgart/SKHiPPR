@@ -2,12 +2,15 @@
 The :py:mod:`~skhippr.visualization.data_export` module provides standardized functions 
 for exporting data created with SKHiPPR visualization functions.
 File names must use valid characters accepted by the OS of the user. Eg. Windows users may not use characters such as ``<,>,",/'' etc..
-Since single ``\`` is an escape character in python strings, Windows users must use ``\\`` or `/`.
+Since single ``\`` is an escape character in python strings, Windows users must use ``\\`` or ``/``.
 
-It provides the functions :py:func:`~skhippr.visualization.data_export.save_png`, 
-:py:func:`~skhippr.visualization.data_export.save_pdf`, 
-:py:func:`~skhippr.visualization.data_export.save_tikz`, and
-:py:func:`~skhippr.visualization.data_export.save_animation`.
+It provides the functions:
+
+* :py:func:`~skhippr.visualization.data_export.save_png`, 
+* :py:func:`~skhippr.visualization.data_export.save_pdf`, 
+* :py:func:`~skhippr.visualization.data_export.save_tikz`, and
+* :py:func:`~skhippr.visualization.data_export.save_animation`.
+
 """
 
 from pathlib import Path

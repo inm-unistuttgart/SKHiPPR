@@ -116,8 +116,8 @@ def main():
         )
     plot_floquet_multiplier_continuation(branch = frc)
     plot_floquet_exponent_continuation(branch = frc)
-    _, animation1 = animate_floquet_multipliers(hbm_set = frc, show_full_range = True)
-    _, animation2 = animate_floquet_exponents(hbm_set = frc, show_full_range = True)
+    _, animation1 = animate_floquet_multipliers(hbm_set = frc, scaling = "static")
+    _, animation2 = animate_floquet_exponents(hbm_set = frc, scaling = "static")
     return animation1, animation2,
 
 if __name__ == "__main__":

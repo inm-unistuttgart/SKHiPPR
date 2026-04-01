@@ -3,8 +3,11 @@
 The :py:mod:`~skhippr.visualization.equilibria` module offers standardized functions for visualizing equilibria as well as equilibrium eigenvalues.
 Supported equations are instances of classes implementing :py:class:`~skhippr.odes.AbstractODE.AbstractODE` as well as :py:class:`~skhippr.equations.EquationSystem.EquationSystem` instances that contain such an object.
 
-It provides the function :py:func:`~skhippr.visualization.equilibria.plot_equilibrium` for plotting the equilibrium in a standard x-y plane
-and :py:func:`~skhippr.visualization.equilibria.plot_eigenvalues` for making plots of the equation eigenvalues in the complex plane.
+It provides the functions:
+
+* :py:func:`~skhippr.visualization.equilibria.plot_equilibrium` for plotting the equilibrium in a standard x-y plane
+* :py:func:`~skhippr.visualization.equilibria.plot_eigenvalues` for making plots of the equation eigenvalues in the complex plane.
+
 """
 
 import numpy as np

@@ -67,9 +67,9 @@ def main():
             break
 
     # --- Create animations from the HBMEquations in the continuation branch ---
-    ax, animation0 = animate_phase(branch)
-    _, animation1 = animate_period(branch)
-    _, animation2 = animate_floquet_multipliers(branch)
+    ax, animation0 = animate_phase(branch, scaling = "dynamic")
+    _, animation1 = animate_period(branch, scaling = "dynamic")
+    _, animation2 = animate_floquet_multipliers(branch, scaling = "unit_circle")
     _, animation3 = animate_floquet_exponents(branch)
     plot_continuation(
         branch=branch,

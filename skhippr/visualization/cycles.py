@@ -4,13 +4,26 @@ The :py:mod:`~skhippr.visualization.cycles` module provides standardized functio
 
 Supported arguments are an instance of :py:class:`~skhippr.cycles.hbm.HBMEquation` or an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` like a :py:class:`~skhippr.cycles.hbm.HBMSystem` that contains such an equation.
 
-It provides the functions :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution,
-:py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits and :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
-The corresponding animation functions :py:func:`~skhippr.visualization.cycles.animate_period`, :py:func:`~skhippr.visualization.cycles.animate_phase`, :py:func:`~skhippr.visualization.cycles.animate_floquet_multipliers` and :py:func:`~skhippr.visualization.cycles.animate_floquet_exponents`
+It provides the functions:
+
+* :py:func:`~skhippr.visualization.cycles.plot_period` for plotting the time series of the equation solution
+* :py:func:`~skhippr.visualization.cycles.plot_phase` for making phase portraits
+* :py:func:`~skhippr.visualization.cycles.plot_floquet_multipliers` as well as :py:func:`~skhippr.visualization.cycles.plot_floquet_exponents` for visualizing the Floquet multipliers and exponents of a cycle.
+
+The corresponding animation functions:
+
+* :py:func:`~skhippr.visualization.cycles.animate_period`
+* :py:func:`~skhippr.visualization.cycles.animate_phase`
+* :py:func:`~skhippr.visualization.cycles.animate_floquet_multipliers`
+* :py:func:`~skhippr.visualization.cycles.animate_floquet_exponents`
+
 create animations analog to the plotting functions but require :py:class:`collections.abc.Iterable` objects containing solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances instead.
 
-This module also offers functions for visualizing matrices by their spectral norm. Namely :py:func:`~skhippr.visualization.cycles.plot_matrix_block_norm` which subdivides a matrix into subblocks and creates a scatter plot colored by the 2-norm of each block,
-as well as :py:func:`~skhippr.visualization.cycles.plot_hill_matrix_blocks` which uses the former function to visualize the Hill matrix of a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+This module also offers functions for visualizing matrices by their spectral norm. Namely:
+
+* :py:func:`~skhippr.visualization.cycles.plot_matrix_block_norm` which subdivides a matrix into subblocks and creates a scatter plot colored by the 2-norm of each block
+* :py:func:`~skhippr.visualization.cycles.plot_hill_matrix_blocks` which uses the former function to visualize the Hill matrix of a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+
 """
 
 import numpy as np
@@ -84,6 +97,7 @@ def animate_period(
     ax=None,
     idx: int = 0,
     n_periods: float = 1.0,
+    scaling: str = "static",
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs,
@@ -103,6 +117,10 @@ def animate_period(
         The index of the state to be plotted across all equations.
     n_periods : float, optional
         The number of periods for which each time series is animated. May be non-integer.
+    scaling: str, optional
+        Adjust how the animation axes are scaled. Passing ``"static"`` sets the axes scaling to display the maximum range required for the data set from the beginning.
+        Passing ``"dynamic"`` adjusts the scaling to show the full data range of each frame individually.
+        The y-axis borders are padded to ensure all data is displayed clearly.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
@@ -156,8 +174,10 @@ def animate_period(
     
     line, = ax.plot([], [], **plot_kwargs)
     
-    ax.set_xlim(all_times.min(), all_times.max())
-    ax.set_ylim(all_signals.min(), all_signals.max())
+    if scaling == "static":
+        y_range = _get_padded_limits(all_signals)
+        ax.set_xlim(all_times.min(), all_times.max())
+        ax.set_ylim(y_range[0], y_range[1])
 
     if generated_ax:
         ax.set_title(title)
@@ -171,6 +191,10 @@ def animate_period(
             f"Time series animation - frame {frame_idx+1}/{len(times)} "
             f"(v={getattr(_get_equation_helper(hbm_set[frame_idx]), parameter, 'N/A')})"
         )
+        if scaling == "dynamic":
+            y_range = _get_padded_limits(signals[frame_idx])
+            ax.set_xlim(times[frame_idx].min(), times[frame_idx].max())
+            ax.set_ylim(y_range[0], y_range[1])
         return (line,)
 
     animation = FuncAnimation(
@@ -181,6 +205,13 @@ def animate_period(
         repeat=repeat
     )
     return ax, animation
+
+def _get_padded_limits(x, y = 0, pad_multiplier = 0.05):
+    x_min = x.min()
+    x_max = x.max()
+    x_range = x_max - x_min
+    x_pad = pad_multiplier * x_range
+    return [x_min - x_pad, x_max + x_pad]
 
 def plot_phase(
     hbm: HBMEquation | EquationSystem,
@@ -229,6 +260,7 @@ def animate_phase(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
     idx: Sequence[int] = (0, 1),
+    scaling: str = "static",
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs
@@ -249,6 +281,10 @@ def animate_phase(
     idx : Sequence[int], optional
         Exactly two indices of the states to be considered for the phase plane 
         (e.g., ``(0, 1)`` for an x-y phase plot). Default is ``(0, 1)``.
+    scaling: str, optional
+        Adjust how the animation axes are scaled. Passing ``"static"`` sets the axes scaling to display the maximum range required for the data set from the beginning.
+        Passing ``"dynamic"`` adjusts the scaling to show the full data range of each frame individually.
+        All borders are padded to ensure all data is displayed clearly.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
@@ -291,8 +327,11 @@ def animate_phase(
     
     line, = ax.plot([], [], **plot_kwargs)
     
-    ax.set_xlim(all_x.min(), all_x.max())
-    ax.set_ylim(all_y.min(), all_y.max())
+    if scaling == "static":
+        x_range = _get_padded_limits(all_x)
+        y_range = _get_padded_limits(all_y)
+        ax.set_xlim(x_range[0], x_range[1])
+        ax.set_ylim(y_range[0], y_range[1])
 
     if generated_ax:
         ax.set_title(title)
@@ -305,6 +344,11 @@ def animate_phase(
         ax.set_title(
             f"Phase plot - frame {frame_idx + 1}/{len(trajectories)}"
         )
+        if scaling == "dynamic":
+            x_range = _get_padded_limits(x_vals)
+            y_range = _get_padded_limits(y_vals)
+            ax.set_xlim(x_range[0], x_range[1])
+            ax.set_ylim(y_range[0], y_range[1])
         return (line,)
 
     animation = FuncAnimation(
@@ -372,7 +416,7 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
 def animate_floquet_multipliers(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
-    show_full_range: bool = False,
+    scaling: str = "unit_circle",
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs
@@ -390,8 +434,11 @@ def animate_floquet_multipliers(
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, 
         a new :py:class:`~matplotlib.axes.Axes` instance will be created.
-    show_full_range: bool, optional
-        Whether to show the full data range. If ``False`` the axis limits are set to show the unit circle clearly.
+    scaling: str, optional
+        Adjust how the animation axes are scaled. Passing ``"static"`` sets the axes scaling to display the maximum range required for the data set from the beginning.
+        Passing ``"dynamic"`` adjusts the scaling to show the full data range of each frame individually.
+        The minimum scaling for both ``"static"`` and ``"dynamic"`` ensure the unit circle is visible for all frames and all borders are padded to ensure all data is displayed clearly.
+        Passing ``"unit_circle"`` makes sets the axes limits around the complex plane unit circle. 
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
@@ -428,20 +475,15 @@ def animate_floquet_multipliers(
     
     sc, = ax.plot([], [], **plot_kwargs)
     
-    if show_full_range:
-        min_real_value = np.real(all_multipliers).min()
-        max_real_value = np.real(all_multipliers).max()
-        min_imag_value = np.imag(all_multipliers).min()
-        max_imag_value = np.imag(all_multipliers).max()
-        ax.set_xlim(
-            min_real_value if min_real_value < -1.2 else -1.2,
-            max_real_value if max_real_value > 1.2 else 1.2
-            )
-        ax.set_ylim(
-            min_imag_value if min_imag_value < -1.2 else -1.2,
-            max_imag_value if max_imag_value > 1.2 else 1.2
-            )
-    else: 
+    if scaling == "static":
+        real_range = _get_padded_limits(np.real(all_multipliers))
+        imag_range = _get_padded_limits(np.imag(all_multipliers))
+        radius = max(
+            abs(real_range[0]), abs(real_range[1]), abs(imag_range[0]), abs(imag_range[1]), 1.2
+        )   
+        ax.set_xlim(-radius, radius)
+        ax.set_ylim(-radius, radius)
+    elif scaling == "unit_circle": 
         ax.set_ylim(-1.2, 1.2)
         ax.set_xlim(-1.2,1.2)
     
@@ -463,7 +505,7 @@ def animate_floquet_multipliers(
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.set_aspect("equal", adjustable='datalim')
+        ax.set_aspect("equal", adjustable="box")
     
     def _update(frame_idx: int):
         current_multipliers = all_multipliers[frame_idx]
@@ -471,6 +513,14 @@ def animate_floquet_multipliers(
         ax.set_title(
             f"Floquet multipliers - frame {frame_idx + 1}/{len(all_multipliers)}"
         )
+        if scaling == "dynamic":
+            real_range = _get_padded_limits(np.real(current_multipliers))
+            imag_range = _get_padded_limits(np.imag(current_multipliers))
+            radius = max(
+                abs(real_range[0]), abs(real_range[1]), abs(imag_range[0]), abs(imag_range[1]), 1.2
+            )   
+            ax.set_xlim(-radius, radius)
+            ax.set_ylim(-radius, radius)
         return (sc,)
 
     animation = FuncAnimation(
@@ -533,7 +583,7 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
 def animate_floquet_exponents(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
-    show_full_range: bool = True,
+    scaling: str = "static",
     interval: int = 30,
     repeat: bool = True,
     **plot_kwargs
@@ -550,8 +600,10 @@ def animate_floquet_exponents(
        The Floquet exponents of each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
-    show_full_range: bool, optional
-        Whether to show the full data range. If ``False`` the axis limits are set to show the data range of the first :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+    scaling: str, optional
+        Adjust how the animation axes are scaled. Passing ``"static"`` sets the axes scaling to display the maximum range required for the data set from the beginning.
+        Passing ``"dynamic"`` adjusts the scaling to show the full data range of each frame individually.
+        All borders are padded to ensure all data is displayed clearly.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
@@ -593,19 +645,15 @@ def animate_floquet_exponents(
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
     sc, = ax.plot([], [], **plot_kwargs)
     
-    if show_full_range:
-        min_real_value = np.real(all_exponents).min()
-        max_real_value = np.real(all_exponents).max()
-        min_imag_value = np.imag(all_exponents).min()
-        max_imag_value = np.imag(all_exponents).max()
-        ax.set_xlim(
-            min_real_value if min_real_value < -1.2 else -1.2,
-            max_real_value if max_real_value > 1.2 else 1.2
-            )
-        ax.set_ylim(
-            min_imag_value if min_imag_value < -1.2 else -1.2,
-            max_imag_value if max_imag_value > 1.2 else 1.2
-            )
+    if scaling == "static":
+        real_range = _get_padded_limits(np.real(all_exponents))
+        imag_range = _get_padded_limits(np.imag(all_exponents))
+        radius = max(
+            abs(real_range[0]), abs(real_range[1]), abs(imag_range[0]), abs(imag_range[1])
+        )   
+        ax.set_xlim(-radius, radius)
+        ax.set_ylim(-radius, radius)  
+    
     sc = ax.scatter(
         np.real(all_exponents[0]),
         np.imag(all_exponents[0]),
@@ -623,6 +671,14 @@ def animate_floquet_exponents(
         ax.set_title(
             f"Floquet exponents - frame {frame_idx + 1}/{len(all_exponents)}"
         )
+        if scaling == "dynamic":
+            real_range = _get_padded_limits(np.real(current_exponents))
+            imag_range = _get_padded_limits(np.imag(current_exponents))
+            radius = max(
+                abs(real_range[0]), abs(real_range[1]), abs(imag_range[0]), abs(imag_range[1])
+            )   
+            ax.set_xlim(-radius, radius)
+            ax.set_ylim(-radius, radius)
         return (sc,)
 
     animation = FuncAnimation(

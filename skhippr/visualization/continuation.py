@@ -2,9 +2,19 @@
 
 The :py:mod:`~skhippr.visualization.continuation` module provides a standardized function for visualizing :py:class:`collections.abc.Iterable` instances of :py:class:`skhippr.solvers.continuation.BranchPoint` objects that can be generated with the method :py:class:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and then collected.
 
-It provides the method :py:func:`~skhippr.visualization.continuation.plot_continuation` for making 1D plots over a continuation parameter, as well as 2D and 3D continuation plots.
+It provides the method
 
-The functions :py:func:`~skhippr.visualization.continuation.plot_floquet_multiplier_continuation` and :py:func:`~skhippr.visualization.continuation.plot_floquet_exponent_continuation` are provided for plotting the Floquet multipliers and exponents over the continuation parameter.
+* :py:func:`~skhippr.visualization.continuation.plot_continuation`
+
+for making 1D plots over a continuation parameter, as well as 2D and 3D continuation plots.
+
+As well as the functions:
+
+* :py:func:`~skhippr.visualization.continuation.plot_floquet_multiplier_continuation`
+* :py:func:`~skhippr.visualization.continuation.plot_floquet_exponent_continuation`
+
+for plotting the Floquet multipliers and exponents over the continuation parameter.
+
 """
 
 from collections.abc import Iterable, Callable
@@ -220,6 +230,7 @@ def plot_floquet_multiplier_continuation(
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
     alpha = plot_kwargs.pop("alpha", 0.9)
+    linestyle = plot_kwargs.pop("linestyle", "dotted")
     
     for i in range(num_multipliers):
         magnitudes_i = all_magnitudes[:, i]
@@ -230,8 +241,8 @@ def plot_floquet_multiplier_continuation(
         ys_stable = np.where(stability_i, magnitudes_i, np.nan)
         ys_unstable = np.where(~stability_i, magnitudes_i, np.nan)
         
-        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
-        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linestyle = linestyle, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
     
     ax.axhline(y=1.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, label="Stability boundary (|λ| = 1)")
     
@@ -313,6 +324,7 @@ def plot_floquet_exponent_continuation(
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
     alpha = plot_kwargs.pop("alpha", 0.9)
+    linestyle = plot_kwargs.pop("linestyle", "dotted")
     
     for i in range(num_exponents):
         exponents_i = all_exponents[:, i]
@@ -324,8 +336,8 @@ def plot_floquet_exponent_continuation(
         ys_stable = np.where(stability_i, real_part, np.nan)
         ys_unstable = np.where(~stability_i, real_part, np.nan)
         
-        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
-        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
+        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
     
 
     ax.axhline(y=0.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, 
