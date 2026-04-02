@@ -625,7 +625,7 @@ def animate_floquet_exponents(
         generated_ax = True
 
     all_exponents: list[np.ndarray] = []
-    for k, hbm in enumerate(hbm_set):
+    for hbm in hbm_set:
         equation = _get_equation_helper(hbm)
         floquet_multipliers = equation.eigenvalues
         lambdas = np.asarray(floquet_multipliers)
