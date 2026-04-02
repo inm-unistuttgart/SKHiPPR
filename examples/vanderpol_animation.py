@@ -70,7 +70,7 @@ def main():
     ax, animation0 = animate_phase(branch, scaling = "dynamic")
     _, animation1 = animate_period(branch, scaling = "dynamic")
     _, animation2 = animate_floquet_multipliers(branch, scaling = "unit_circle")
-    _, animation3 = animate_floquet_exponents(branch)
+    _, animation3 = animate_floquet_exponents(branch, scaling = "static")
     plot_continuation(
         branch=branch,
         plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:]),

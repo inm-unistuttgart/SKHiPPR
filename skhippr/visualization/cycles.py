@@ -206,12 +206,6 @@ def animate_period(
     )
     return ax, animation
 
-def _get_padded_limits(x, y = 0, pad_multiplier = 0.05):
-    x_min = x.min()
-    x_max = x.max()
-    x_range = x_max - x_min
-    x_pad = pad_multiplier * x_range
-    return [x_min - x_pad, x_max + x_pad]
 
 def plot_phase(
     hbm: HBMEquation | EquationSystem,
@@ -631,7 +625,7 @@ def animate_floquet_exponents(
         generated_ax = True
 
     all_exponents: list[np.ndarray] = []
-    for hbm in hbm_set:
+    for k, hbm in enumerate(hbm_set):
         equation = _get_equation_helper(hbm)
         floquet_multipliers = equation.eigenvalues
         lambdas = np.asarray(floquet_multipliers)
@@ -920,3 +914,10 @@ def _get_equation_helper(hbm: HBMEquation | EquationSystem):
             if isinstance(equation, HBMEquation):
                 return equation
     raise ValueError("hbm does not contain any usable HBMEquation instance")
+
+def _get_padded_limits(x, pad_multiplier = 0.05):
+    x_min = np.nanmin(x)
+    x_max = np.nanmax(x)
+    x_range = x_max - x_min
+    x_pad = pad_multiplier * x_range
+    return [x_min - x_pad, x_max + x_pad]
