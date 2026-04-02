@@ -3,8 +3,11 @@
 The :py:mod:`~skhippr.visualization.equilibria` module offers standardized functions for visualizing equilibria as well as equilibrium eigenvalues.
 Supported equations are instances of classes implementing :py:class:`~skhippr.odes.AbstractODE.AbstractODE` as well as :py:class:`~skhippr.equations.EquationSystem.EquationSystem` instances that contain such an object.
 
-It provides the function :py:func:`~skhippr.visualization.equilibria.plot_equilibrium` for plotting the equilibrium in a standard x-y plane
-and :py:func:`~skhippr.visualization.equilibria.plot_eigenvalues` for making plots of the equation eigenvalues in the complex plane.
+It provides the functions:
+
+* :py:func:`~skhippr.visualization.equilibria.plot_equilibrium` for plotting the equilibrium in a standard x-y plane
+* :py:func:`~skhippr.visualization.equilibria.plot_eigenvalues` for making plots of the equation eigenvalues in the complex plane.
+
 """
 
 import numpy as np
@@ -44,16 +47,19 @@ def plot_equilibrium(
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+    title = plot_kwargs.pop("title", "Equilibria")
+    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
+    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(ode=ode)
     x = np.asarray(equation.x)
-    ax.plot(x[idx[0]], x[idx[1]], **plot_kwargs)
+    ax.plot(x[idx[0]], x[idx[1]], **kwargs)
     if generated_ax:
-        ax.set_title("Equilibria")
-        ax.set_xlabel("x1")
-        ax.set_ylabel("x2")
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
     return ax
 
 
@@ -79,17 +85,22 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    if "marker" not in plot_kwargs:
-        plot_kwargs["marker"] = "x"
+    
+    title = plot_kwargs.pop("title", "Equilibria eigenvalues")
+    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
+    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
+    
     equation = _get_equation_helper(ode=ode)
     eigenvalues = np.asarray(equation.eigenvalues)
     ax.scatter(
-        np.real(eigenvalues), np.imag(eigenvalues), label="eigenvalues", **plot_kwargs
+        np.real(eigenvalues), np.imag(eigenvalues), **kwargs
     )
     if generated_ax:
-        ax.set_title("Equilibria eigenvalues")
-        ax.set_xlabel("Re($\\lambda$)")
-        ax.set_ylabel("Im($\\lambda$)")
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
         ax.legend(loc="best")
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
     return ax
@@ -115,7 +126,7 @@ def _get_equation_helper(ode: AbstractODE | EquationSystem):
     """
     if isinstance(ode, AbstractODE):
         return ode
-    if isinstance(ode, EquationSystem) and hasattr(ode, "equations"):
+    if isinstance(ode, EquationSystem):
         for equation in ode.equations:
             if isinstance(equation, AbstractODE):
                 return equation

@@ -31,3 +31,10 @@ __pycache__/
 
 # Documentation
 docs_source/build/*
+
+# Plots
+*.pdf
+*.gif
+*.mp4
+*.png
+*.tex
