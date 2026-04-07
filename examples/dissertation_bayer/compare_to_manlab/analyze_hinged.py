@@ -50,6 +50,7 @@ def main():
     #     max_stepsize=0.4,
     # )
 
+
     #### CREATE REFERENCE SOLUTION ######
     # frc = create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024)
     # ax = plot_continuation(frc, plot_fun=plot_fun)
@@ -176,12 +177,12 @@ def get_filename(ode, N_HBM, shooting_tol):
 
 def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
     solver = NewtonSolver(tolerance=1e-13, verbose=False)
-    ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.1)
+    ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.05)
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
 
     hbm = init_hbm_sys(ode, fourier, stability_method=KoopmanHillSubharmonic(fourier))
 
-    shooting_tol = 1e-6
+    shooting_tol = 1e-14
 
     frc_ref = []
 
@@ -194,7 +195,7 @@ def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
         initial_direction=1,
         continuation_parameter="omega",
         verbose=True,
-        num_steps=5,
+        num_steps=np.inf,
         atol=shooting_tol,
         rtol=shooting_tol,
     ):
