@@ -1,4 +1,6 @@
 import numpy as np
+import datetime
+import tikzplotlib
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -57,16 +59,18 @@ def main():
     #     filepath=f"hinged_hinged_ref_N_{frc[0].equations[0].fourier.N_HBM}.tikz",
     # )
 
-    ### STEP 1: Analyze FM errors for different stability methods and HBM orders ###
-    ax, error_stats = iterate_step_1(
-        n_modes=10,
-        xi=0.005,
-        Nmax=40,
-        Ns_HBM=range(1, 39),
-        shooting_tol=1e-14,
-        labels_stabmethod=("dir", "subh", "imag", "RK4"),
-        early_break=np.inf,
-    )
+    # ### STEP 1: Analyze FM errors for different stability methods and HBM orders ###
+    # ax, error_stats = iterate_step_1(
+    #     n_modes=10,
+    #     xi=0.005,
+    #     Nmax=40,
+    #     Ns_HBM=range(1, 39),
+    #     shooting_tol=1e-14,
+    #     labels_stabmethod=("dir", "subh", "imag", "RK4"),
+    #     early_break=np.inf,
+    # )
+
+    # ### STEP 2: whole branch measurement
 
     plt.show()
 
@@ -265,6 +269,51 @@ def iterate_step_1(
         ax.set_title(f"step 1 FM errors for {label_stab}")
         tikzplotlib.save(f"{filename.split('.')[0]}_stab_{label_stab}.tikz")
     return ax, error_stats
+
+
+def step_2(
+    n_modes,
+    xi,
+    Nmax=120,
+    L_DFT=1024,
+    atol=1e-14,
+    rtol=1e-14,
+    continuation_verbose=False,
+    stepsize_range=(0.001, 0.1),
+):
+
+    ode, label = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.1)
+    filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
+
+    dict_Ns = {
+        "subh": (KoopmanHillSubharmonic, 10),
+        "dir": (KoopmanHillProjection, 10),
+        "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
+        "RK4": (SinglePassRK4, 11),
+    }
+
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
+
+    axs = iterate_and_plot_step_2(
+        ode=ode,
+        filename=filename,
+        dict_Ns=dict_Ns,
+        L_DFT=L_DFT,
+        solver=solver,
+        early_break=np.inf,
+        axs=None,
+        continuation_verbose=continuation_verbose,
+        stepsize_range=stepsize_range,
+    )
+
+    now = datetime.datetime.now()
+    for k, ax in enumerate(axs):
+        ax.set_title(f"step 2 FM errors for {label}")
+        plt.sca(ax)
+        tikzplotlib.save(
+            f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz"
+        )
+        plt.close()
 
 
 if __name__ == "__main__":
