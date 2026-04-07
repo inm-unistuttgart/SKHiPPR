@@ -312,7 +312,7 @@ def step_2(
         dict_Ns=dict_Ns,
         L_DFT=L_DFT,
         solver=solver,
-        early_break=40,
+        early_break=np.inf,
         axs=None,
         continuation_verbose=continuation_verbose,
         stepsize_range=stepsize_range,
