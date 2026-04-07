@@ -1,5 +1,6 @@
 import argparse
 import time
+from tqdm import tqdm
 
 import numpy as np
 from scipy.linalg import expm
@@ -55,7 +56,7 @@ def main():
     eig_times = []
     expm_times = []
 
-    for matrix in matrices:
+    for matrix in tqdm(matrices):
         for _ in range(args.repeats):
             eig_times.append(time_call(np.linalg.eig, matrix))
             expm_times.append(time_call(expm, matrix))
