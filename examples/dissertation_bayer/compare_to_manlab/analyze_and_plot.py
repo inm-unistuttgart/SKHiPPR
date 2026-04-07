@@ -153,6 +153,7 @@ def compute_step_2(
 
     # Determine step 3 time and error
     start = time.perf_counter_ns()
+    direction = np.sign(data["param"][-1] - data["param"][0])
 
     frc = []
     for bp in pseudo_arclength_continuator(
@@ -161,12 +162,12 @@ def compute_step_2(
         stepsize=0.1,
         stepsize_range=stepsize_range,
         continuation_parameter="omega",
-        initial_direction=-1,
+        initial_direction=direction,
         verbose=continuation_verbose,
-        num_steps=np.inf,
+        num_steps=early_break,
     ):
         frc.append(bp)
-        if bp.omega < data["param"][-1]:
+        if direction * bp.omega > direction * data["param"][-1]:
             break
     stop = time.perf_counter_ns()
     comptime_total = (stop - start) * 1e-9
@@ -218,10 +219,10 @@ def iterate_and_plot_step_2(
         axs[0].plot(
             comptime_per_bp,
             error_median_after,
-            '*',
+            "*",
             label=f"{label}, N = {N_HBM}, {num_points} points",
         )
-        axs[1].plot(comptime_total, error_median_after, '*', label=label)
+        axs[1].plot(comptime_total, error_median_after, "*", label=label)
 
     for ax in axs:
         # ax.set_yscale("log")

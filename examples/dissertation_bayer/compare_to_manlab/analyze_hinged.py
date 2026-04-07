@@ -71,6 +71,16 @@ def main():
     # )
 
     # ### STEP 2: whole branch measurement
+    step_2(
+        n_modes=10,
+        xi=0.005,
+        Nmax=40,
+        L_DFT=1024,
+        atol=1e-14,
+        rtol=1e-14,
+        continuation_verbose=True,
+        stepsize_range=(0.001, 0.1),
+    )
 
     plt.show()
 
@@ -282,8 +292,8 @@ def step_2(
     stepsize_range=(0.001, 0.1),
 ):
 
-    ode, label = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.05)
-    filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
+    ode = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.05)
+    filename = get_filename(ode, N_HBM=Nmax, shooting_tol=atol)
 
     dict_Ns = {
         "subh": (KoopmanHillSubharmonic, 10),
@@ -300,7 +310,7 @@ def step_2(
         dict_Ns=dict_Ns,
         L_DFT=L_DFT,
         solver=solver,
-        early_break=np.inf,
+        early_break=10,
         axs=None,
         continuation_verbose=continuation_verbose,
         stepsize_range=stepsize_range,
@@ -308,7 +318,7 @@ def step_2(
 
     now = datetime.datetime.now()
     for k, ax in enumerate(axs):
-        ax.set_title(f"step 2 FM errors for {label}")
+        ax.set_title(f"step 2 FM errors for {filename}")
         plt.sca(ax)
         tikzplotlib.save(
             f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz"
