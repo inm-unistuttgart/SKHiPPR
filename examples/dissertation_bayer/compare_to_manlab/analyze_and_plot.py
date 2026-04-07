@@ -248,7 +248,7 @@ def FM_error_measure(FMs, FMs_ref):
 
     idx_max = np.argmax(np.abs(FMs_ref_pos))
 
-    err = np.min(FMs_ref_pos[idx_max] - FMs)
+    err = np.min(np.abs(FMs_ref_pos[idx_max] - FMs))
     if err > 0.1:
         pass
     return err

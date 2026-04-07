@@ -80,7 +80,7 @@ def main():
         rtol=1e-14,
         continuation_verbose=True,
         stepsize_range=(0.001, 0.1),
-        k_init=600,
+        k_init=0,
     )
 
     plt.show()
@@ -299,7 +299,7 @@ def step_2(
 
     dict_Ns = {
         # "subh": (KoopmanHillSubharmonic, 10),
-        "dir": (KoopmanHillProjection, 10),
+        "dir": (KoopmanHillProjection, 5),
         # "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
         # "RK4": (SinglePassRK4, 11),
     }
