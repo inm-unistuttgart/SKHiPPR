@@ -51,6 +51,7 @@ def compute_config_1_and_2(
     solver,
     real_formulation=True,
     early_break=np.inf,
+    k_init=0,
 ):
     comptimes = []
     errors_FM_before = []
@@ -65,12 +66,13 @@ def compute_config_1_and_2(
                 L_DFT=L_DFT,
                 real_formulation=real_formulation,
                 stability_method=stability_method_generator,
+                k_init=k_init,
             )
         ),
-        total=min(early_break, len(data["param"])),
+        total=min(early_break, len(data["param"]) - k_init),
     ):
-        bp.omega = data["param"][l]
-        FMs_ref = data["FMs"][l, :]
+        bp.omega = data["param"][l + k_init]
+        FMs_ref = data["FMs"][l + k_init, :]
         FMs_before = bp.equations[0].determine_stability(update=True)[1]
         errors_FM_before.append(FM_error_measure(FMs_before, FMs_ref))
 
@@ -89,7 +91,7 @@ def compute_config_1_and_2(
 
         # # DEBUG
         if l > early_break:
-            print(f"DEBUGGING: stopped after {l} points on branch")
+            print(f"DEBUGGING: stopped after {l + k_init} points on branch")
             break
 
     return errors_FM_before, errors_FM_after, comptimes
@@ -117,6 +119,7 @@ def compute_step_2(
     early_break=np.inf,
     continuation_verbose=False,
     stepsize_range=(0.001, 0.1),
+    k_init=0,
 ):
     real_formulation = data["real_formulation"]
 
@@ -130,6 +133,7 @@ def compute_step_2(
         solver,
         real_formulation=real_formulation,
         early_break=early_break,
+        k_init=k_init,
     )
 
     error_median_after = np.nanmedian(errors_FM_after)
@@ -186,6 +190,7 @@ def iterate_and_plot_step_2(
     axs=None,
     continuation_verbose=False,
     stepsize_range=(0.001, 0.1),
+    k_init=0,
 ):
 
     if axs is None:
@@ -214,6 +219,7 @@ def iterate_and_plot_step_2(
                 early_break=early_break,
                 continuation_verbose=continuation_verbose,
                 stepsize_range=stepsize_range,
+                k_init=k_init,
             )
         )
         axs[0].plot(
@@ -239,12 +245,10 @@ def FM_error_measure(FMs, FMs_ref):
         )
 
     FMs_ref_pos = FMs_ref[np.imag(FMs_ref) >= 0]
-    FMs_pos = FMs[np.imag(FMs) >= 0]
 
-    idx_max_FM = np.argmax(np.abs(FMs_pos))
-    idx_max_FM_ref = np.argmax(np.abs(FMs_ref_pos))
+    idx_max = np.argmax(np.abs(FMs_ref_pos))
 
-    err = np.abs(FMs_ref_pos[idx_max_FM_ref] - FMs_pos[idx_max_FM])
-    if err > 1:
+    err = np.min(FMs_ref_pos[idx_max] - FMs)
+    if err > 0.1:
         pass
     return err

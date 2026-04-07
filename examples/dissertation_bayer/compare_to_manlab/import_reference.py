@@ -39,7 +39,7 @@ def import_reference(filename, ode):
 
 
 def iterate_from_reference(
-    ode, data, N_HBM, L_DFT, real_formulation, stability_method=None
+    ode, data, N_HBM, L_DFT, real_formulation, stability_method=None, k_init=0
 ):
 
     fourier_new = Fourier(N_HBM, L_DFT, ode.n_dof, real_formulation=real_formulation)
@@ -50,11 +50,11 @@ def iterate_from_reference(
         ode, ode.omega, fourier_new, initial_guess, stability_method=stability_method
     )
     bp_init = BranchPoint(hbm, data["name_param"], 1)
-    X = data["X"][0, :]
+    X = data["X"][k_init, :]
     N_ref = int((len(X) / ode.n_dof - 1) / 2)
     fourier_ref = Fourier(N_ref, L_DFT, ode.n_dof)
 
-    for X, param in zip(data["X"], data["param"]):
+    for X, param in zip(data["X"][k_init:], data["param"][k_init:]):
         bp = bp_init.duplicate()
         bp.X = change_N_HBM(X, fourier_new=fourier_new, fourier_old=fourier_ref)
         setattr(bp, data["name_param"], param)

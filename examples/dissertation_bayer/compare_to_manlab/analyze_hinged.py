@@ -80,6 +80,7 @@ def main():
         rtol=1e-14,
         continuation_verbose=True,
         stepsize_range=(0.001, 0.1),
+        k_init=600,
     )
 
     plt.show()
@@ -290,15 +291,16 @@ def step_2(
     rtol=1e-14,
     continuation_verbose=False,
     stepsize_range=(0.001, 0.1),
+    k_init=0,
 ):
 
     ode = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.05)
     filename = get_filename(ode, N_HBM=Nmax, shooting_tol=atol)
 
     dict_Ns = {
-        "subh": (KoopmanHillSubharmonic, 10),
-        # "dir": (KoopmanHillProjection, 10),
-        "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
+        # "subh": (KoopmanHillSubharmonic, 10),
+        "dir": (KoopmanHillProjection, 10),
+        # "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
         # "RK4": (SinglePassRK4, 11),
     }
 
@@ -314,6 +316,7 @@ def step_2(
         axs=None,
         continuation_verbose=continuation_verbose,
         stepsize_range=stepsize_range,
+        k_init=k_init,
     )
 
     now = datetime.datetime.now()
