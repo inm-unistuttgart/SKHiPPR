@@ -297,9 +297,9 @@ def step_2(
 
     dict_Ns = {
         "subh": (KoopmanHillSubharmonic, 10),
-        "dir": (KoopmanHillProjection, 10),
+        # "dir": (KoopmanHillProjection, 10),
         "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
-        "RK4": (SinglePassRK4, 11),
+        # "RK4": (SinglePassRK4, 11),
     }
 
     solver = NewtonSolver(tolerance=1e-13, verbose=False)
@@ -310,7 +310,7 @@ def step_2(
         dict_Ns=dict_Ns,
         L_DFT=L_DFT,
         solver=solver,
-        early_break=10,
+        early_break=40,
         axs=None,
         continuation_verbose=continuation_verbose,
         stepsize_range=stepsize_range,
