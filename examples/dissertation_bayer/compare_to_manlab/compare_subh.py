@@ -16,7 +16,7 @@ from skhippr.stability.ClassicalHill import ClassicalHill
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
 
-k_max = 20
+k_max = 1000
 
 ode = init_hinged(n_modes=10, omega_0_normalized=0.1)
 
