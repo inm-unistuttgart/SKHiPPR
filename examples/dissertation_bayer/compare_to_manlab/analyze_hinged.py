@@ -50,7 +50,6 @@ def main():
     #     max_stepsize=0.4,
     # )
 
-
     #### CREATE REFERENCE SOLUTION ######
     # frc = create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024)
     # ax = plot_continuation(frc, plot_fun=plot_fun)
@@ -283,7 +282,7 @@ def step_2(
     stepsize_range=(0.001, 0.1),
 ):
 
-    ode, label = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.1)
+    ode, label = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.05)
     filename = get_filename(label, N_HBM=Nmax, atol=atol, rtol=rtol)
 
     dict_Ns = {
