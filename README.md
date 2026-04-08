@@ -10,6 +10,6 @@ SKHiPPR [ˈski-pr] is a Python toolbox with focus on **S**tability using the **K
 > - Project website: https://www.inm.uni-stuttgart.de/research_nonlinear_mechanics/project_bayer/
 
 The SKHiPPR toolbox is object-oriented and modularized. It generates continuation curves with stability information using an ODE object, Harmonic Balance residual equation, a stability method, and a continuation wrapper.   
-For technical details about installation and usage, please refer to [the documentation]([https://github.com/inm-unistuttgart/SKHiPPR](https://inm-unistuttgart.github.io/SKHiPPR/)). 
+For technical details about installation and usage, please refer to [the documentation](https://inm-unistuttgart.github.io/SKHiPPR/). 
 
     
