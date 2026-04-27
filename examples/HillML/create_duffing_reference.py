@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from skhippr.odes.nonautonomous import Duffing
 from skhippr.solvers.newton import NewtonSolver
@@ -6,6 +7,10 @@ from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMSystem
 from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 
+from skhippr.visualization.cycles import (
+    animate_floquet_exponents,
+    animate_floquet_multipliers,
+)
 from skhippr.visualization.continuation import plot_continuation
 
 from generate_stability_data import generate_stability_data
@@ -13,19 +18,22 @@ from generate_stability_data import generate_stability_data
 
 """ Parameters """
 PARAMS = {
-    "alpha": 1,
-    "beta": 0.1,
-    "F": 0.5,
-    "delta": 0.02,
+    "alpha": 0.5,
+    "beta": 1,
+    "F": 5,
+    "delta": 0.1,
 }
-N_HBM = 10
-L_DFT = 1024
+N_HBM = 30
+L_DFT = 2**13
 SOLVER_TOL = 1e-10
+NUM_STEPS = 100
+STEPSIZE = 0.1
+OMEGA_START = 0.01
 
 
 def main():
     """Create reference data for the duffing oscillator, which can be parsed by the csv parser."""
-    ode = Duffing(t=0, x=0, omega=0.1, **PARAMS)
+    ode = Duffing(t=0, x=0, omega=OMEGA_START, **PARAMS)
     filename = f"examples/HillML/Duffing_alpha_{ode.alpha}_beta_{ode.beta}_F_{ode.F}_delta_{ode.delta}_N_{N_HBM}_L_{L_DFT}_solvertol_{SOLVER_TOL}.csv"
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
     initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
@@ -43,12 +51,12 @@ def main():
             filename=filename,
             initial_system=hbm,
             solver=NewtonSolver(tolerance=1e-8, verbose=False),
-            stepsize=0.01,
-            stepsize_range=(0.01, 0.01),
+            stepsize=STEPSIZE,
+            stepsize_range=(STEPSIZE, STEPSIZE),
             initial_direction=1,
             continuation_parameter="omega",
             verbose=True,
-            num_steps=5,
+            num_steps=NUM_STEPS,
         )
     )
 
@@ -59,6 +67,11 @@ def main():
         ylabel="max|x(t)|",
         title="Duffing reference solution",
     )
+    anims = []
+    anims.append(animate_floquet_exponents(frc))
+    anims.append(animate_floquet_multipliers(frc))
+
+    return anims
 
 
 def plot_fun(bp):
@@ -66,4 +79,5 @@ def plot_fun(bp):
 
 
 if __name__ == "__main__":
-    main()
+    anims = main()
+    plt.show()
