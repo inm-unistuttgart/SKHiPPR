@@ -92,6 +92,18 @@ def to_csv(
     arclength,
 ):
     _, FMs = hbm.determine_stability(update=True)
+
+    # sort the FMs if n = 2
+    if hbm.fourier.n_dof == 2:
+        if np.abs(np.imag(FMs[0])) > 1e-10:
+            # sort by imaginary part, if the FMs are complex conjugate pairs
+            idx = np.argsort(np.imag(FMs))
+            FMs = FMs[idx]
+        else:
+            # otherwise sort by real part
+            idx = np.argsort(np.real(FMs))
+            FMs = FMs[idx]
+
     param = getattr(hbm, name_param)
     X = hbm.X
     hill_mat = hbm.hill_matrix(real_formulation=True, update=True)
