@@ -107,7 +107,7 @@ def to_csv(
             idx = np.argsort(np.real(FMs))
             FMs = FMs[idx]
 
-    param = getattr(hbm, name_param)
+    param = np.squeeze(getattr(hbm, name_param))
     X = hbm.X
     hill_mat = hbm.hill_matrix(real_formulation=True, update=True)
     Js = hbm.fourier.matrix_inv_DFT(hill_mat)

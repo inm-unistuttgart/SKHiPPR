@@ -67,7 +67,7 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
                 omega = parameter
 
             # Floquet multipliers and Floquet exponents
-            floquet_multipliers = np.array([float(x) for x in row[2 : 2 + n_dof]])
+            floquet_multipliers = np.array([complex(x) for x in row[2 : 2 + n_dof]])
 
             T = 2 * np.pi / omega
             floquet_exponents = np.log(floquet_multipliers) / T
@@ -79,12 +79,12 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
 
             # Fourier coefficients of Jacobian
             J_coeffs = np.array(
-                [[float(x) for x in row[2 + n_dof * (2 * N_harmo + 2) : -1]]]
+                [[float(x) for x in row[2 + n_dof * (2 * N_harmo + 2) :]]]
             )
             J_coeffs = J_coeffs.reshape((n_dof, n_dof, -1), order="F")
 
             # Construct block-Toeplitz Hill matrix from Fourier coefficients of Jacobian
-            hill_matrix = construct_hill_matrix(J_coeffs, omega)
+            hill_matrix = construct_hill_matrix(J_coeffs, n_dof, N_harmo, omega)
 
             yield DataPoint(
                 parameter,
