@@ -38,3 +38,4 @@ docs_source/build/*
 *.mp4
 *.png
 *.tex
+*.tikz
