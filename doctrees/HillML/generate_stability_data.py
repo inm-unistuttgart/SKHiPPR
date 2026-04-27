@@ -1,5 +1,49 @@
+import os
+import csv
+import numpy as np
+
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation
+from skhippr.solvers.continuation import pseudo_arclength_continuator
+
+
+def generate_stability_data(
+    filename,
+    initial_system,
+    solver,
+    stepsize,
+    stepsize_range,
+    initial_direction,
+    continuation_parameter,
+    verbose,
+    num_steps,
+):
+
+    if os.path.exists(filename):
+        raise RuntimeError(f"File {filename} already exists")
+    with open(filename, "w", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+
+        init_csv(initial_system.equations[0].fourier, writer, continuation_parameter)
+        arclength = 0
+
+        for k, bp in enumerate(
+            pseudo_arclength_continuator(
+                initial_system,
+                solver,
+                stepsize,
+                stepsize_range,
+                initial_direction,
+                continuation_parameter,
+                verbose,
+                num_steps,
+            )
+        ):
+            if k > 0:
+                arclength += np.linalg.norm(X_prev - bp.X)
+            X_prev = bp.X
+
+            to_csv(writer, bp.equations[0], continuation_parameter, arclength)
 
 
 def init_csv(fourier: Fourier, writer, name_param: str):
