@@ -1,6 +1,5 @@
 import os
 import csv
-from typing import Any
 from collections.abc import Generator
 import numpy as np
 

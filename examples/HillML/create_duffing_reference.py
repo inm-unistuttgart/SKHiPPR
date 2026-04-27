@@ -8,7 +8,7 @@ from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 
 from skhippr.visualization.continuation import plot_continuation
 
-from generate_stability_data import generate_stability_data
+from examples.HillML.generate_stability_data import generate_stability_data
 
 
 """ Parameters """
