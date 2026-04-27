@@ -1,10 +1,12 @@
 import os
 import csv
+from typing import Any
+from collections.abc import Generator
 import numpy as np
 
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation
-from skhippr.solvers.continuation import pseudo_arclength_continuator
+from skhippr.solvers.continuation import BranchPoint, pseudo_arclength_continuator
 
 
 def generate_stability_data(
@@ -17,7 +19,7 @@ def generate_stability_data(
     continuation_parameter,
     verbose,
     num_steps,
-):
+) -> Generator[BranchPoint, None, None]:
 
     if os.path.exists(filename):
         raise RuntimeError(f"File {filename} already exists")
@@ -44,6 +46,8 @@ def generate_stability_data(
             X_prev = bp.X
 
             to_csv(writer, bp.equations[0], continuation_parameter, arclength)
+
+            yield bp
 
 
 def init_csv(fourier: Fourier, writer, name_param: str):
