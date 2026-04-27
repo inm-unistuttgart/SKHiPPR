@@ -8,7 +8,7 @@ from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 
 from skhippr.visualization.continuation import plot_continuation
 
-from examples.HillML.generate_stability_data import generate_stability_data
+from generate_stability_data import generate_stability_data
 
 
 """ Parameters """
@@ -26,7 +26,7 @@ SOLVER_TOL = 1e-10
 def main():
     """Create reference data for the duffing oscillator, which can be parsed by the csv parser."""
     ode = Duffing(t=0, x=0, omega=0.1, **PARAMS)
-    filename = f"HillML/Duffing_alpha_{ode.alpha}_beta_{ode.beta}_F_{ode.F}_delta_{ode.delta}_N_{N_HBM}_L_{L_DFT}_solvertol_{SOLVER_TOL}.csv"
+    filename = f"examples/HillML/Duffing_alpha_{ode.alpha}_beta_{ode.beta}_F_{ode.F}_delta_{ode.delta}_N_{N_HBM}_L_{L_DFT}_solvertol_{SOLVER_TOL}.csv"
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
     initial_guess = np.zeros((2 * fourier.N_HBM + 1) * ode.n_dof)
     hbm = HBMSystem(
