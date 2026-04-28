@@ -77,14 +77,16 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
                 [float(x) for x in row[2 + n_dof : 2 + n_dof * (2 * N_harmo + 2)]]
             )
 
-            # Fourier coefficients of Jacobian
-            J_coeffs = np.array(
-                [[float(x) for x in row[2 + n_dof * (2 * N_harmo + 2) :]]]
+            # Hill matrix
+            hill_mat = np.array(
+                [float(x) for x in row[2 + n_dof * (2 * N_harmo + 2) :]]
             )
-            J_coeffs = J_coeffs.reshape((n_dof, n_dof, -1), order="F")
+            hill_mat = hill_mat.reshape(
+                (n_dof * (2 * N_harmo + 1), n_dof * (2 * N_harmo + 1)), order="C"
+            )
 
-            # Construct block-Toeplitz Hill matrix from Fourier coefficients of Jacobian
-            hill_matrix = construct_hill_matrix(J_coeffs, n_dof, N_harmo, omega)
+            # Extract Fourier coefficients of Jacobian from Hill matrix
+            J_coeffs = extract_J_coeffs(hill_mat, n_dof, N_harmo)
 
             yield DataPoint(
                 parameter,
@@ -93,99 +95,65 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
                 floquet_multipliers,
                 floquet_exponents,
                 J_coeffs,
-                hill_matrix,
+                hill_mat,
             )
 
 
-def construct_hill_matrix(J_coeffs, n_dof, N_HBM, omega):
+def extract_J_coeffs(hill_mat, n_dof, N_HBM):
     """Construct the real-valued block-Toeplitz Hill matrix.
 
     Parameters
     ----------
-    J_coeffs : ndarray of shape (n_dof, n_dof, 2 * N_HBM + 1)
-        Fourier coefficients of the Jacobian in real harmonic form. The third
-        axis is ordered as ``[J0, Jc_1, ..., Jc_N, Js_1, ..., Js_N]``.
+    hill_mat : Hill matrix in real-valued form (structured like Eq. (84) of Bayer et al., 2024)
     n_dof : int
         Number of states.
     N_HBM : int
         Number of harmonics.
-    omega : float
-        Angular frequency of the sought-after periodic solution.
 
     Returns
     -------
-    hill_matrix : ndarray of shape ((2 * N_HBM + 1) * n_dof, (2 * N_HBM + 1) * n_dof)
-        Real-valued Hill matrix assembled from derivative, Toeplitz, and Hankel
-        block components.
+    J_coeffs : ndarray of shape (n_dof, n_dof, 4*N_HBM+1)
+        Fourier coefficients of system matrix.
+        J_coeffs[:,:,0] contains the coefficients of the constant term.
+        J_coeffs[:,:,k] with k in range(1, 2*N_HBM+1) contains the coefficients of the cosine terms of frequency k*omega.
+        J_coeffs[:,:,k] with k in range(2*N_HBM+1, 4*N_HBM+1) contains the coefficients of the sine terms of frequency (k-2*N_HBM)*omega.
 
     Notes
     -----
-    The assembly follows Equations (83)--(85) in:
+    The extraction procedure follows from Equations (84)--(85) in:
     Bayer et al., "Koopman-Hill stability computation of periodic orbits in
     polynomial dynamical systems using a real-valued quadratic harmonic balance
     formulation", International Journal of Non-Linear Mechanics, 2024.
     DOI: https://doi.org/10.1016/j.ijnonlinmec.2024.104894
     """
 
-    # Components
-    J0 = J_coeffs[:, :, 0]
-    Jc = J_coeffs[:, :, 1 : N_HBM + 1]
-    Js = J_coeffs[:, :, N_HBM + 1 :]
+    # Tile the Hill matrix as in Eq. (84)
+    idx_split = [n_dof, n_dof * (N_HBM + 1)]
+    row_bands = np.split(hill_mat, idx_split, axis=0)
+    blocks = [
+        [np.split(rb, idx_split, axis=1)[j] for j in range(3)] for rb in row_bands
+    ]
 
-    Jcs = np.reshape(
-        J_coeffs[:, :, 1:], shape=(n_dof, 2 * N_HBM * n_dof, -1), order="F"
+    # the lower-frequency Fourier coeff.s (up to N_HBM) can be found in the first row
+    J_0 = blocks[0][0]
+    J_c_lower = 2 * blocks[0][1].reshape((n_dof, n_dof, N_HBM), order="F")
+    J_s_lower = 2 * blocks[0][2].reshape((n_dof, n_dof, N_HBM), order="F")
+
+    # the higher-frequency Fourier coeff.s are found in the last row of the block-Hankel components Kc and Ks
+
+    # 2*Kc according to Eq. (84) in Bayer et al., 2024
+    Kc = blocks[1][1] - blocks[2][2]
+
+    J_c_higher = Kc[-n_dof:, :].reshape((n_dof, n_dof, N_HBM), order="F")
+    # no need to multiply by 2 here, because Kc already contains the factor of 2
+
+    # 2*Ks according to Eq. (84) in Bayer et al., 2024
+    Ks = blocks[1][2] + blocks[2][1]
+
+    J_s_higher = Ks[-n_dof:, :].reshape((n_dof, n_dof, N_HBM), order="F")
+    # again no need to multiply by 2
+
+    return np.concatenate(
+        [J_0[:, :, np.newaxis], J_c_lower, J_c_higher, J_s_lower, J_s_higher],
+        axis=2,
     )
-
-    # block-wise transposition
-    Jcs_tr = np.transpose(J_coeffs[:, :, 1], (0, 2, 1))
-    Jcs_tr = np.reshape(Jcs_tr, shape=(2 * N_HBM * n_dof, n_dof, -1), order="F")
-
-    # Construct block-Hankel component matrices block by block
-    Kc = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-    Ks = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-
-    for K, J in zip([Kc, Ks], [Jc, Js]):
-        for i in range(N_HBM):
-            for j in range(N_HBM):
-                block = 0.5 * J[:, :, (i + 1) + (j + 1) - 1]
-                K[i * n_dof : (i + 1) * n_dof, j * n_dof : (j + 1) * n_dof] = block
-
-    # construct block-Toeplitz components block by block
-    Tc = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-    Ts = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-
-    for i in range(N_HBM):
-        for j in range(N_HBM):
-
-            if i == j:
-                block_c = J0
-                block_s = np.zeros((n_dof, n_dof))
-            else:
-                block_c = 0.5 * Jc[:, :, abs(i - j) - 1]
-                block_s = 0.5 * np.sign(j - i) * Js[:, :, abs(i - j) - 1]
-
-            Tc[i * n_dof : (i + 1) * n_dof, j * n_dof : (j + 1) * n_dof] = block_c
-            Ts[i * n_dof : (i + 1) * n_dof, j * n_dof : (j + 1) * n_dof] = block_s
-
-    Kc = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-    Ks = np.zeros((n_dof * N_HBM, n_dof * N_HBM))
-
-    # Derivative matrix
-    D = np.zeros((2 * N_HBM + 1, 2 * N_HBM + 1))
-    D[2 : (N_HBM + 1), (N_HBM + 1) :] = np.diag(np.arange(1, N_HBM + 1) * omega)
-    D[(N_HBM + 1) :, 2 : (N_HBM + 1)] = -np.diag(np.arange(1, N_HBM + 1) * omega)
-
-    D = np.kron(D, np.eye(n_dof))
-
-    # assemble the Hill matrix
-    # D is only nonzero in the mid-right and bottom-mid blocks,
-    # so '+=' is not necessary everywhere else
-    hill_matrix = -D
-    hill_matrix[:n_dof, :n_dof] = J0
-    hill_matrix[n_dof:, :n_dof] = Jcs_tr
-    hill_matrix[n_dof:, n_dof:] = 0.5 * Jcs
-
-    hill_matrix[n_dof : n_dof * (N_HBM + 1), n_dof : n_dof * (N_HBM + 1)] = Kc + Tc
-    hill_matrix[n_dof : n_dof * (N_HBM + 1), n_dof * (N_HBM + 1) :] += Ks - Ts
-    hill_matrix[n_dof * (N_HBM + 1) :, n_dof : n_dof * (N_HBM + 1)] += Ks + Ts
-    hill_matrix[n_dof * (N_HBM + 1) :, n_dof * (N_HBM + 1) :] = Tc - Kc

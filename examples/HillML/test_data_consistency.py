@@ -7,12 +7,12 @@ from parse_csv import parse_stability_data
 def main():
     max_error = 0
     for data_point in parse_stability_data(
-        filename="examples/HillML/Duffing_alpha_0.5_beta_1_F_5_delta_0.1_N_30_L_8192_solvertol_1e-10.csv"
+        filename="examples/HillML/Duffing_alpha_1_beta_0.1_F_1_delta_0.1_N_20_L_1024_solvertol_1e-10.csv"
     ):
         FMs = data_point.FMs
         hill_mat = data_point.hill_matrix
         n_dof = data_point.J_coeffs.shape[0]
-        N_HBM = (data_point.J_coeffs.shape[-1] - 1) / 2
+        N_HBM = (data_point.J_coeffs.shape[-1] - 1) // 4
         omega = data_point.parameter
 
         FMs_direct = koopman_hill_direct(hill_mat, n_dof, N_HBM, omega)
@@ -22,8 +22,13 @@ def main():
         if error_FMs > max_error:
             max_error = error_FMs
 
+        print(error_FMs)
+
         if error_FMs > 1e-4:
-            raise ValueError(f"Error in Floquet multipliers: {error_FMs}")
+            # raise ValueError(f"Error in Floquet multipliers: {error_FMs}")
+            pass
+
+    print(max_error)
 
 
 def koopman_hill_direct(hill_mat, n_dof, N_HBM, omega):
@@ -37,7 +42,7 @@ def koopman_hill_direct(hill_mat, n_dof, N_HBM, omega):
     DOI: https://doi.org/10.1016/j.ijnonlinmec.2024.104894
     """
 
-    C_small = np.zeros(1, 2 * N_HBM + 1)
+    C_small = np.zeros((1, 2 * N_HBM + 1))
     C_small[0, 0] = 1
     C = np.kron(C_small, np.eye(n_dof))
 

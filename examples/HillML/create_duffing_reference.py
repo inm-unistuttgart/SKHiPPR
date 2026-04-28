@@ -17,17 +17,24 @@ from generate_stability_data import generate_stability_data
 
 
 """ Parameters """
+# PARAMS = {
+#     "alpha": 0.5,
+#     "beta": 1,
+#     "F": 5,
+#     "delta": 0.1,
+# }
+
 PARAMS = {
-    "alpha": 0.5,
-    "beta": 1,
-    "F": 5,
+    "alpha": 1,
+    "beta": 0.5,
+    "F": 0.3,
     "delta": 0.1,
 }
-N_HBM = 30
-L_DFT = 2**13
+N_HBM = 26
+L_DFT = 2**8
 SOLVER_TOL = 1e-10
-NUM_STEPS = 5
-STEPSIZE = 0.1
+NUM_STEPS = 400
+STEPSIZE = 0.03
 OMEGA_START = 0.01
 
 
