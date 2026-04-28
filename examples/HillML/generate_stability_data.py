@@ -84,7 +84,7 @@ def init_csv(fourier: Fourier, writer, name_param: str):
 
     hill_labels = []
     for k in range(fourier.n_dof * (2 * fourier.N_HBM + 1)):
-        for j in range(fourier.n_dof):
+        for j in range(fourier.n_dof * (2 * fourier.N_HBM + 1)):
             hill_labels = hill_labels + [f" hill [{k}, {j}]"]
 
     header = params + FM_labels + X_labels + hill_labels

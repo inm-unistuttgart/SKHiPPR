@@ -32,7 +32,8 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
          * ``X``: Fourier coefficients of the periodic sol. as 1-D array, ordered [X_0, X_{c, 1}, ..., X_{c, N}, X_{s, 1}, ... X_{s, N}]
          * ``FMs``: Floquet multipliers as 1-D array,
          * ``FEs``: Floquet exponents as 1-D array,
-         * ``J_coeffs``: Fourier coefficients of the system matrix as n x n x (2*N+1) array, ordered like the Fourier coeff.s of the periodic sol. * * ``hill_matrix`` real-valued Hill matrix  as 2-D array . It is the Jacobian matrix of the HBM equations in the chosen ordering.
+         * ``J_coeffs``: Fourier coefficients of the system matrix as n x n x (4*N+1) array, ordered like the Fourier coeff.s of the periodic sol. but twice the number of harmonics.
+         * ``hill_matrix`` real-valued Hill matrix  as 2-D array . It is the Jacobian matrix of the HBM equations in the chosen ordering.
 
     Notes
     -----

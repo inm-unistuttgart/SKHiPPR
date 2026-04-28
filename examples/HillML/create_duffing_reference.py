@@ -12,7 +12,7 @@ from skhippr.visualization.cycles import (
     animate_floquet_multipliers,
 )
 from skhippr.visualization.continuation import plot_continuation
-
+from skhippr.visualization.data_export import save_animation, save_png
 from generate_stability_data import generate_stability_data
 
 
@@ -67,7 +67,7 @@ def main():
         )
     )
 
-    plot_continuation(
+    ax = plot_continuation(
         frc,
         plot_fun,
         xlabel="omega",
@@ -75,10 +75,15 @@ def main():
         title="Duffing reference solution",
     )
     anims = []
-    anims.append(animate_floquet_exponents(frc))
-    anims.append(animate_floquet_multipliers(frc))
+    anims.append(animate_floquet_exponents(frc)[1])
+    anims.append(animate_floquet_multipliers(frc)[1])
 
-    return anims
+    for anim, label in zip(anims, ["FE", "FM"]):
+        save_animation(anim, filename.replace(".csv", f"_{label}.gif"))
+
+    save_png(ax, filename.replace(".csv", "_FRC.png"))
+
+    return anims, ax
 
 
 def plot_fun(bp):
@@ -86,5 +91,6 @@ def plot_fun(bp):
 
 
 if __name__ == "__main__":
-    anims = main()
+    anims, ax = main()
+    save_png(ax)
     plt.show()
