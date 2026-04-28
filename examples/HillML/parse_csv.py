@@ -100,7 +100,7 @@ def parse_stability_data(filename, omega=None) -> Iterable[DataPoint]:
 
 
 def extract_J_coeffs(hill_mat, n_dof, N_HBM):
-    """Construct the real-valued block-Toeplitz Hill matrix.
+    """Extract the Fourier coefficients of the system matrix from the Hill matrix, up to (2*N_HBM+1)-th harmonic.
 
     Parameters
     ----------

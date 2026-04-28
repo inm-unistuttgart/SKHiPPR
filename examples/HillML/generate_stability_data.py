@@ -21,12 +21,16 @@ def generate_stability_data(
 ) -> Generator[BranchPoint, None, None]:
 
     if os.path.exists(filename):
-        raise RuntimeError(f"File {filename} already exists")
+        answer = input(f"File {filename} already exists. Overwrite? [y/N] ")
+        if answer.strip().lower() not in {"y", "yes"}:
+            raise RuntimeError(f"File {filename} already exists")
     with open(filename, "w", newline="") as file:
         writer = csv.writer(file, delimiter=";")
 
         init_csv(initial_system.equations[0].fourier, writer, continuation_parameter)
         arclength = 0
+        num_stable = 0
+        num_ustbl = 0
 
         for k, bp in enumerate(
             pseudo_arclength_continuator(
@@ -44,9 +48,18 @@ def generate_stability_data(
                 arclength += np.linalg.norm(X_prev - bp.X)
             X_prev = bp.X
 
+            if bp.stable:
+                num_stable += 1
+            else:
+                num_ustbl += 1
+
             to_csv(writer, bp.equations[0], continuation_parameter, arclength)
 
             yield bp
+
+        print(
+            f"ratio stable/unstable: {num_stable}/{num_ustbl} = {num_stable/(num_stable+num_ustbl):.2f}"
+        )
 
 
 def init_csv(fourier: Fourier, writer, name_param: str):

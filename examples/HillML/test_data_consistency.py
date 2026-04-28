@@ -3,16 +3,21 @@ from scipy.linalg import expm
 
 from parse_csv import parse_stability_data
 
+from skhippr.Fourier import Fourier
+
 
 def main():
     max_error = 0
+    max_error_J = 0
     for data_point in parse_stability_data(
-        filename="examples/HillML/Duffing_alpha_1_beta_0.1_F_1_delta_0.1_N_20_L_1024_solvertol_1e-10.csv"
+        filename="examples/HillML/Duffing_alpha_1_beta_0.5_F_0.3_delta_0.1_N_26_L_256_solvertol_1e-10.csv"
     ):
         FMs = data_point.FMs
         hill_mat = data_point.hill_matrix
         n_dof = data_point.J_coeffs.shape[0]
         N_HBM = (data_point.J_coeffs.shape[-1] - 1) // 4
+
+        fourier = Fourier(N_HBM=N_HBM, n_dof=n_dof, L_DFT=2**9)
         omega = data_point.parameter
 
         FMs_direct = koopman_hill_direct(hill_mat, n_dof, N_HBM, omega)
@@ -22,13 +27,36 @@ def main():
         if error_FMs > max_error:
             max_error = error_FMs
 
-        print(error_FMs)
-
         if error_FMs > 1e-4:
             # raise ValueError(f"Error in Floquet multipliers: {error_FMs}")
             pass
 
-    print(max_error)
+        J_coeffs = data_point.J_coeffs
+        J_time = fourier.matrix_inv_DFT(hill_mat)
+        J_coeffs_from_time = fourier.DFT(J_time)
+        # reshape and order J_coeffs
+
+        errors_Jc = [
+            np.linalg.norm(
+                J_coeffs[:, :, k] - J_coeffs_from_time[k * n_dof : (k + 1) * n_dof, :]
+            )
+            for k in range(N_HBM + 1)
+        ]
+        errors_Js = [
+            np.linalg.norm(
+                J_coeffs[:, :, 2 * N_HBM + 1 + k]
+                - J_coeffs_from_time[
+                    (N_HBM + 1 + k) * n_dof : (N_HBM + 1 + k + 1) * n_dof, :
+                ]
+            )
+            for k in range(N_HBM)
+        ]
+        print(
+            f"Error in J_coeffs: {max(errors_Jc)}, {max(errors_Js)}, error in FMs: {error_FMs}"
+        )
+        max_error_J = max(max_error_J, max(errors_Jc + errors_Js))
+
+    print(f"max error J: {max_error_J}, max error FMs: {max_error}")
 
 
 def koopman_hill_direct(hill_mat, n_dof, N_HBM, omega):
