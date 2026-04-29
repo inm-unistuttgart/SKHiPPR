@@ -10,14 +10,9 @@ from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 class FrictionDirect(AbstractEquation):
     """Substituted formulation of the friction oscillator using Harmonic Balance Method.
 
-    This class solves a reduced-order friction oscillator problem by treating the
-    Lagrange multiplier (Lambda) as the primary unknown and inferring the remaining
-    state variables through a direct substitution method. This approach is often used
-    to obtain warm-start solutions for more complex non-smooth friction problems.
-
-    The formulation uses Fourier series approximation to represent periodic solutions
-    and employs either a smooth (tanh-based) or non-smooth (proximal) constraint
-    formulation to model friction contact.
+    This class solves the tanh-smoothed or nonsmooth frictional oscillator HBM problem by treating the
+    odd Fourier coefficients of the friction force  (Lambda) as the primary unknowns and inferring the remaining
+    state variables through a direct substitution method.
 
     Parameters
     ----------
@@ -44,10 +39,10 @@ class FrictionDirect(AbstractEquation):
     omega : float, optional
         Excitation frequency. Default is 1.
     smoothing : float, optional
-        Smoothing parameter for constraint formulation. If np.inf, uses non-smooth
+        Smoothing parameter for tanh-smoothing. If np.inf, uses non-smooth
         proximal formulation. Default is np.inf.
     prox_parameter : float, optional
-        Proximal parameter for non-smooth constraint. Default is 1.
+        Prox parameter used for non-smooth constraint. Default is 1.
     initial_guess : ndarray, optional
         Initial guess for Lambda coefficients. If None, defaults to zeros.
 
@@ -56,7 +51,7 @@ class FrictionDirect(AbstractEquation):
     masses : ndarray
         Mass values for each DOF.
     n_dof : int
-        Number of degrees of freedom.
+        Number of degrees of freedom. (Caution: Really degrees of freedom (i.e. number of masses), not number of states!)
     g : float
         Gravitational/normal force parameter.
     mu : float
@@ -64,7 +59,7 @@ class FrictionDirect(AbstractEquation):
     forcing_amplitudes : ndarray
         Forcing amplitudes for each DOF.
     forcing_phases : ndarray
-        Forcing phase angles for each DOF.
+        Forcing phase angles for each DOF - k-th mass forced by sin(omega*t + phases[k])
     smoothing : float
         Current smoothing parameter.
     prox_parameter : float
@@ -80,15 +75,17 @@ class FrictionDirect(AbstractEquation):
     K : ndarray
         Stiffness matrix in Fourier coefficient space.
     Z : ndarray
-        Combined impedance matrix (M + C + K).
+        Combined impedance matrix (M,C,K) in freq. domain.
     F : ndarray
         Forcing vector in Fourier coefficient space.
     W : ndarray
-        Weighting matrix for Lagrange multiplier coupling.
+        generalized force direction in freq. domain
     lam_crit : float
         Critical friction force value.
     N_odd : int
         Number of odd harmonics in the approximation.
+    Lambda : ndarray
+        Full Lambda vector, internally reconstructed from odd harmonics.
     Lambda_odd : ndarray
         Odd harmonic coefficients of the Lagrange multiplier.
     """
@@ -110,13 +107,10 @@ class FrictionDirect(AbstractEquation):
         prox_parameter=1,
         initial_guess=None,
     ):
-        """Initialize a FrictionDirect solver instance.
-
-        Sets up the harmonic balance formulation of the friction oscillator,
-        constructing the system matrices in Fourier coefficient space and
-        initializing all necessary parameters for solving.
-        """
+        """Initialize a FrictionDirect solver instance."""
         super().__init__(stability_method=None)
+
+        # passed arguments
         self.masses = np.atleast_1d(masses)
         self.n_dof = len(self.masses)
         self.g = g
@@ -125,16 +119,20 @@ class FrictionDirect(AbstractEquation):
         self.forcing_phases = np.atleast_1d(forcing_phases)
         self.smoothing = smoothing
         self.prox_parameter = prox_parameter
-        self.fourier = Fourier(
-            N_HBM=N_HBM, L_DFT=L_DFT, n_dof=1, real_formulation=real_formulation
-        )
         self.omega = omega
 
+        # initial guess
         if initial_guess is None:
             initial_guess = np.zeros((2 * self.fourier.N_HBM + 1))
         self.Lambda = initial_guess
 
+        # Fourier object and derivative operator
+        self.fourier = Fourier(
+            N_HBM=N_HBM, L_DFT=L_DFT, n_dof=1, real_formulation=real_formulation
+        )
         D = self.fourier.derivative_matrix
+
+        # assemble system matrices in time domain
         M = np.diag(self.masses)
         stiffnesses = np.append(stiffnesses, 0)
         dampings = np.append(dampings, 0)
@@ -154,11 +152,14 @@ class FrictionDirect(AbstractEquation):
                 C[i, i - 1] = -dampings[i]
             if i < len(masses) - 1:
                 C[i, i + 1] = -dampings[i + 1]
+
+        # transform system matrices to Freq domain
         self.M = np.kron(self.omega**2 * D @ D, M)
         self.C = np.kron(self.omega * D, C)
         self.K = np.kron(np.eye(2 * self.fourier.N_HBM + 1), K)
         self.Z = self.M + self.C + self.K
 
+        # evaluate Fourier coeffs of forcing
         t = self.fourier.time_samples(self.omega)
         arguments = self.forcing_phases[:, np.newaxis] + self.omega * t[np.newaxis, :]
         forcing = self.forcing_amplitudes[:, np.newaxis] * np.sin(arguments)
@@ -181,7 +182,7 @@ class FrictionDirect(AbstractEquation):
 
         The Lambda property reconstructs the complete set of Fourier coefficients
         (constant, cosine, and sine terms) from the stored odd harmonic components.
-        Even harmonics are assumed to be zero in this reduced formulation.
+        Even harmonics are zero due to symmetry.
 
         Returns
         -------
@@ -217,16 +218,16 @@ class FrictionDirect(AbstractEquation):
         self.Lambda_odd = self.extract_odd(value)
 
     def extract_odd(self, Lambda):
-        """Extract odd harmonic coefficients from full Lambda vector.
+        """Extract odd harmonic coefficients from full Fourier coefficient vector.
 
-        Decomposes the full Lambda vector into odd and even harmonic components.
+        Decomposes the full FC vector into odd and even harmonic components.
         Even harmonics should theoretically be zero; any non-zero even harmonics
         are flagged but not enforced to be zero.
 
         Parameters
         ----------
         Lambda : ndarray
-            Full Lambda vector of length (2*N_HBM + 1).
+            Full Fourier coefficient vector of length (2*N_HBM + 1).
 
         Returns
         -------
@@ -244,20 +245,20 @@ class FrictionDirect(AbstractEquation):
         return Lambda_odd
 
     def FC_X(self, Lambda=None):
-        """Compute displacement response in Fourier coefficient space.
+        """Compute displacement Fourier coefficients.
 
         Solves the linear system Z @ X = W @ Lambda + F to obtain the displacement
-        Fourier coefficients for a given Lagrange multiplier.
+        Fourier coefficients for a given friction force.
 
         Parameters
         ----------
         Lambda : ndarray, optional
-            Lambda coefficients. If None, uses current self.Lambda.
+            Lambda coefficients. If None, uses self.Lambda.
 
         Returns
         -------
         ndarray
-            Displacement Fourier coefficients of shape (n_dof, 2*N_HBM + 1).
+            State (except Lambda) Fourier coefficients of shape (n_dof, 2*N_HBM + 1).
         """
         if Lambda is None:
             Lambda = self.Lambda
@@ -267,7 +268,7 @@ class FrictionDirect(AbstractEquation):
         return X
 
     def FC_dX(self, Lambda=None):
-        """Compute displacement and velocity in Fourier coefficient space.
+        """Compute FCs of full state vector (except lambda).
 
         Computes both displacement and velocity (time derivative) Fourier coefficients
         by solving for X and then computing its Fourier-space derivative.
