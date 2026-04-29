@@ -1,15 +1,40 @@
 import numpy as np
+import os
 
 
-def to_csv(hbms, N_max=None):
+def to_csv(hbms, filename: str, N_max=None):
 
+    # parse file name
+    if not filename.endswith(".csv"):
+        filename = f"{filename}.csv"
+
+    # guard against accidental overwriting of existing files
+    if os.path.exists(filename):
+        answer = (
+            input(f"File '{filename}' already exists. Overwrite? [y/N]: ")
+            .strip()
+            .lower()
+        )
+        if answer not in ("y", "yes"):
+            raise RuntimeError(f"File '{filename}' already exists.")
+
+    # prepare the iteration
     if N_max is None:
         N_max = max(hbm.fourier.N_HBM for hbm in hbms)
     n_dof = hbms[0].fourier.n_dof
-
+    fourier_max = hbms[0].fourier.__replace(N_HBM=N_max)
     header = csv_header(N_max, n_dof)
 
-    results_to_csv = np.zeros((len(hbms), n_dof * (2 * N_max + 1) + 2))
+    # Create and populate result table
+    results_table = np.zeros((len(hbms), n_dof * (2 * N_max + 1) + 2))
+
+    for k, hbm in enumerate(hbms):
+        results_table[k, 0] = hbm.fourier.N_HBM
+        results_table[k, 1] = np.linalg.norm(hbm.residual(update=False))
+        results_table[k, 2:] = fourier_max.resize_coefficients(hbm.X)
+
+    # store the result
+    np.savetxt(filename, results_table, delimiter=";", header=header)
 
 
 def csv_header(N_max, n_dof):
