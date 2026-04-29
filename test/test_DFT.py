@@ -207,17 +207,16 @@ def test_matrix_DFT_and_iDFT(fourier):
     assert np.allclose(A_samples_fft, A_samples, atol=1e-14, rtol=1e-14)
 
 
+@pytest.mark.parametrize("n_dof", [1, 2, 3])
 @pytest.mark.parametrize("real_formulation", [True, False])
 @pytest.mark.parametrize("input_shape", ["vector", "matrix"])
 @pytest.mark.parametrize("N_new", [2, 5, 8])
-def test_resize_coefficients(real_formulation, input_shape, N_new):
+def test_resize_coefficients(n_dof, real_formulation, input_shape, N_new):
     """Test resizing Fourier coefficients across different N_HBM values.
 
     The test compares ``resize_coefficients`` against the reference procedure
     of iDFT with the old Fourier object and then DFT with the new Fourier object.
     """
-
-    n_dof = 3
     N_old = 5
     L_DFT = 128
 
