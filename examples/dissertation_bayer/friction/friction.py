@@ -3,10 +3,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import tikzplotlib
-from scipy.linalg import (
-    lu_factor,
-    lu_solve,
-)
 
 
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
@@ -18,11 +14,11 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator
 
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillDAE,
-    drazin,
 )
 
 from friction_init import init_oscillator
 from friction_direct import solve_friction
+from drazin import compute_drazin_ratio
 
 
 def solve_hbm(
@@ -228,7 +224,7 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         e_stab[:, k] = np.abs(FMs - FM_ref)
 
         # Drazin inverse analysis
-        drazin_ratios[k] = analyze_drazin(hbm, ax_drazin, tol_drazin=tol_drazin)
+        drazin_ratios[k] = compute_drazin_ratio(hbm, ax_drazin, tol_drazin=tol_drazin)
 
     # np.savetxt(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\X_{description}.csv",
@@ -323,37 +319,6 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         "==============================================================================================="
     )
     return figs
-
-
-def analyze_drazin(
-    hbm: HBMEquationDAE,
-    ax=None,
-    tol_cond=1e6,
-    tol_drazin=1e-7,
-):
-
-    hill_matrix = hbm.hill_matrix(update=True)
-    mass_matrix = hbm.M()
-
-    # Copy&pasted from KoopmanHillDAE.generalized_exponential()
-    a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
-    success = False
-    for a in a_vals:
-        pencil = a * mass_matrix - hill_matrix
-        if np.linalg.cond(pencil) < tol_cond:
-            success = True
-            # print(f"N = {N}: a = {a}")
-            break
-    if not success:
-        raise RuntimeError(
-            f"Could not find suitable scaling factor 'a' for Drazin inverse with condition < {tol_cond}."
-        )
-
-    pencil_lu = lu_factor(a * mass_matrix - hill_matrix)
-    pencil_M = lu_solve(pencil_lu, mass_matrix)
-    _, ratio = drazin(pencil_M, tol_drazin, ax_plot=ax)
-    # print(f"Ratio of Drazin inverse: {ratio}")
-    return ratio
 
 
 def sort_FMs(FMs, significant_digits=2):

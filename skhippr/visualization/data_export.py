@@ -1,11 +1,11 @@
 """
-The :py:mod:`~skhippr.visualization.data_export` module provides standardized functions 
+The :py:mod:`~skhippr.visualization.data_export` module provides standardized functions
 for exporting data created with SKHiPPR visualization functions.
 File names must use valid characters accepted by the OS of the user. Eg. Windows users may not use characters such as ``<,>,",/'' etc..
 Since single ``\`` is an escape character in python strings, Windows users must use ``\\`` or `/`.
 
-It provides the functions :py:func:`~skhippr.visualization.data_export.save_png`, 
-:py:func:`~skhippr.visualization.data_export.save_pdf`, 
+It provides the functions :py:func:`~skhippr.visualization.data_export.save_png`,
+:py:func:`~skhippr.visualization.data_export.save_pdf`,
 :py:func:`~skhippr.visualization.data_export.save_tikz`, and
 :py:func:`~skhippr.visualization.data_export.save_animation`.
 """
@@ -19,8 +19,8 @@ def save_png(
     axes: Axes,
     filepath: str = None,
     dpi: int = 300,
-    bbox_inches: str = 'tight',
-    transparent: bool = False
+    bbox_inches: str = "tight",
+    transparent: bool = False,
 ):
     """
     Save the figure containing the given axes as a PNG image.
@@ -30,12 +30,12 @@ def save_png(
     axes : Axes
         The axes object to save.
     filepath : str, optional
-        Output file path. If None, a default filename based on the figure number 
+        Output file path. If None, a default filename based on the figure number
         is generated.
     dpi : int, default 300
         Resolution in dots per inch. Higher values yield better quality but larger files.
     bbox_inches : str, default 'tight'
-        How to calculate the bounding box for the saved figure. 'tight' removes 
+        How to calculate the bounding box for the saved figure. 'tight' removes
         excess whitespace.
     transparent : bool, optional
         Whether to save the figure with a transparent background.
@@ -44,32 +44,23 @@ def save_png(
     -------
     str
         The absolute filepath where the PNG was saved.
-    """ 
+    """
     fig = axes.figure
 
     if filepath is None:
         filepath = f"figure_{fig.number}.png"
 
-    if not filepath.lower().endswith('.png'):
-        filepath += '.png'
+    if not filepath.lower().endswith(".png"):
+        filepath += ".png"
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
-    fig.savefig(
-        filepath,
-        dpi=dpi,
-        bbox_inches=bbox_inches,
-        transparent=transparent
-    )
+    fig.savefig(filepath, dpi=dpi, bbox_inches=bbox_inches, transparent=transparent)
 
     return str(Path(filepath).resolve())
 
 
-def save_pdf(
-    axes: Axes,
-    filepath: str = None,
-    bbox_inches: str = 'tight'
-):
+def save_pdf(axes: Axes, filepath: str = None, bbox_inches: str = "tight"):
     """
     Save the figure containing the given axes as a PDF (vector format).
 
@@ -92,24 +83,17 @@ def save_pdf(
     if filepath is None:
         filepath = f"figure_{fig.number}.pdf"
 
-    if not filepath.lower().endswith('.pdf'):
-        filepath += '.pdf'
+    if not filepath.lower().endswith(".pdf"):
+        filepath += ".pdf"
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
-    fig.savefig(
-        filepath,
-        bbox_inches=bbox_inches
-    )
+    fig.savefig(filepath, bbox_inches=bbox_inches)
 
     return str(Path(filepath).resolve())
 
 
-def save_tikz(
-    axes: Axes,
-    filepath:str = None,
-    **tikzplotlib_kwargs
-):
+def save_tikz(axes: Axes, filepath: str = None, **tikzplotlib_kwargs):
     """
     Save the figure containing the given axes as TikZ/LaTeX code.
     Imports tikzplotlib locally, which means tikzplotlib must be installed.
@@ -121,7 +105,7 @@ def save_tikz(
     filepath : str, optional
         Output file path. If None, a default filename based on the figure number is generated.
     **tikzplotlib_kwargs
-        Additional keyword arguments passed to ``tikzplotlib.save()``. Common 
+        Additional keyword arguments passed to ``tikzplotlib.save()``. Common
         options include ``standalone``, ``encoding``, and ``axis limits``.
 
     Returns
@@ -136,15 +120,12 @@ def save_tikz(
     if filepath is None:
         filepath = f"figure_{fig.number}.tex"
 
-    if not filepath.lower().endswith('.tex'):
-        filepath += '.tex'
+    if not filepath.lower().endswith(".tex"):
+        filepath += ".tex"
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
-    defaults = {
-        'standalone': True,
-        'encoding': 'utf-8'
-    }
+    defaults = {"standalone": False, "encoding": "utf-8"}
     defaults.update(tikzplotlib_kwargs)
 
     tikzplotlib.save(filepath, **defaults)
@@ -193,7 +174,7 @@ def save_animation(
 
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
-    if ext == '.gif':
+    if ext == ".gif":
         writer_class = PillowWriter
     else:
         writer_class = FFMpegWriter
