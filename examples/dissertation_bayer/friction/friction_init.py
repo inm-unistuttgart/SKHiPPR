@@ -3,6 +3,10 @@ import numpy as np
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 
 
+def get_description(name_case, smoothing, N_max, L_DFT):
+    return f"{name_case}-Nmax{N_max}-smoothing{smoothing}-L{L_DFT}"
+
+
 def init_oscillator(name_case="A", smoothing=np.inf):
     """Caution: Oscillator is excited with sin, not cos! --> phase must be pi/2 + phase_cos."""
     masses = [1, 1]
