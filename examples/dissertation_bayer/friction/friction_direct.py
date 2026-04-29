@@ -19,9 +19,10 @@ def solve_friction(
 
     This function constructs a :class:`FrictionDirect` instance for the given
     oscillator and Fourier settings, then solves the reduced problem for the
-    Lagrange multiplier coefficients ``Lambda``. The function optionally
-    performs a warm-start by first solving a smoothed version of the problem
-    when a non-smooth (proximal) formulation is requested.
+    Lagrange multiplier coefficients ``Lambda``.
+
+    In the nonsmooth case, if no initial guess is provided, the function
+    performs a warm-start by first solving a smoothed version of the problem.
 
     Parameters
     ----------
@@ -109,78 +110,6 @@ def solve_friction(
     solver.solve_equation(equ, unknown="Lambda_odd")
 
     return equ
-
-
-def plot_solve_friction():
-    """Example plot routine: solve friction and plot time series.
-
-    This convenience function demonstrates the use of :func:`solve_friction`
-    by building example oscillators (smoothed and non-smooth), solving the
-    substituted problem and plotting the time-domain responses for the
-    solution. It is intended as an example / demo helper and does not return
-    values.
-
-    Notes
-    -----
-    The function uses fixed example parameters and the :mod:`matplotlib`
-    plotting backend to produce a 5-row subplot showing displacements,
-    velocities and the Lagrange multiplier time series.
-    """
-    # # Legrand
-    masses = [1, 1]
-    stiffnesses = [1, 1]
-    dampings = [0.02, 0.02]
-    forcings = [20, 0]
-    omega = 0.299
-    phases = [0.5 * np.pi, 0]
-    mu = 0.9
-    smoothing = 10
-    prox_parameter = 1
-    normal_force = 10.5
-    g = normal_force / masses[1]
-
-    # warm-start from smoothed oscillator
-    N_HBM = 40
-    L_DFT = 4096
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=5, real_formulation=True)
-
-    dae_smooth = SmoothedFrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        smoothing=smoothing,
-    )
-
-    dae_nonsmooth = FrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        prox_parameter=prox_parameter,
-    )
-
-    for smoothing, dae in zip(
-        (dae_smooth.smoothing, np.inf), [dae_smooth, dae_nonsmooth]
-    ):
-
-        equ = solve_friction(dae, fourier, omega, smoothing, initial_guess=None)
-
-        x_time = equ.x_time()
-        ts = equ.fourier.time_samples(equ.omega)
-        _, axs = plt.subplots(5, 1)
-        for k in range(5):
-            axs[k].plot(ts, x_time[k, :])
-            if k == 0:
-                axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
-            axs[k].set_xlabel("time")
-            axs[k].set_ylabel(f"x[{k}]")
 
 
 class FrictionDirect(AbstractEquation):
@@ -640,3 +569,74 @@ class FrictionDirect(AbstractEquation):
             Analytical derivative if available, otherwise None.
         """
         return super().closed_form_derivative(variable)
+
+
+def plot_solve_friction():
+    """Solve friction oscillator and plot the time series.
+
+    This demo function demonstrates the use of :func:`solve_friction`
+    by building example oscillators (smoothed and non-smooth), solving the
+    substituted problem and plotting the time-domain responses for the
+    solution.
+
+    Notes
+    -----
+    The function uses fixed example parameters and the :mod:`matplotlib`
+    plotting backend to produce a 5-row subplot showing displacements,
+    velocities and the Lagrange multiplier time series.
+    """
+    # # Legrand
+    masses = [1, 1]
+    stiffnesses = [1, 1]
+    dampings = [0.02, 0.02]
+    forcings = [20, 0]
+    omega = 0.299
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    smoothing = 10
+    prox_parameter = 1
+    normal_force = 10.5
+    g = normal_force / masses[1]
+
+    # warm-start from smoothed oscillator
+    N_HBM = 40
+    L_DFT = 4096
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=5, real_formulation=True)
+
+    dae_smooth = SmoothedFrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        smoothing=smoothing,
+    )
+
+    dae_nonsmooth = FrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        prox_parameter=prox_parameter,
+    )
+
+    for smoothing, dae in zip(
+        (dae_smooth.smoothing, np.inf), [dae_smooth, dae_nonsmooth]
+    ):
+
+        equ = solve_friction(dae, fourier, omega, smoothing, initial_guess=None)
+
+        x_time = equ.x_time()
+        ts = equ.fourier.time_samples(equ.omega)
+        _, axs = plt.subplots(5, 1)
+        for k in range(5):
+            axs[k].plot(ts, x_time[k, :])
+            if k == 0:
+                axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
+            axs[k].set_xlabel("time")
+            axs[k].set_ylabel(f"x[{k}]")
