@@ -1,6 +1,7 @@
 """FRC of frictional oscillator. See Schütz (2025), Bachelor's thesis, and Legrand2023."""
 
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 
 import numpy as np
 import matplotlib.pyplot as plt
