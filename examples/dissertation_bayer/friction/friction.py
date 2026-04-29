@@ -22,6 +22,7 @@ from skhippr.stability.KoopmanHillProjection import (
 )
 
 from friction_init import init_oscillator
+from friction_direct import solve_friction
 
 
 def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=None):
