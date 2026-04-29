@@ -97,6 +97,39 @@ def solve_hbm(
     return hbm
 
 
+def iterate_over_N(
+    name_case="C",
+    smoothing=np.inf,
+    Ns_HBM=(30, 40, 50),
+    L_DFT=2**14,
+    max_residual=1e-9,
+) -> Generator[HBMEquationDAE, Any, None]:
+
+    N_max = Ns_HBM[-1]
+    description = get_description(name_case, smoothing, N_max, L_DFT)
+
+    hbm_ref = None
+
+    for N_HBM in Ns_HBM:
+        plt.close("all")
+        print("--------------------------------------------------------------------")
+        print(f"solving N = {N_HBM} for {description}")
+        fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
+        hbm = solve_hbm(name_case, smoothing, fourier, hbm_ref)
+
+        # hbms.append(hbm_ref)
+        # figs = plot_and_save(hbms, Ns_HBM[: len(hbms)], description, tol_drazin)
+
+        if np.linalg.norm(hbm_ref.residual(update=False)) > max_residual:
+            print(
+                f"Residual of reference solution is above threshold: {np.linalg.norm(hbm_ref.residual(update=False))} > {max_residual}. Stopping iteration."
+            )
+            break
+        else:
+            hbm_ref = hbm
+            yield hbm
+
+
 def plot_and_export_hbm(name_case="C", smoothing=np.inf, N_HBM=160, L_DFT=2**14):
     fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
     hbm = solve_hbm(name_case, smoothing, fourier)
@@ -145,39 +178,6 @@ def plot_and_export_hbm(name_case="C", smoothing=np.inf, N_HBM=160, L_DFT=2**14)
     tikzplotlib.save(f"plots/forcelaw_{description}.tikz")
 
     np.savetxt(f"X_{description}.csv", hbm.X, delimiter=";")
-
-
-def iterate_over_N(
-    name_case="C",
-    smoothing=np.inf,
-    Ns_HBM=(30, 40, 50),
-    L_DFT=2**14,
-    max_residual=1e-9,
-) -> Generator[HBMEquationDAE, Any, None]:
-
-    N_max = Ns_HBM[-1]
-    description = get_description(name_case, smoothing, N_max, L_DFT)
-
-    hbm_ref = None
-
-    for N_HBM in Ns_HBM:
-        plt.close("all")
-        print("--------------------------------------------------------------------")
-        print(f"solving N = {N_HBM} for {description}")
-        fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
-        hbm = solve_hbm(name_case, smoothing, fourier, hbm_ref)
-
-        # hbms.append(hbm_ref)
-        # figs = plot_and_save(hbms, Ns_HBM[: len(hbms)], description, tol_drazin)
-
-        if np.linalg.norm(hbm_ref.residual(update=False)) > max_residual:
-            print(
-                f"Residual of reference solution is above threshold: {np.linalg.norm(hbm_ref.residual(update=False))} > {max_residual}. Stopping iteration."
-            )
-            break
-        else:
-            hbm_ref = hbm
-            yield hbm
 
 
 def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
