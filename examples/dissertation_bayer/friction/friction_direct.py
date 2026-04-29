@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from skhippr.solvers.newton import ScipyRootSolver, NewtonSolver
-from skhippr.equations import AbstractEquation
+from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.Fourier import Fourier
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
 
@@ -226,16 +226,16 @@ class FrictionDirect(AbstractEquation):
         self.prox_parameter = prox_parameter
         self.omega = omega
 
-        # initial guess
-        if initial_guess is None:
-            initial_guess = np.zeros((2 * self.fourier.N_HBM + 1))
-        self.Lambda = initial_guess
-
         # Fourier object and derivative operator
         self.fourier = Fourier(
             N_HBM=N_HBM, L_DFT=L_DFT, n_dof=1, real_formulation=real_formulation
         )
         D = self.fourier.derivative_matrix
+
+        # initial guess
+        if initial_guess is None:
+            initial_guess = np.zeros((2 * self.fourier.N_HBM + 1))
+        self.Lambda = initial_guess
 
         # assemble system matrices in time domain
         M = np.diag(self.masses)
