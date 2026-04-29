@@ -26,6 +26,7 @@ from skhippr.stability.KoopmanHillProjection import (
 
 
 def init_oscillator(name_case="A", smoothing=np.inf):
+    """Caution: Oscillator is excited with sin, not cos! --> phase must be pi/2 + phase_cos."""
     masses = [1, 1]
     stiffnesses = [1, 1]
     dampings = [0.02, 0.02]
@@ -239,7 +240,12 @@ def plot_and_export_hbm(name_case="C", smoothing=np.inf, N_HBM=160, L_DFT=2**14)
 
 
 def convergence_study_N(
-    name_case="C", smoothing=np.inf, Ns_HBM=(30, 40, 50), L_DFT=2**14, tol_drazin=1e-7, max_residual=1e-9
+    name_case="C",
+    smoothing=np.inf,
+    Ns_HBM=(30, 40, 50),
+    L_DFT=2**14,
+    tol_drazin=1e-7,
+    max_residual=1e-9,
 ):
 
     N_max = Ns_HBM[-1]
@@ -258,13 +264,11 @@ def convergence_study_N(
         hbm_ref = solve_hbm(name_case, smoothing, fourier, hbm_ref)
 
         hbms.append(hbm_ref)
-        figs = plot_and_save(hbms, Ns_HBM[:len(hbms)], description, tol_drazin)
+        figs = plot_and_save(hbms, Ns_HBM[: len(hbms)], description, tol_drazin)
 
         if np.linalg.norm(hbm_ref.residual(update=False)) > max_residual:
             hbm_ref = hbms[-1]
             break
-
-        
 
 
 def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
@@ -336,19 +340,15 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     # tikzplotlib.save(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz"
     # )
-    tikzplotlib.save(
-        f"drazin_{description}.tikz"
-    )
+    tikzplotlib.save(f"drazin_{description}.tikz")
 
     fig, ax_drazin_ratio = plt.subplots(1, 1)
     ax_drazin_ratio.plot(Ns_HBM, drazin_ratios, "-x")
     ax_drazin_ratio.axhline(4 / 5, linestyle="--")
     ax_drazin_ratio.axhline(3 / 5, linestyle="--")
     ax_drazin_ratio.set_title(f"Drazin ratio {description}")
-    # 
-    tikzplotlib.save(
-        f"drazin_ratio_{description}.tikz"
-    )
+    #
+    tikzplotlib.save(f"drazin_ratio_{description}.tikz")
     figs.append(fig)
 
     # Plot Floquet multipliers
@@ -364,9 +364,7 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     # tikzplotlib.save(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz"
     # )
-    tikzplotlib.save(
-        f"FMs_conv_{description}.tikz"
-    )
+    tikzplotlib.save(f"FMs_conv_{description}.tikz")
     figs.append(fig)
 
     # Plot HBM convergence in time
@@ -380,9 +378,7 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     # tikzplotlib.save(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz"
     # )
-    tikzplotlib.save(
-        f"HBM_error_{description}.tikz"
-    )
+    tikzplotlib.save(f"HBM_error_{description}.tikz")
     figs.append(fig)
 
     # Plot HBM convergence in freq domain
@@ -396,9 +392,7 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     # tikzplotlib.save(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz"
     # )
-    tikzplotlib.save(
-        f"HBM_FC_error_{description}.tikz"
-    )
+    tikzplotlib.save(f"HBM_FC_error_{description}.tikz")
     figs.append(fig)
 
     # Plot FM convergence
@@ -412,9 +406,7 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     # tikzplotlib.save(
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz"
     # )
-    tikzplotlib.save(
-        f"FMs_error_{description}.tikz"
-    )
+    tikzplotlib.save(f"FMs_error_{description}.tikz")
     figs.append(fig)
 
     print(
@@ -455,10 +447,12 @@ def analyze_drazin(
 
 
 def sort_FMs(FMs, significant_digits=2):
-    
+
     FMs_rounded = np.zeros_like(FMs)
     for k, FM in enumerate(FMs):
-            FMs_rounded[k] = round_to_significant_digits(FM, significant_digits=significant_digits)
+        FMs_rounded[k] = round_to_significant_digits(
+            FM, significant_digits=significant_digits
+        )
     idx_sort = np.lexsort((np.angle(FMs_rounded), np.abs(FMs_rounded)))
     FMs = FMs[idx_sort]
     FMs_rounded = FMs_rounded[idx_sort]
@@ -619,6 +613,10 @@ def plot_frc():
 def solve_friction(
     oscillator, fourier, omega, smoothing, solver=None, initial_guess=None
 ):
+    """Solves the substituted formulation of the friction oscillator, i.e.,
+    solves for Lambda and infers the rest.
+    This is used to get a warm start for the actual HBM problem,
+    which is hard to solve directly for the non-smooth case."""
 
     if solver is None:
         solver = ScipyRootSolver(
@@ -923,17 +921,23 @@ if __name__ == "__main__":
     N_max = 1200
     Ns = [
         int(N)
-        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max),60)))
+        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 60)))
     ]
     # Ns = [80]
     # Ns = np.arange(1, N_max + 1)
     print(Ns)
     # Ns = Ns + [N_max + k for k in range(1, 11)]
-    for name_case in ['B']:
-        for smoothing in [np.inf]: # np.inf case B fehlt noch
+    for name_case in ["B"]:
+        for smoothing in [np.inf]:  # np.inf case B fehlt noch
             # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=80, L_DFT=4096)
             try:
-                convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=2**13, smoothing=smoothing, max_residual=1e-5)
+                convergence_study_N(
+                    name_case,
+                    Ns_HBM=Ns,
+                    L_DFT=2**13,
+                    smoothing=smoothing,
+                    max_residual=1e-5,
+                )
                 plt.close("all")
             except MemoryError:
                 plt.close("all")
