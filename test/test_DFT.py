@@ -5,19 +5,17 @@ from skhippr.Fourier import Fourier
 
 @pytest.mark.parametrize("real_formulation", [True, False])
 @pytest.mark.parametrize("input_shape", ["vector", "matrix"])
-@pytest.mark.parametrize("N_new", [2, 4, 6])
+@pytest.mark.parametrize("N_new", [2, 5, 8])
 def test_resize_coefficients(real_formulation, input_shape, N_new):
-    """Test resizing Fourier coefficients across harmonic truncations.
+    """Test resizing Fourier coefficients across different N_HBM values.
 
     The test compares ``resize_coefficients`` against the reference procedure
-    of reconstructing a time signal with the old Fourier object and then
-    recomputing the coefficients with the new Fourier object.
+    of iDFT with the old Fourier object and then DFT with the new Fourier object.
     """
 
-    n_dof = 2
-    N_old = 4
+    n_dof = 3
+    N_old = 5
     L_DFT = 128
-    omega = 1.37
 
     fourier_old = Fourier(
         N_HBM=N_old,
@@ -44,12 +42,15 @@ def test_resize_coefficients(real_formulation, input_shape, N_new):
         X_old = np.reshape(X_old, (n_dof, coeff_count_old), order="F")
 
     X_resized = fourier_new.resize_coefficients(X_old)
-    x_time = fourier_old.inv_DFT(X_old)
+    X_old_vector = (
+        X_old if input_shape == "vector" else np.reshape(X_old, -1, order="F")
+    )
+    x_time = fourier_old.inv_DFT(X_old_vector)
 
-    if input_shape == "vector":
-        X_expected = fourier_new.DFT(x_time)
-    else:
-        X_expected = np.reshape(fourier_new.DFT(x_time), (n_dof, -1), order="F")
+    X_expected = fourier_new.DFT(x_time)
+
+    if input_shape == "matrix":
+        X_expected = np.reshape(X_expected, (n_dof, -1), order="F")
 
     assert X_resized.shape == X_expected.shape
     assert np.allclose(X_resized, X_expected, atol=1e-14, rtol=1e-14)
