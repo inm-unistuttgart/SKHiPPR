@@ -18,7 +18,7 @@ from skhippr.stability.KoopmanHillProjection import (
 
 from friction_init import init_oscillator
 from friction_direct import solve_friction
-from drazin import compute_drazin_ratio
+from drazin import plot_drazin_and_ratio
 
 
 def solve_hbm(
@@ -202,9 +202,22 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     e_stab = np.zeros((5, len(Ns_HBM)))
     FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
 
-    drazin_ratios = np.zeros(len(Ns_HBM))
+    # Drazin and Drazin ratio plots
     fig, ax_drazin = plt.subplots(1, 1)
     figs.append(fig)
+    fig, ax_drazin_ratio = plt.subplots(1, 1)
+    figs.append(fig)
+
+    plot_drazin_and_ratio(
+        hbms=hbms,
+        tol_drazin=tol_drazin,
+        description=description,
+        ratio_limits=[3 / 5, 4 / 5],
+        ax_drazin=ax_drazin,
+        ax_ratio=ax_drazin_ratio,
+        path_drazin=None,
+        path_ratio=f"plots/",
+    )
 
     for k, hbm in enumerate(hbms):
 
@@ -247,15 +260,6 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz"
     # )
     tikzplotlib.save(f"drazin_{description}.tikz")
-
-    fig, ax_drazin_ratio = plt.subplots(1, 1)
-    ax_drazin_ratio.plot(Ns_HBM, drazin_ratios, "-x")
-    ax_drazin_ratio.axhline(4 / 5, linestyle="--")
-    ax_drazin_ratio.axhline(3 / 5, linestyle="--")
-    ax_drazin_ratio.set_title(f"Drazin ratio {description}")
-    #
-    tikzplotlib.save(f"drazin_ratio_{description}.tikz")
-    figs.append(fig)
 
     # Plot Floquet multipliers
     fig, ax = plt.subplots(1, 1)
