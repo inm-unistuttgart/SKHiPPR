@@ -23,6 +23,7 @@ from friction_init import init_oscillator, get_description
 from friction_direct import solve_friction
 from drazin import plot_drazin_and_ratio
 from plot_friction import plot_hbm_result
+from export_friction import to_csv
 
 
 def solve_hbm(
@@ -139,29 +140,14 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
 
     FM_ref = sort_FMs(hbm_ref.eigenvalues)
 
-    results_to_csv = np.zeros((len(Ns_HBM), hbm_ref.X.shape[0] + 2))
-    header_components = lambda my_text: [
-        f"X_{my_text}_{l}" for l in range(hbm_ref.fourier.n_dof)
-    ]
-    header_const = header_components("const")
-    header_cos = []
-    header_sin = []
-    for k in range(1, hbm_ref.fourier.N_HBM + 1):
-        header_cos += header_components(f"cos{k}")
-        header_sin += header_components(f"sin{k}")
-    header_csv = ["N_HBM", "HBM residual"] + header_const + header_cos + header_sin
-    header_csv = ";".join(header_csv)
-
     e_hbm = np.zeros((5, len(Ns_HBM)))
     e_hbm_fourier = np.zeros((5, len(Ns_HBM)))
     e_stab = np.zeros((5, len(Ns_HBM)))
     FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
 
     # Drazin and Drazin ratio plots
-    fig, ax_drazin = plt.subplots(1, 1)
-    figs.append(fig)
-    fig, ax_drazin_ratio = plt.subplots(1, 1)
-    figs.append(fig)
+    _, ax_drazin = plt.subplots(1, 1)
+    _, ax_drazin_ratio = plt.subplots(1, 1)
 
     plot_drazin_and_ratio(
         hbms=hbms,
@@ -170,9 +156,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         ratio_limits=[3 / 5, 4 / 5],
         ax_drazin=ax_drazin,
         ax_ratio=ax_drazin_ratio,
-        path_drazin=None,
+        path_drazin="plots/",
         path_ratio=f"plots/",
     )
+
+    # save the HBM results to a file
 
     for k, hbm in enumerate(hbms):
 
@@ -180,10 +168,6 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         X_comp = hbm_ref.fourier.DFT(x_time)
         X_comp[np.abs(X_comp) <= 1e-17] = 0
         e_comp = np.reshape(hbm_ref.X - X_comp, (5, -1), order="F")
-
-        results_to_csv[k, 0] = hbm.fourier.N_HBM
-        results_to_csv[k, 1] = np.linalg.norm(hbm.residual(update=False))
-        results_to_csv[k, 2:] = X_comp
 
         e_hbm[:, k] = np.max(np.abs(x_time - hbm_ref.x_time()), axis=1)
         e_hbm_fourier[:, k] = np.linalg.norm(e_comp, axis=1)
