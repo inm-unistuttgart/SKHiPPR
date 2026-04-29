@@ -640,3 +640,8 @@ def plot_solve_friction():
                 axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
             axs[k].set_xlabel("time")
             axs[k].set_ylabel(f"x[{k}]")
+
+
+if __name__ == "__main__":
+    plot_solve_friction()
+    plt.show()
