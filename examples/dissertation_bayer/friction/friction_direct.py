@@ -572,7 +572,7 @@ class FrictionDirect(AbstractEquation):
         return super().closed_form_derivative(variable)
 
 
-def plot_solve_friction(case_name="B", N_HBM=40, L_DFT=4096, smoothing=10):
+def plot_solve_friction(name_case="B", N_HBM=40, L_DFT=4096, smoothing=10):
     """Solve friction oscillator and plot the time series.
 
     This demo function demonstrates the use of :func:`solve_friction`
@@ -587,7 +587,7 @@ def plot_solve_friction(case_name="B", N_HBM=40, L_DFT=4096, smoothing=10):
     velocities and the Lagrange multiplier time series.
     """
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=1, real_formulation=True)
-    dae = init_oscillator(name_case=case_name, smoothing=smoothing)
+    dae = init_oscillator(name_case=name_case, smoothing=smoothing)
 
     equ = solve_friction(dae, fourier, dae.omega, smoothing, initial_guess=None)
 
@@ -598,13 +598,13 @@ def plot_solve_friction(case_name="B", N_HBM=40, L_DFT=4096, smoothing=10):
         axs[k].plot(ts, x_time[k, :])
         if k == 0:
             axs[k].set_title(
-                f"Case {case_name} directly solved friction oscillator -- smoothing = {smoothing}"
+                f"Case {name_case} directly solved friction oscillator -- smoothing = {smoothing}"
             )
         axs[k].set_xlabel("time")
         axs[k].set_ylabel(f"x[{k}]")
 
 
 if __name__ == "__main__":
-    plot_solve_friction(case_name="B", N_HBM=40, L_DFT=4096, smoothing=10)
-    plot_solve_friction(case_name="B", N_HBM=40, L_DFT=4096, smoothing=np.inf)
+    plot_solve_friction(name_case="B", N_HBM=40, L_DFT=4096, smoothing=10)
+    plot_solve_friction(name_case="B", N_HBM=40, L_DFT=4096, smoothing=np.inf)
     plt.show()
