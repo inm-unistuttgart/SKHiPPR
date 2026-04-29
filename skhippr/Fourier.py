@@ -599,7 +599,8 @@ class Fourier:
 
         The method accepts either a flattened coefficient vector of length
         ``n_dof * (2 * N_other + 1)`` or a 2-D array with ``n_dof`` rows and
-        ``2 * N_other + 1`` columns. The coefficient ordering is preserved in the
+        ``2 * N_other + 1`` columns and correspondingly returns either a flattened or a 2-D result.
+        The coefficient ordering is preserved in the
         current formulation:
 
         * real formulation: ``[const, cos_1, ..., cos_N, sin_1, ..., sin_N]``
@@ -645,7 +646,7 @@ class Fourier:
         n_coeffs = X.shape[1]
         if n_coeffs % 2 != 1:
             raise ValueError(
-                f"Expected an odd number of coefficients per DOF, got {n_coeffs}."
+                f"Expected an odd number of coefficients (2*N_HBM_old + 1) per DOF, got {n_coeffs}."
             )
 
         N_other = (n_coeffs - 1) // 2
@@ -666,11 +667,11 @@ class Fourier:
             ]
         else:
             # Complex formulation stores frequencies symmetrically around zero.
-            start_src = N_other - n_keep
-            end_src = N_other + n_keep + 1
-            start_dst = self.N_HBM - n_keep
-            end_dst = self.N_HBM + n_keep + 1
-            X_resized[:, start_dst:end_dst] = X[:, start_src:end_src]
+            start_old = N_other - n_keep
+            end_old = N_other + n_keep + 1
+            start_new = self.N_HBM - n_keep
+            end_new = self.N_HBM + n_keep + 1
+            X_resized[:, start_new:end_new] = X[:, start_old:end_old]
 
         if input_is_vector:
             return X_resized.reshape(-1, order="F")
