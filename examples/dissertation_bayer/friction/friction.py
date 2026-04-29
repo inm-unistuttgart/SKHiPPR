@@ -25,7 +25,13 @@ from friction_init import init_oscillator
 from friction_direct import solve_friction
 
 
-def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=None):
+def solve_hbm(
+    name_case,
+    smoothing=np.inf,
+    fourier: Fourier = None,
+    hbm_ref: HBMEquationDAE = None,
+    solver=None,
+):
     if fourier is None:
         if hbm_ref is None:
             raise ValueError("fourier and hbm_ref may not be both None!")
@@ -50,25 +56,9 @@ def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=No
     if hbm_ref is None:
         initial_guess_lambda = None
     else:
-        X_old = hbm_ref.X
-        X_old = np.reshape(X_old, (dae.n_dof, -1), order="F")
-        Lambda_old = X_old[-1, :]
-
-        initial_guess_lambda = np.zeros(2 * fourier.N_HBM + 1)
-
-        idx_cos_end_old = min(hbm_ref.fourier.N_HBM + 1, fourier.N_HBM + 1)
-        idx_cos_end_new = idx_cos_end_old
-
-        idx_sin_start_old = hbm_ref.fourier.N_HBM + 1
-        idx_sin_end_old = idx_cos_end_old + hbm_ref.fourier.N_HBM
-
-        idx_sin_start_new = fourier.N_HBM + 1
-        idx_sin_end_new = idx_cos_end_old + fourier.N_HBM
-
-        initial_guess_lambda[:idx_cos_end_new] = Lambda_old[:idx_cos_end_old]
-        initial_guess_lambda[idx_sin_start_new:idx_sin_end_new] = Lambda_old[
-            idx_sin_start_old:idx_sin_end_old
-        ]
+        X = fourier.resize_coefficients(hbm_ref.X)
+        X = np.reshape(X, (fourier.n_dof, -1), order="F")
+        initial_guess_lambda = X[4, :]
 
     # Solve with substituted formulation
     equ_lambda = solve_friction(
@@ -83,7 +73,7 @@ def solve_hbm(name_case, smoothing=np.inf, fourier=None, hbm_ref=None, solver=No
     X, dX = equ_lambda.FC_dX()
     initial_guess = np.real(np.vstack(((X, dX, equ_lambda.Lambda))).flatten(order="F"))
 
-    # Solve actual problem
+    # Solve actual problem with substituted warm-start
     hbm = HBMEquationDAE(
         dae,
         dae.omega,
