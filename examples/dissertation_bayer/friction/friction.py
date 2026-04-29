@@ -22,6 +22,12 @@ from friction_init import init_oscillator, get_description
 from friction_direct import solve_friction
 from drazin import plot_drazin_and_ratio
 
+from skhippr.visualization.cycles import (
+    plot_period,
+    plot_phase,
+    plot_floquet_multipliers,
+)
+
 
 def solve_hbm(
     name_case,
@@ -130,54 +136,38 @@ def iterate_over_N(
             yield hbm
 
 
-def plot_and_export_hbm(name_case="C", smoothing=np.inf, N_HBM=160, L_DFT=2**14):
-    fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
-    hbm = solve_hbm(name_case, smoothing, fourier)
-    x_time = hbm.x_time()
-    ts = hbm.fourier.time_samples(hbm.omega)
-    residual = np.linalg.norm(hbm.residual(update=True))
-
-    description = f"case-{name_case}-N-{N_HBM}-smoothing-{smoothing}"
-
-    # Plot position
-    _, ax = plt.subplots(1, 1)
-    ax.plot(ts, x_time[0, :], label="x0")
-    ax.plot(ts, x_time[1, :], label="x1")
-    ax.set_xlabel("t")
-    ax.set_ylabel("position")
-    ax.set_title(f"position {description} r = {residual}")
+def plot_and_save_solution(hbm, description, idx=(0, 1), path_export=None):
+    ax = None
+    for i in idx:
+        ax = plot_phase(hbm, idx=i, ax=ax, label=f"x_{i}")
+    ax.set_title(f"{description}")
     ax.legend()
-    tikzplotlib.save(f"plots/position_{description}.tikz")
+    if path_export is not None:
+        tikzplotlib.save(f"{path_export}{description}.tikz")
 
-    # Plot velocity
-    _, ax = plt.subplots(1, 1)
-    ax.plot(ts, x_time[2, :], label="x2")
-    ax.plot(ts, x_time[3, :], label="x3")
-    ax.set_xlabel("t")
-    ax.set_ylabel("velocity")
-    ax.set_title(f"velocity {description} r = {residual}")
-    ax.legend()
-    tikzplotlib.save(f"plots/velocity_{description}.tikz")
 
-    # Plot tangential force
-    _, ax = plt.subplots(1, 1)
-    ax.plot(ts, x_time[4, :], label="lambda")
-    ax.set_xlabel("t")
-    ax.set_ylabel("lambda")
-    ax.set_title(f"lambda {description} r = {residual}")
-    ax.legend()
-    tikzplotlib.save(f"plots/lambda_{description}.tikz")
+def plot_hbm_result(hbm, description, path="plots/"):
+    path = "plots/"
+    r = np.linalg.norm(hbm.residual(update=False))
 
-    # Plot force law
-    _, ax = plt.subplots(1, 1)
-    ax.plot(x_time[3, :], x_time[4, :], label="lambda")
-    ax.set_xlabel("x3")
-    ax.set_ylabel("lambda")
-    ax.set_title(f"force law {description} r = {residual}")
-    ax.legend()
-    tikzplotlib.save(f"plots/forcelaw_{description}.tikz")
+    # position, velocity, lambda in three plots
+    ax_pos = plot_and_save_solution(hbm, f"position_{description}", (0, 1), path)
+    ax_vel = plot_and_save_solution(hbm, f"velocity_{description}", (0, 1), path)
+    ax_force = plot_and_save_solution(hbm, f"lambda_{description}", (0, 1), path)
 
-    np.savetxt(f"X_{description}.csv", hbm.X, delimiter=";")
+    # force law
+    ax_forcelaw = plot_phase(hbm, idx=(3, 4))
+    ax_forcelaw.set_title(f"force_law_{description}")
+
+    ax_forcelaw.set_xlabel("x3")
+    ax_forcelaw.set_ylabel("lambda")
+    ax_forcelaw.set_title(f"force law {description} r = {r}")
+    ax_forcelaw.legend()
+    tikzplotlib.save(f"{path}forcelaw_{description}.tikz")
+
+    return ax_pos, ax_vel, ax_force, ax_forcelaw
+
+    # np.savetxt(f"X_{description}.csv", hbm.X, delimiter=";")
 
 
 def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
