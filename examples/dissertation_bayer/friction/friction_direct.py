@@ -1,10 +1,186 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from skhippr.solvers.newton import ScipyRootSolver
+from skhippr.solvers.newton import ScipyRootSolver, NewtonSolver
 from skhippr.equations import AbstractEquation
 from skhippr.Fourier import Fourier
 from skhippr.odes.daes import FrictionOscillator, SmoothedFrictionOscillator
+
+
+def solve_friction(
+    oscillator: FrictionOscillator,
+    fourier: Fourier,
+    omega,
+    smoothing,
+    solver: NewtonSolver = None,
+    initial_guess=None,
+):
+    """Solve substituted friction problem and return a FrictionDirect object.
+
+    This function constructs a :class:`FrictionDirect` instance for the given
+    oscillator and Fourier settings, then solves the reduced problem for the
+    Lagrange multiplier coefficients ``Lambda``. The function optionally
+    performs a warm-start by first solving a smoothed version of the problem
+    when a non-smooth (proximal) formulation is requested.
+
+    Parameters
+    ----------
+    oscillator : FrictionOscillator or SmoothedFrictionOscillator
+        Oscillator object providing mechanical parameters (must expose
+        attributes like ``stiffnesses``, ``dampings``, ``masses``, ``mu``,
+        ``forcing_amplitudes``, ``forcing_phases``, and optionally
+        ``prox_parameter``).
+    fourier : Fourier
+        Fourier helper object used for HBM/DFT settings (``N_HBM``,
+        ``L_DFT``, ``real_formulation``).
+    omega : float
+        Excitation frequency.
+    smoothing : float
+        Smoothing parameter; if ``np.inf`` a non-smooth proximal constraint
+        is used (requires ``prox_parameter`` on the oscillator), otherwise a
+        smooth ``tanh``-based constraint is used.
+    solver : NewtonSolver, optional
+        Solver instance used to solve the reduced system. If
+        ``None``, a default :class:`ScipyRootSolver` is constructed.
+    initial_guess : ndarray or None, optional
+        Initial guess for the full ``Lambda`` coefficients. If ``None``, a
+        zero vector of appropriate length is used.
+
+    Returns
+    -------
+    FrictionDirect
+        A solved :class:`FrictionDirect` instance containing the converged
+        ``Lambda_odd`` coefficients and allowing retrieval of inferred states
+        (via methods such as :meth:`x_time`).
+    """
+
+    if solver is None:
+        solver = ScipyRootSolver(
+            tolerance=1e-8,
+            max_iterations=1000000,
+            verbose=True,
+            use_fprime=False,
+            method="lm",
+        )
+
+    try:
+        prox_parameter = oscillator.prox_parameter
+    except AttributeError:
+        if smoothing == np.inf:
+            raise ValueError("Must specify prox_parameter for non-smooth oscillator.")
+        prox_parameter = 0
+
+    g = oscillator.lam_crit / (oscillator.mu * oscillator.masses[-1])
+
+    warmstart = smoothing == np.inf and initial_guess is None
+    if initial_guess is None:
+        initial_guess = np.zeros(2 * fourier.N_HBM + 1)
+
+    equ = FrictionDirect(
+        N_HBM=fourier.N_HBM,
+        L_DFT=fourier.L_DFT,
+        real_formulation=fourier.real_formulation,
+        stiffnesses=oscillator.stiffnesses,
+        dampings=oscillator.dampings,
+        masses=oscillator.masses,
+        g=g,
+        mu=oscillator.mu,
+        forcing_amplitudes=oscillator.forcing_amplitudes,
+        forcing_phases=oscillator.forcing_phases,
+        omega=omega,
+        smoothing=smoothing,
+        prox_parameter=prox_parameter,
+        initial_guess=initial_guess,
+    )
+
+    if warmstart:  # warm-start with smoothed solution
+        if solver.verbose:
+            print("Solving smoothed lambda problem for warm-start...")
+
+        equ.smoothing = 40
+        solver.solve_equation(equ, unknown="Lambda_odd")
+        equ.smoothing = smoothing
+
+    if solver.verbose:
+        print(
+            f"Solving lambda problem (smoothing = {equ.smoothing}). Residual before: {np.linalg.norm(equ.residual(update=True))}..."
+        )
+
+    solver.solve_equation(equ, unknown="Lambda_odd")
+
+    return equ
+
+
+def plot_solve_friction():
+    """Example plot routine: solve friction and plot time series.
+
+    This convenience function demonstrates the use of :func:`solve_friction`
+    by building example oscillators (smoothed and non-smooth), solving the
+    substituted problem and plotting the time-domain responses for the
+    solution. It is intended as an example / demo helper and does not return
+    values.
+
+    Notes
+    -----
+    The function uses fixed example parameters and the :mod:`matplotlib`
+    plotting backend to produce a 5-row subplot showing displacements,
+    velocities and the Lagrange multiplier time series.
+    """
+    # # Legrand
+    masses = [1, 1]
+    stiffnesses = [1, 1]
+    dampings = [0.02, 0.02]
+    forcings = [20, 0]
+    omega = 0.299
+    phases = [0.5 * np.pi, 0]
+    mu = 0.9
+    smoothing = 10
+    prox_parameter = 1
+    normal_force = 10.5
+    g = normal_force / masses[1]
+
+    # warm-start from smoothed oscillator
+    N_HBM = 40
+    L_DFT = 4096
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=5, real_formulation=True)
+
+    dae_smooth = SmoothedFrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        smoothing=smoothing,
+    )
+
+    dae_nonsmooth = FrictionOscillator(
+        stiffnesses=stiffnesses,
+        dampings=dampings,
+        masses=masses,
+        g=g,
+        mu=mu,
+        forcing_amplitudes=forcings,
+        forcing_phases=phases,
+        prox_parameter=prox_parameter,
+    )
+
+    for smoothing, dae in zip(
+        (dae_smooth.smoothing, np.inf), [dae_smooth, dae_nonsmooth]
+    ):
+
+        equ = solve_friction(dae, fourier, omega, smoothing, initial_guess=None)
+
+        x_time = equ.x_time()
+        ts = equ.fourier.time_samples(equ.omega)
+        _, axs = plt.subplots(5, 1)
+        for k in range(5):
+            axs[k].plot(ts, x_time[k, :])
+            if k == 0:
+                axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
+            axs[k].set_xlabel("time")
+            axs[k].set_ylabel(f"x[{k}]")
 
 
 class FrictionDirect(AbstractEquation):
@@ -464,126 +640,3 @@ class FrictionDirect(AbstractEquation):
             Analytical derivative if available, otherwise None.
         """
         return super().closed_form_derivative(variable)
-
-
-def solve_friction(
-    oscillator, fourier, omega, smoothing, solver=None, initial_guess=None
-):
-    """Solves the substituted formulation of the friction oscillator, i.e.,
-    solves for Lambda and infers the rest.
-    This is used to get a warm start for the actual HBM problem,
-    which is hard to solve directly for the non-smooth case."""
-
-    if solver is None:
-        solver = ScipyRootSolver(
-            tolerance=1e-8,
-            max_iterations=1000000,
-            verbose=True,
-            use_fprime=False,
-            method="lm",
-        )
-
-    try:
-        prox_parameter = oscillator.prox_parameter
-    except AttributeError:
-        if smoothing == np.inf:
-            raise ValueError("Must specify prox_parameter for non-smooth oscillator.")
-        prox_parameter = 0
-
-    g = oscillator.lam_crit / (oscillator.mu * oscillator.masses[-1])
-
-    warmstart = smoothing == np.inf and initial_guess is None
-    if initial_guess is None:
-        initial_guess = np.zeros(2 * fourier.N_HBM + 1)
-
-    equ = FrictionDirect(
-        N_HBM=fourier.N_HBM,
-        L_DFT=fourier.L_DFT,
-        real_formulation=fourier.real_formulation,
-        stiffnesses=oscillator.stiffnesses,
-        dampings=oscillator.dampings,
-        masses=oscillator.masses,
-        g=g,
-        mu=oscillator.mu,
-        forcing_amplitudes=oscillator.forcing_amplitudes,
-        forcing_phases=oscillator.forcing_phases,
-        omega=omega,
-        smoothing=smoothing,
-        prox_parameter=prox_parameter,
-        initial_guess=initial_guess,
-    )
-
-    if warmstart:  # warm-start with smoothed solution
-        if solver.verbose:
-            print("Solving smoothed lambda problem for warm-start...")
-
-        equ.smoothing = 40
-        solver.solve_equation(equ, unknown="Lambda_odd")
-        equ.smoothing = smoothing
-
-    if solver.verbose:
-        print(
-            f"Solving lambda problem (smoothing = {equ.smoothing}). Residual before: {np.linalg.norm(equ.residual(update=True))}..."
-        )
-
-    solver.solve_equation(equ, unknown="Lambda_odd")
-
-    return equ
-
-
-def plot_solve_friction():
-    # # Legrand
-    masses = [1, 1]
-    stiffnesses = [1, 1]
-    dampings = [0.02, 0.02]
-    forcings = [20, 0]
-    omega = 0.299
-    phases = [0.5 * np.pi, 0]
-    mu = 0.9
-    smoothing = 10
-    prox_parameter = 1
-    normal_force = 10.5
-    g = normal_force / masses[1]
-
-    # warm-start from smoothed oscillator
-    N_HBM = 40
-    L_DFT = 4096
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=5, real_formulation=True)
-
-    dae_smooth = SmoothedFrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        smoothing=smoothing,
-    )
-
-    dae_nonsmooth = FrictionOscillator(
-        stiffnesses=stiffnesses,
-        dampings=dampings,
-        masses=masses,
-        g=g,
-        mu=mu,
-        forcing_amplitudes=forcings,
-        forcing_phases=phases,
-        prox_parameter=prox_parameter,
-    )
-
-    for smoothing, dae in zip(
-        (dae_smooth.smoothing, np.inf), [dae_smooth, dae_nonsmooth]
-    ):
-
-        equ = solve_friction(dae, fourier, omega, smoothing, initial_guess=None)
-
-        x_time = equ.x_time()
-        ts = equ.fourier.time_samples(equ.omega)
-        _, axs = plt.subplots(5, 1)
-        for k in range(5):
-            axs[k].plot(ts, x_time[k, :])
-            if k == 0:
-                axs[k].set_title(f"Direct Friction oscillator smoothing = {smoothing}")
-            axs[k].set_xlabel("time")
-            axs[k].set_ylabel(f"x[{k}]")
