@@ -19,13 +19,14 @@ def compute_drazin_ratio(
     mass_matrix = hbm.M()
 
     # Copy&pasted from KoopmanHillDAE.generalized_exponential()
-    a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
+    # a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
+    a_vals = [np.linalg.norm(hill_matrix, ord=2) / np.linalg.norm(mass_matrix, ord=2)]
     success = False
     for a in a_vals:
         pencil = a * mass_matrix - hill_matrix
         if np.linalg.cond(pencil) < tol_cond:
             success = True
-            # print(f"N = {N}: a = {a}")
+            print(f"a = {a}")
             break
     if not success:
         raise RuntimeError(

@@ -619,9 +619,9 @@ def drazin(A, tol=0, ax_plot=None):
     W = np.eye(n, dtype=complex)
 
     if np.linalg.norm(C, np.inf) > tol:
-        # warnings.warn(
-        #     "Drazin inverse computation: Non-zero coupling block detected. Results may be inaccurate."
-        # )
+        print(
+            "Drazin inverse computation: Non-zero coupling block detected. Results may be inaccurate."
+        )
 
         W_nz = solve_sylvester(R, -N, -C)
         W[:n_cutoff, n_cutoff:] = W_nz

@@ -1,5 +1,6 @@
 """FRC of frictional oscillator. See Schütz (2025), Bachelor's thesis, and Legrand2023."""
 
+from copy import copy
 from typing import Any
 from collections.abc import Generator, Iterable
 
@@ -60,6 +61,16 @@ def main(
                             name_case, smoothing, hbm.fourier.N_HBM, L_DFT
                         )
                         plot_hbm_result(hbm, description_plot, path=f"plots/")
+                    print(
+                        "---------------------------------------------------------------------"
+                    )
+                    print(f"smoothing = {smoothing}:")
+                    print(hbm.eigenvalues)
+                    print(
+                        "---------------------------------------------------------------------"
+                    )
+
+                    KH_other_N(hbm, N_other=10)
             except MemoryError:
                 plt.close("all")
                 continue
@@ -68,6 +79,23 @@ def main(
                 plot_and_save(hbms, description_plot, tol_drazin=1e-7, path="plots/")
             else:
                 to_csv(hbms, f"plots/HBM_results_{description}.csv")
+
+                plot_FM_convergence(
+                    hbms, description, path=f"plots/FMs_{description}.tikz"
+                )
+
+                _, ax = plt.subplots(1, 1)
+
+                plot_drazin_and_ratio(
+                    hbms=hbms,
+                    tol_drazin=1e-7,
+                    description=description,
+                    ratio_limits=[3 / 5, 4 / 5],
+                    ax_drazin=ax,
+                    ax_ratio=None,
+                    path_drazin=None,
+                    path_ratio=None,
+                )
 
 
 def solve_hbm(
@@ -158,7 +186,7 @@ def iterate_over_N(
     hbm_ref = None
 
     for N_HBM in Ns_HBM:
-        plt.close("all")
+        # plt.close("all")
         print("--------------------------------------------------------------------")
         print(f"solving N = {N_HBM} for {description}")
         fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
@@ -217,13 +245,34 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
     )
 
 
+def KH_other_N(hbm, N_other):
+    fourier_other = hbm.fourier.__replace__(N_HBM=N_other)
+    X_other = fourier_other.resize_coefficients(hbm.X)
+    hbm_other = copy(hbm)
+    hbm_other = HBMEquationDAE(
+        hbm_other.ode,
+        hbm_other.omega,
+        fourier_other,
+        initial_guess=X_other,
+        stability_method=KoopmanHillDAE(
+            fourier_other,
+            hbm.stability_method.tol,
+            autonomous=False,
+            tol_drazin=hbm.stability_method.tol_drazin,
+        ),
+    )
+    _ = hbm_other.hill_matrix(update=True)
+    _, ax = plt.subplots(1, 1)
+    plot_drazin_and_ratio([hbm_other], 1e-7, f"KH_other_N_{N_other}", ax_drazin=ax)
+
+
 if __name__ == "__main__":
     main(
-        cases=["A", "B", "C", "D", "Schuetz1", "Schuetz2"],
+        cases=["B"],
         smoothings=[50, np.inf],
-        Ns_HBM=(20,),
-        Ns_plot=(20,),
-        L_DFT=2**14,
+        Ns_HBM=(30,),
+        Ns_plot=(30,),
+        L_DFT=2048,
         max_residual=1e-9,
     )
     plt.show()

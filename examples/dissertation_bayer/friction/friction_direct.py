@@ -345,7 +345,7 @@ class FrictionDirect(AbstractEquation):
         Lambda_sin = Lambda[self.fourier.N_HBM + 1 :]
         Lambda_odd = np.hstack((Lambda_cos[::2], Lambda_sin[::2]))
         Lambda_even = np.hstack(((Lambda_const,), Lambda_cos[1::2], Lambda_sin[1::2]))
-        if any(np.abs(Lambda_even) > 1e-14):
+        if any(np.abs(Lambda_even) > 1e-12):
             # raise ValueError("Lambda_even must be zero.")
             print(f"ignored even values of magnitude {np.max(np.abs(Lambda_even))}.")
         return Lambda_odd
