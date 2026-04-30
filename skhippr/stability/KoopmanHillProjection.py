@@ -601,14 +601,14 @@ def drazin(A, tol=0, ax_plot=None):
 
     if ax_plot is not None:
         eigenvalues = np.diag(T)
-        eigenvalues_plot = np.zeros_like(eigenvalues)
-        for k, eigenvalue in enumerate(eigenvalues):
-            eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
+        # eigenvalues_plot = np.zeros_like(eigenvalues)
+        # for k, eigenvalue in enumerate(eigenvalues):
+        #     eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
 
-        _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
+        # _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
         ax_plot.semilogy(
-            n * np.ones_like(eigenvalues[idx_unique]),
-            np.abs(eigenvalues[idx_unique]),
+            range(len(eigenvalues)),  # n * np.ones_like(eigenvalues[idx_unique]),
+            np.abs(eigenvalues),  # [idx_unique]),
             "x",
         )
 
@@ -620,7 +620,7 @@ def drazin(A, tol=0, ax_plot=None):
 
     if np.linalg.norm(C, np.inf) > tol:
         print(
-            "Drazin inverse computation: Non-zero coupling block detected. Results may be inaccurate."
+            "Drazin inverse computation: Non-zero coupling block detected. Using Sylvester."
         )
 
         W_nz = solve_sylvester(R, -N, -C)

@@ -2,7 +2,7 @@
 
 from copy import copy
 from typing import Any
-from collections.abc import Generator, Iterable
+from collections.abc import Generator
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,6 +30,7 @@ from plot_friction import (
     plot_hbm_convergence,
 )
 from export_friction import to_csv
+from floquet import KH_other_N
 
 
 def main(
@@ -70,7 +71,7 @@ def main(
                         "---------------------------------------------------------------------"
                     )
 
-                    KH_other_N(hbm, N_other=10)
+                    KH_other_N(hbm, N_other=10, description=description)
             except MemoryError:
                 plt.close("all")
                 continue
@@ -245,34 +246,13 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
     )
 
 
-def KH_other_N(hbm, N_other):
-    fourier_other = hbm.fourier.__replace__(N_HBM=N_other)
-    X_other = fourier_other.resize_coefficients(hbm.X)
-    hbm_other = copy(hbm)
-    hbm_other = HBMEquationDAE(
-        hbm_other.ode,
-        hbm_other.omega,
-        fourier_other,
-        initial_guess=X_other,
-        stability_method=KoopmanHillDAE(
-            fourier_other,
-            hbm.stability_method.tol,
-            autonomous=False,
-            tol_drazin=hbm.stability_method.tol_drazin,
-        ),
-    )
-    _ = hbm_other.hill_matrix(update=True)
-    _, ax = plt.subplots(1, 1)
-    plot_drazin_and_ratio([hbm_other], 1e-7, f"KH_other_N_{N_other}", ax_drazin=ax)
-
-
 if __name__ == "__main__":
     main(
         cases=["B"],
         smoothings=[50, np.inf],
         Ns_HBM=(30,),
         Ns_plot=(30,),
-        L_DFT=2048,
+        L_DFT=2**14,
         max_residual=1e-9,
     )
     plt.show()
