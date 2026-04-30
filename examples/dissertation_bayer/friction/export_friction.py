@@ -9,14 +9,14 @@ def to_csv(hbms, filename: str, N_max=None, **kwargs):
         filename = f"{filename}.csv"
 
     # guard against accidental overwriting of existing files
-    if os.path.exists(filename):
-        answer = (
-            input(f"File '{filename}' already exists. Overwrite? [y/N]: ")
-            .strip()
-            .lower()
-        )
-        if answer not in ("y", "yes"):
-            raise RuntimeError(f"File '{filename}' already exists.")
+    # if os.path.exists(filename):
+    #     answer = (
+    #         input(f"File '{filename}' already exists. Overwrite? [y/N]: ")
+    #         .strip()
+    #         .lower()
+    #     )
+    #     if answer not in ("y", "yes"):
+    #         raise RuntimeError(f"File '{filename}' already exists.")
 
     # prepare the iteration and header
     if N_max is None:

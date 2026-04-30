@@ -219,10 +219,10 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
 
 if __name__ == "__main__":
     main(
-        cases=["B", "C"],
+        cases=["A", "B", "C", "D", "Schuetz1", "Schuetz2"],
         smoothings=[50, np.inf],
-        Ns_HBM=(10, 20),
-        Ns_plot=(10,),
+        Ns_HBM=(20,),
+        Ns_plot=(20,),
         L_DFT=2**14,
         max_residual=1e-9,
     )
