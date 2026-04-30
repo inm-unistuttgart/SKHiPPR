@@ -30,11 +30,18 @@ def plot_hbm_result(hbm, description, path="plots/"):
     ax_forcelaw.set_ylabel("lambda")
     ax_forcelaw.set_title(f"force law {description} r = {r}")
     ax_forcelaw.legend()
-    tikzplotlib.save(f"{path}forcelaw_{description}.tikz")
+    if path is not None:
+        tikzplotlib.save(f"{path}forcelaw_{description}.tikz")
 
-    return ax_pos, ax_vel, ax_force, ax_forcelaw
+    # phase diagram
+    ax_phasediagram = None
+    for i in range(2):
+        ax_phasediagram = plot_phase(hbm, idx=(i, i + 2), label=f"mass {i}")
+        ax_phasediagram.set_title(f"phase_diagram_{description}")
+    if path is not None:
+        tikzplotlib.save(f"{path}phase_diagram_{description}.tikz")
 
-    # np.savetxt(f"X_{description}.csv", hbm.X, delimiter=";")
+    return ax_pos, ax_vel, ax_force, ax_forcelaw, ax_phasediagram
 
 
 def plot_and_save_solution(hbm, description, idx=(0, 1), path_export=None):
