@@ -10,6 +10,7 @@ from skhippr.visualization.cycles import (
 import tikzplotlib
 
 from floquet import sort_FMs
+from friction_error import hbm_error_freq, hbm_error_time, FM_error
 
 
 def plot_hbm_result(hbm, description, path="plots/"):
@@ -71,3 +72,48 @@ def plot_FM_convergence(hbms, description, path="plots/"):
     if path is not None:
         tikzplotlib.save(f"{path}FMs_{description}.tikz")
     return ax
+
+
+def plot_FM_error(hbms, FM_ref, description, path="plots/"):
+    fig, ax = plt.subplots(1, 1)
+
+    err = FM_error(hbms, FM_ref)
+    for l in range(err.shape[0]):
+        ax.plot([hbm.fourier.N_HBM for hbm in hbms], err[l, :], "-", label=f"FM {l}")
+
+    ax.set_yscale("log")
+    ax.set_title(description)
+    ax.legend(loc="upper right")
+    if path is not None:
+        tikzplotlib.save(f"{path}FM_error_{description}.tikz")
+    return ax
+
+
+def plot_hbm_convergence(hbms, description, path="plots/"):
+    _, ax_time = plt.subplots(1, 1)
+    _, ax_freq = plt.subplots(1, 1)
+
+    err_freq = hbm_error_freq(hbms, hbms[-1])
+    err_time = hbm_error_time(hbms, hbms[-1].x_time())
+
+    for ax, err, label in zip(
+        (ax_freq, ax_time), (err_freq, err_time), ("FCs", "time")
+    ):
+
+        for l in range(err.shape[0]):
+            ax.plot(
+                [hbm.fourier.N_HBM for hbm in hbms],
+                err[l, :],
+                "-",
+                label=f"label x{l}",
+            )
+
+        ax.set_yscale("log")
+        ax.set_title(description)
+        ax.legend(loc="upper right")
+        ax.set_xlabel("N")
+        ax.set_ylabel(f"error")
+        ax.set_title(f"HBM {label} convergence {description}")
+        if path is not None:
+            tikzplotlib.save(f"{path}HBM_error_{label}_{description}.tikz")
+        return ax

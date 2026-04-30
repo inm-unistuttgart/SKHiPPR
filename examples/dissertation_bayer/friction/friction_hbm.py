@@ -22,9 +22,13 @@ from skhippr.stability.KoopmanHillProjection import (
 from friction_init import init_oscillator, get_description
 from friction_direct import solve_friction
 from drazin import plot_drazin_and_ratio
-from plot_friction import plot_hbm_result, plot_FM_convergence
+from plot_friction import (
+    plot_hbm_result,
+    plot_FM_convergence,
+    plot_FM_error,
+    plot_hbm_convergence,
+)
 from export_friction import to_csv
-from floquet import sort_FMs
 
 
 def solve_hbm(
@@ -135,8 +139,6 @@ def iterate_over_N(
 
 
 def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7, path=""):
-    figs = []
-    hbm_ref = hbms[-1]
     print(f"a posteriori analysis {description}")
 
     # Drazin and Drazin ratio plots
@@ -160,52 +162,21 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7, path=""):
     # Plot Floquet multipliers
     plot_FM_convergence(hbms, description, path=f"{path}FMs_{description}.tikz")
 
-    # Plot HBM convergence in time
-    fig, ax = plt.subplots(1, 1)
-    for l in range(e_hbm.shape[0]):
-        ax.semilogy(Ns_HBM[:-1], e_hbm[l, :-1], label=f"x{l}")
-    ax.legend(loc="best")
-    ax.set_xlabel("N")
-    ax.set_ylabel("error HBM")
-    ax.set_title(f"HBM convergence {description}")
-    # tikzplotlib.save(
-    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz"
-    # )
-    tikzplotlib.save(f"HBM_error_{description}.tikz")
-    figs.append(fig)
+    plot_FM_error(
+        hbms,
+        hbms[-1].eigenvalues,
+        description,
+        path=f"{path}FM_error_{description}.tikz",
+    )
 
-    # Plot HBM convergence in freq domain
-    fig, ax = plt.subplots(1, 1)
-    for l in range(e_hbm_fourier.shape[0]):
-        ax.semilogy(Ns_HBM[:-1], e_hbm_fourier[l, :-1], label=f"x{l}")
-    ax.legend(loc="best")
-    ax.set_xlabel("N")
-    ax.set_ylabel("error HBM FCs")
-    ax.set_title(f"HBM FC convergence {description}")
-    # tikzplotlib.save(
-    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz"
-    # )
-    tikzplotlib.save(f"HBM_FC_error_{description}.tikz")
-    figs.append(fig)
-
-    # Plot FM convergence
-    fig, ax = plt.subplots(1, 1)
-    for l in range(e_stab.shape[0]):
-        ax.semilogy(Ns_HBM[:-1], e_stab[l, :-1], label=f"FM {l}")
-    ax.legend(loc="best")
-    ax.set_xlabel("N")
-    ax.set_ylabel("error FMs")
-    ax.set_title(f"FM convergence {description}")
-    # tikzplotlib.save(
-    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz"
-    # )
-    tikzplotlib.save(f"FMs_error_{description}.tikz")
-    figs.append(fig)
+    # Plot HBM convergence
+    plot_hbm_convergence(
+        hbms, description, path=f"{path}HBM_convergence_time_{description}.tikz"
+    )
 
     print(
         "==============================================================================================="
     )
-    return figs
 
 
 def plot_everything():
