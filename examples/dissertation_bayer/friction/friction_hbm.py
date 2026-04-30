@@ -1,7 +1,7 @@
 """FRC of frictional oscillator. See Schütz (2025), Bachelor's thesis, and Legrand2023."""
 
 from typing import Any
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,8 +22,9 @@ from skhippr.stability.KoopmanHillProjection import (
 from friction_init import init_oscillator, get_description
 from friction_direct import solve_friction
 from drazin import plot_drazin_and_ratio
-from plot_friction import plot_hbm_result
+from plot_friction import plot_hbm_result, plot_FM_convergence
 from export_friction import to_csv
+from floquet import sort_FMs
 
 
 def solve_hbm(
@@ -133,17 +134,10 @@ def iterate_over_N(
             yield hbm
 
 
-def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
+def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7, path=""):
     figs = []
     hbm_ref = hbms[-1]
     print(f"a posteriori analysis {description}")
-
-    FM_ref = sort_FMs(hbm_ref.eigenvalues)
-
-    e_hbm = np.zeros((5, len(Ns_HBM)))
-    e_hbm_fourier = np.zeros((5, len(Ns_HBM)))
-    e_stab = np.zeros((5, len(Ns_HBM)))
-    FMs_all = np.zeros((5, len(Ns_HBM)), dtype=complex)
 
     # Drazin and Drazin ratio plots
     _, ax_drazin = plt.subplots(1, 1)
@@ -161,48 +155,10 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     )
 
     # save the HBM results to a file
-
-    for k, hbm in enumerate(hbms):
-
-        x_time = hbm.x_time()
-        X_comp = hbm_ref.fourier.DFT(x_time)
-        X_comp[np.abs(X_comp) <= 1e-17] = 0
-        e_comp = np.reshape(hbm_ref.X - X_comp, (5, -1), order="F")
-
-        e_hbm[:, k] = np.max(np.abs(x_time - hbm_ref.x_time()), axis=1)
-        e_hbm_fourier[:, k] = np.linalg.norm(e_comp, axis=1)
-        FMs = sort_FMs(hbm.eigenvalues)
-        FMs_all[:, k] = FMs
-        e_stab[:, k] = np.abs(FMs - FM_ref)
-
-    # np.savetxt(
-    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\X_{description}.csv",
-    #     results_to_csv,
-    #     delimiter=";",
-    #     header=header_csv,
-    # )
-    np.savetxt(
-        f"X_{description}.csv",
-        results_to_csv,
-        delimiter=";",
-        header=header_csv,
-    )
+    to_csv(hbms, f"{path}HBM_results_{description}.csv")
 
     # Plot Floquet multipliers
-    fig, ax = plt.subplots(1, 1)
-    phis = np.linspace(0, 2 * np.pi, 250)
-    ax.plot(np.cos(phis), np.sin(phis))
-    for l in range(FMs_all.shape[0]):
-        ax.plot(np.real(FMs_all[l, :]), np.imag(FMs_all[l, :]), "-x", label=f"FM {l}")
-    ax.plot(np.real(FM_ref), np.imag(FM_ref), "o", label=f"ref(N={N_max})")
-    ax.set_aspect("equal")
-    ax.set_title(description)
-    ax.legend(loc="upper left")
-    # tikzplotlib.save(
-    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz"
-    # )
-    tikzplotlib.save(f"FMs_conv_{description}.tikz")
-    figs.append(fig)
+    plot_FM_convergence(hbms, description, path=f"{path}FMs_{description}.tikz")
 
     # Plot HBM convergence in time
     fig, ax = plt.subplots(1, 1)
@@ -250,21 +206,6 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         "==============================================================================================="
     )
     return figs
-
-
-def sort_FMs(FMs, significant_digits=2):
-
-    FMs_rounded = np.zeros_like(FMs)
-    for k, FM in enumerate(FMs):
-        FMs_rounded[k] = round_to_significant_digits(
-            FM, significant_digits=significant_digits
-        )
-    idx_sort = np.lexsort((np.angle(FMs_rounded), np.abs(FMs_rounded)))
-    FMs = FMs[idx_sort]
-    FMs_rounded = FMs_rounded[idx_sort]
-    # Separate complex and real eigenvalues
-    FMs = np.hstack((FMs[np.imag(FMs_rounded) == 0], FMs[np.imag(FMs_rounded) != 0]))
-    return FMs
 
 
 def plot_everything():

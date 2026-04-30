@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from skhippr.visualization.cycles import (
     plot_period,
@@ -7,6 +8,8 @@ from skhippr.visualization.cycles import (
 )
 
 import tikzplotlib
+
+from floquet import sort_FMs
 
 
 def plot_hbm_result(hbm, description, path="plots/"):
@@ -41,3 +44,30 @@ def plot_and_save_solution(hbm, description, idx=(0, 1), path_export=None):
     ax.legend()
     if path_export is not None:
         tikzplotlib.save(f"{path_export}{description}.tikz")
+
+
+def plot_FM_convergence(hbms, description, path="plots/"):
+    fig, ax = plt.subplots(1, 1)
+
+    # unit circle
+    phis = np.linspace(0, 2 * np.pi, 250)
+    ax.plot(np.cos(phis), np.sin(phis))
+
+    # Sort FMs into one numpy array
+    FMs_all = np.zeros((hbms[0].fourier.n_dof, len(hbms)), dtype=complex)
+    for k, hbm in enumerate(hbms):
+        FMs = sort_FMs(FMs=hbm.eigenvalues)
+        FMs_all[:, k] = FMs
+
+    # Plot sorted FMs state by state
+    for l in range(FMs_all.shape[0]):
+        ax.plot(np.real(FMs_all[l, :]), np.imag(FMs_all[l, :]), "-x", label=f"FM {l}")
+
+    # Plot highest-N FMs as reference
+    ax.plot(np.real(FMs), np.imag(FMs), "o", label=f"ref(N={hbm.fourier.N_HBM})")
+    ax.set_aspect("equal")
+    ax.set_title(description)
+    ax.legend(loc="upper left")
+    if path is not None:
+        tikzplotlib.save(f"{path}FMs_{description}.tikz")
+    return ax

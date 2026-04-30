@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 
-def to_csv(hbms, filename: str, N_max=None):
+def to_csv(hbms, filename: str, N_max=None, **kwargs):
 
     # parse file name
     if not filename.endswith(".csv"):
@@ -18,7 +18,7 @@ def to_csv(hbms, filename: str, N_max=None):
         if answer not in ("y", "yes"):
             raise RuntimeError(f"File '{filename}' already exists.")
 
-    # prepare the iteration
+    # prepare the iteration and header
     if N_max is None:
         N_max = max(hbm.fourier.N_HBM for hbm in hbms)
     n_dof = hbms[0].fourier.n_dof
