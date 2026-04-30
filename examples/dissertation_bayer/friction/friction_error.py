@@ -27,6 +27,7 @@ def hbm_error_freq(hbms, hbm_ref):
         e_comp = np.reshape(X_comp - hbm_ref.X, (hbm.fourier.n_dof, -1), order="F")
 
         err[:, k] = np.linalg.norm(e_comp, axis=1)
+    return err
 
 
 def hbm_error_time(hbms, x_time_ref):
@@ -52,6 +53,7 @@ def hbm_error_time(hbms, x_time_ref):
     for k, hbm in enumerate(hbms):
         x_time = hbm.x_time()
         err[:, k] = np.max(np.abs(x_time - x_time_ref), axis=1)
+    return err
 
 
 def FM_error(hbms, FM_ref):
@@ -75,3 +77,5 @@ def FM_error(hbms, FM_ref):
 
         FMs = sort_FMs(hbm.eigenvalues)
         err[:, k] = np.abs(FMs - FM_ref)
+
+    return err

@@ -54,9 +54,11 @@ def plot_drazin_and_ratio(
     Ns_HBM = []
 
     # Drazin inverse analysis + plotting for all HBMs
-    for k, hbm in enumerate(hbms):
-        drazin_ratios[k] = compute_drazin_ratio(hbm, ax_drazin, tol_drazin=tol_drazin)
-        Ns_HBM[k] = hbm.fourier.N_HBM
+    for hbm in hbms:
+        drazin_ratios.append(
+            compute_drazin_ratio(hbm, ax_drazin, tol_drazin=tol_drazin)
+        )
+        Ns_HBM.append(hbm.fourier.N_HBM)
 
     if ax_drazin is not None:
 

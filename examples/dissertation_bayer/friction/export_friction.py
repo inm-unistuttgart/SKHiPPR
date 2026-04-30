@@ -22,7 +22,7 @@ def to_csv(hbms, filename: str, N_max=None, **kwargs):
     if N_max is None:
         N_max = max(hbm.fourier.N_HBM for hbm in hbms)
     n_dof = hbms[0].fourier.n_dof
-    fourier_max = hbms[0].fourier.__replace(N_HBM=N_max)
+    fourier_max = hbms[0].fourier.__replace__(N_HBM=N_max)
     header = csv_header(N_max, n_dof)
 
     # Create and populate result table

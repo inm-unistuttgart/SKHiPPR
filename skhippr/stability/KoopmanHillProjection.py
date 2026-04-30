@@ -496,9 +496,14 @@ class KoopmanHillDAE(KoopmanHillProjection):
         self.tol_drazin = tol_drazin
 
     @override
-    def fundamental_matrix(self, t_over_period, hbm: HBMEquationDAE):
+    def fundamental_matrix(self, t_over_period, hbm: HBMEquationDAE, omega=None):
         C = self.C_time(t_over_period)
         hill_matrix = hbm.hill_matrix()
+
+        if omega is None:
+            omega = hbm.omega
+        else:
+            pass
         t = t_over_period * 2 * np.pi / hbm.omega
 
         if hbm.ode.invertible:
@@ -527,7 +532,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         )
 
     @override
-    def fundamental_matrix(self, t_over_period, hbm):
+    def fundamental_matrix(self, t_over_period, hbm, omega=None):
         if not hbm.ode.invertible:
             raise ValueError(
                 "Subharmonic Koopman-Hill for DAEs with singular mass matrix is not implemented."
@@ -550,11 +555,16 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
 
         M_subh = M[self.fourier.n_dof :, self.fourier.n_dof :]
 
+        if omega is None:
+            omega = hbm.omega
+        else:
+            pass
+
         hill_subh = hill_matrix[self.fourier.n_dof :, self.fourier.n_dof :]
-        hill_subh = hill_subh + 0.5j * hbm.omega * M_subh
+        hill_subh = hill_subh + 0.5j * omega * M_subh
         hill_subh_inv = np.linalg.solve(M_subh, hill_subh)
 
-        t = t_over_period * 2 * np.pi / hbm.omega
+        t = t_over_period * 2 * np.pi / omega
 
         C = self.C_time(t_over_period)
         C_subh = self.C_subh_time(t_over_period=t_over_period)

@@ -31,6 +31,45 @@ from plot_friction import (
 from export_friction import to_csv
 
 
+def main(
+    cases=("B",),
+    smoothings=(np.inf,),
+    Ns_HBM=(30, 40, 50),
+    Ns_plot=(),
+    L_DFT=2**14,
+    max_residual=1e-9,
+):
+    print(Ns_HBM)
+    for name_case in cases:
+        for smoothing in smoothings:
+            description = get_description(name_case, smoothing, max(Ns_HBM), L_DFT)
+
+            try:
+                hbms = []
+                for hbm in iterate_over_N(
+                    name_case=name_case,
+                    smoothing=smoothing,
+                    Ns_HBM=Ns_HBM,
+                    L_DFT=L_DFT,
+                    max_residual=max_residual,
+                ):
+                    hbms.append(hbm)
+
+                    if hbm.fourier.N_HBM in Ns_plot:
+                        description_plot = get_description(
+                            name_case, smoothing, hbm.fourier.N_HBM, L_DFT
+                        )
+                        plot_hbm_result(hbm, description_plot, path=f"plots/")
+            except MemoryError:
+                plt.close("all")
+                continue
+
+            if len(Ns_HBM) > 1:
+                plot_and_save(hbms, description_plot, tol_drazin=1e-7, path="plots/")
+            else:
+                to_csv(hbms, f"plots/HBM_results_{description}.csv")
+
+
 def solve_hbm(
     name_case,
     smoothing=np.inf,
@@ -125,20 +164,19 @@ def iterate_over_N(
         fourier = Fourier(N_HBM, L_DFT, n_dof=5, real_formulation=True)
         hbm = solve_hbm(name_case, smoothing, fourier, hbm_ref)
 
-        # hbms.append(hbm_ref)
-        # figs = plot_and_save(hbms, Ns_HBM[: len(hbms)], description, tol_drazin)
-
-        if np.linalg.norm(hbm_ref.residual(update=False)) > max_residual:
+        if np.linalg.norm(hbm.residual(update=False)) > max_residual:
             print(
-                f"Residual of reference solution is above threshold: {np.linalg.norm(hbm_ref.residual(update=False))} > {max_residual}. Stopping iteration."
+                f"Residual of solved solution is above threshold: {np.linalg.norm(hbm_ref.residual(update=False))} > {max_residual}"
             )
-            break
+            # . Stopping iteration."
+            # )
+            # break
         else:
             hbm_ref = hbm
             yield hbm
 
 
-def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7, path=""):
+def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
     print(f"a posteriori analysis {description}")
 
     # Drazin and Drazin ratio plots
@@ -180,31 +218,12 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7, path=""):
 
 
 if __name__ == "__main__":
-    N_min = 10
-    N_max = 1200
-    Ns = [
-        int(N)
-        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max), 60)))
-    ]
-    # Ns = [80]
-    # Ns = np.arange(1, N_max + 1)
-    print(Ns)
-    # Ns = Ns + [N_max + k for k in range(1, 11)]
-    for name_case in ["B"]:
-        for smoothing in [np.inf]:  # np.inf case B fehlt noch
-            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=80, L_DFT=4096)
-            try:
-                iterate_over_N(
-                    name_case,
-                    Ns_HBM=Ns,
-                    L_DFT=2**13,
-                    smoothing=smoothing,
-                    max_residual=1e-5,
-                )
-                plt.close("all")
-            except MemoryError:
-                plt.close("all")
-                continue
-    # plot_everything()
-    # plot_frc()
-    # plt.show()
+    main(
+        cases=["B", "C"],
+        smoothings=[50, np.inf],
+        Ns_HBM=(10, 20),
+        Ns_plot=(10,),
+        L_DFT=2**14,
+        max_residual=1e-9,
+    )
+    plt.show()

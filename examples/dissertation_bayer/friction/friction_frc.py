@@ -80,3 +80,9 @@ def compute_frc(
                 break
 
     return frcs
+
+
+if __name__ == "__main__":
+    frcs = compute_frc()
+    plot_frcs(frcs)
+    plt.show()
