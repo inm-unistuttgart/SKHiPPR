@@ -29,7 +29,6 @@ def plot_hbm_result(hbm, description, path="plots/"):
     ax_forcelaw.set_xlabel("x3")
     ax_forcelaw.set_ylabel("lambda")
     ax_forcelaw.set_title(f"force law {description} r = {r}")
-    ax_forcelaw.legend()
     if path is not None:
         tikzplotlib.save(f"{path}forcelaw_{description}.tikz")
 

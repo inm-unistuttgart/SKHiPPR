@@ -2,6 +2,14 @@ import numpy as np
 import os
 
 
+def save_result_with_hill_matrix(hbm, description):
+    hill_matrix = hbm.hill_matrix(update=False)
+    filename = f"hill_matrix_{description}.csv"
+    res = np.hstack((hbm.X[:, np.newaxis], hill_matrix))
+    header = ["X"] + [f"H[:,{j}]" for j in range(hill_matrix.shape[1])]
+    np.savetxt(filename, res, delimiter=";", header=";".join(header))
+
+
 def to_csv(hbms, filename: str, N_max=None, **kwargs):
 
     # parse file name

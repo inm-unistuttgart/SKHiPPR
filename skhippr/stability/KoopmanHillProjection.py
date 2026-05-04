@@ -580,7 +580,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         return np.real(funda_mat)
 
 
-def drazin(A, tol=0, ax_plot=None):
+def drazin(A, tol=0, ax_plot=None, x_value=None):
     """Compute the Drazin inverse of a matrix A.
 
     Parameters
@@ -589,7 +589,9 @@ def drazin(A, tol=0, ax_plot=None):
         The input square matrix.
     tol : float, optional
         Tolerance for determining the rank (default is 0).
-
+    x_value: float, optional
+        x value(s) to plot the eigenvalues at, if multiple cases are to be compared in one plot.
+        If None (default), the eigenvalues are plotted at their index
     Returns
     -------
     np.ndarray
@@ -601,13 +603,18 @@ def drazin(A, tol=0, ax_plot=None):
 
     if ax_plot is not None:
         eigenvalues = np.diag(T)
+
+        if x_value is None:
+            x_vals = np.arange(len(eigenvalues))
+        else:
+            x_vals = x_value * np.ones_like(eigenvalues)
         # eigenvalues_plot = np.zeros_like(eigenvalues)
         # for k, eigenvalue in enumerate(eigenvalues):
         #     eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
 
         # _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
         ax_plot.semilogy(
-            range(len(eigenvalues)),  # n * np.ones_like(eigenvalues[idx_unique]),
+            x_vals,
             np.abs(eigenvalues),  # [idx_unique]),
             "x",
         )
@@ -644,7 +651,9 @@ def drazin(A, tol=0, ax_plot=None):
     return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
 
 
-def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
+def generalized_exponential(
+    M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6, a_pencil=None
+):
     """Compute the generalized matrix exponential for DAEs based on the Drazin inverse.
     This yields the fundamental solution matrix for the LTI DAE
 
@@ -659,6 +668,8 @@ def generalized_exponential(M, hill_matrix, t, tol_drazin=1e-6, tol_cond=1e6):
     """
 
     a_vals = [1.0, 10.0, 0.1, 100, 0.01, 1000, 0.001]
+    if a_pencil is not None:
+        a_vals = [a_pencil] + a_vals
     success = False
     for a in a_vals:
         pencil = a * M - hill_matrix

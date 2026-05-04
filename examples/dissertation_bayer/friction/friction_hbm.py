@@ -29,7 +29,7 @@ from plot_friction import (
     plot_FM_error,
     plot_hbm_convergence,
 )
-from export_friction import to_csv
+from export_friction import to_csv, save_result_with_hill_matrix
 from floquet import KH_other_N
 
 
@@ -70,10 +70,12 @@ def main(
                     print(
                         "---------------------------------------------------------------------"
                     )
+                    save_result_with_hill_matrix(hbms[-1], description_plot)
 
                     KH_other_N(hbm, N_other=10, description=description)
-            except MemoryError:
+            except MemoryError as ME:
                 plt.close("all")
+                print(f"Memory overflow: {ME}")
                 continue
 
             if len(Ns_HBM) > 1:
