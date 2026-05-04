@@ -14,7 +14,6 @@ from friction_error import hbm_error_freq, hbm_error_time, FM_error
 
 
 def plot_hbm_result(hbm, description, path="plots/"):
-    path = "plots/"
     r = np.linalg.norm(hbm.residual(update=False))
 
     # position, velocity, lambda in three plots

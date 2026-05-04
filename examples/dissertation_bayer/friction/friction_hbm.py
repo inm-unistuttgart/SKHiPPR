@@ -61,7 +61,11 @@ def main(
                         description_plot = get_description(
                             name_case, smoothing, hbm.fourier.N_HBM, L_DFT
                         )
-                        plot_hbm_result(hbm, description_plot, path=f"plots/")
+                        plot_hbm_result(
+                            hbm,
+                            description_plot,
+                            path=f"examples/dissertation_bayer/friction/plots/",
+                        )
                     print(
                         "---------------------------------------------------------------------"
                     )
@@ -70,7 +74,11 @@ def main(
                     print(
                         "---------------------------------------------------------------------"
                     )
-                    save_result_with_hill_matrix(hbms[-1], description_plot)
+                    save_result_with_hill_matrix(
+                        hbms[-1],
+                        description_plot,
+                        "examples/dissertation_bayer/friction/data/",
+                    )
 
                     KH_other_N(hbm, N_other=10, description=description)
             except MemoryError as ME:
@@ -79,12 +87,22 @@ def main(
                 continue
 
             if len(Ns_HBM) > 1:
-                plot_and_save(hbms, description_plot, tol_drazin=1e-7, path="plots/")
+                plot_and_save(
+                    hbms,
+                    description_plot,
+                    tol_drazin=1e-7,
+                    path="examples/dissertation_bayer/friction/plots/",
+                )
             else:
-                to_csv(hbms, f"plots/HBM_results_{description}.csv")
+                to_csv(
+                    hbms,
+                    f"examples/dissertation_bayer/friction/data/HBM_results_{description}.csv",
+                )
 
                 plot_FM_convergence(
-                    hbms, description, path=f"plots/FMs_{description}.tikz"
+                    hbms,
+                    description,
+                    path=f"examples/dissertation_bayer/friction/plots/FMs_{description}.tikz",
                 )
 
                 _, ax = plt.subplots(1, 1)
@@ -96,7 +114,7 @@ def main(
                     ratio_limits=[3 / 5, 4 / 5],
                     ax_drazin=ax,
                     ax_ratio=None,
-                    path_drazin=None,
+                    path_drazin=f"examples/dissertation_bayer/friction/plots/",
                     path_ratio=None,
                 )
 
@@ -221,8 +239,8 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
         ratio_limits=[3 / 5, 4 / 5],
         ax_drazin=ax_drazin,
         ax_ratio=ax_drazin_ratio,
-        path_drazin="plots/",
-        path_ratio=f"plots/",
+        path_drazin=path,
+        path_ratio=path,
     )
 
     # save the HBM results to a file
@@ -254,7 +272,7 @@ if __name__ == "__main__":
         smoothings=[50, np.inf],
         Ns_HBM=(30,),
         Ns_plot=(30,),
-        L_DFT=2**14,
+        L_DFT=2048,  # 2**14,
         max_residual=1e-9,
     )
     plt.show()
