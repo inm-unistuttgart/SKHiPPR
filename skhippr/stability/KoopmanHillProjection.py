@@ -580,7 +580,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         return np.real(funda_mat)
 
 
-def drazin(A, tol=0, ax_plot=None, x_value=None):
+def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     """Compute the Drazin inverse of a matrix A.
 
     Parameters
@@ -649,6 +649,22 @@ def drazin(A, tol=0, ax_plot=None, x_value=None):
     )
 
     return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
+
+
+def drazin(A, tol=0, ax_plot=None, x_value=None):
+    A_i = 0.5 * A
+    while np.linalg.norm(A_i - A_i @ A @ A_i, 2) > np.linalg.norm(A, 2):
+        A_i = 0.5 * A_i
+        if np.linalg.norm(A_i, 2) < 1e-12:
+            raise RuntimeError("Drazin inverse computation: Did not find suitable  A_0")
+    converged = False
+    while not converged:
+        A_i_next = 2 * A_i - A_i @ A @ A_i
+        if np.linalg.norm(A_i_next - A_i, 2) < tol:
+            converged = True
+        A_i = A_i_next
+
+    return A_i
 
 
 def generalized_exponential(

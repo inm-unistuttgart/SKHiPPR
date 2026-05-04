@@ -80,7 +80,8 @@ def main(
                         "examples/dissertation_bayer/friction/data/",
                     )
 
-                    KH_other_N(hbm, N_other=10, description=description)
+                    # KH_other_N(hbm, N_other=10, description=description)
+                    hbm.hill_matrix(update=True)
             except MemoryError as ME:
                 plt.close("all")
                 print(f"Memory overflow: {ME}")
@@ -269,10 +270,10 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
 if __name__ == "__main__":
     main(
         cases=["B"],
-        smoothings=[50, np.inf],
-        Ns_HBM=(30,),
-        Ns_plot=(30,),
-        L_DFT=2048,  # 2**14,
+        smoothings=[np.inf],
+        Ns_HBM=(70,),
+        Ns_plot=(70,),
+        L_DFT=2**12,
         max_residual=1e-9,
     )
     plt.show()
