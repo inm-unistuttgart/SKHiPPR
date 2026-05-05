@@ -805,161 +805,15 @@ def compute_index(A):
 
 
 def drazin_example_matrix():
-    """Example matrix for Drazin inversion, taken from Soleymani2013, Eq. (52)."""
-    A = np.zeros((12, 12))
-
-    A[0, 0] = 2
-    A[0, 1] = 0.4
-    A[1, 0] = -2
-    A[1, 1] = 0.4
-
-    A[2, 0] = -1
-    A[2, 1] = -1
-    A[2, 2] = 1
-    A[2, 3] = -1
-    A[2, 8] = -1
-
-    A[3, 0] = -1
-    A[3, 1] = -1
-    A[3, 2] = -1
-    A[3, 3] = 1
-
-    A[4, 4] = 1
-    A[4, 5] = 1
-    A[4, 6] = -1
-    A[4, 7] = -1
-    A[4, 10] = -1
-
-    A[5, 4] = 1
-    A[5, 5] = 1
-    A[5, 6] = -1
-    A[5, 7] = -1
-
-    A[6, 3] = -1
-    A[6, 4] = -2
-    A[6, 5] = 0.4
-
-    A[7, 4] = 2
-    A[7, 5] = 0.4
-
-    A[8, 1] = -1
-    A[8, 8] = 1
-    A[8, 9] = -1
-    A[8, 10] = -1
-    A[8, 11] = -1
-
-    A[9, 8] = -1
-    A[9, 9] = 1
-    A[9, 10] = -1
-    A[9, 11] = -1
-
-    A[10, 10] = 0.4
-    A[10, 11] = -2
-    A[11, 10] = 0.4
-    A[11, 11] = 2
-
-    return A
+    raise NotImplementedError(
+        "drazin_example_matrix has been moved to the test suite; import it from tests instead"
+    )
 
 
 def drazin_example_result():
-    """Drazin inversion result for example matrix (Soleymani2013, Eq. (53))."""
-    A = np.zeros((12, 12))
-
-    A[0, 0] = 0.25
-    A[0, 1] = -0.25
-
-    A[1, 0] = 1.25
-    A[1, 1] = 1.25
-
-    A[2, 0] = -1.66406
-    A[2, 1] = -0.992187
-    A[2, 2] = 0.25
-    A[2, 3] = -0.25
-    A[2, 8] = -0.0625
-    A[2, 9] = -0.0625
-    A[2, 11] = 0.15625
-
-    A[3, 0] = -1.19531
-    A[3, 1] = -0.679687
-    A[3, 2] = -0.25
-    A[3, 3] = 0.25
-    A[3, 8] = -0.0625
-    A[3, 9] = 0.1875
-    A[3, 10] = 0.6875
-    A[3, 11] = 1.34375
-
-    A[4, 0] = -2.76367
-    A[4, 1] = -1.04492
-    A[4, 2] = -1.875
-    A[4, 3] = -1.25
-    A[4, 4] = -1.25
-    A[4, 5] = 1.25
-    A[4, 6] = 1.25
-    A[4, 7] = 1.25
-    A[4, 8] = 1.48438
-    A[4, 9] = 2.57813
-    A[4, 10] = 3.32031
-    A[4, 11] = 6.64063
-
-    A[5, 0] = -2.76367
-    A[5, 1] = -1.04492
-    A[5, 2] = -1.875
-    A[5, 3] = -1.25
-    A[5, 4] = -1.25
-    A[5, 5] = 1.25
-    A[5, 6] = 1.25
-    A[5, 7] = 1.25
-    A[5, 8] = 1.48438
-    A[5, 9] = 2.57813
-    A[5, 10] = 4.57031
-    A[5, 11] = 8.51563
-
-    A[6, 0] = 14.1094
-    A[6, 1] = 6.30078
-    A[6, 2] = 6.625
-    A[6, 3] = 3.375
-    A[6, 4] = 5
-    A[6, 5] = -3
-    A[6, 6] = -5
-    A[6, 7] = -5
-    A[6, 8] = -4.1875
-    A[6, 9] = -8.5
-    A[6, 10] = -10.5078
-    A[6, 11] = -22.4609
-
-    A[7, 0] = -19.3242
-    A[7, 1] = -8.50781
-    A[7, 2] = -9.75
-    A[7, 3] = -5.25
-    A[7, 4] = -7.5
-    A[7, 5] = 4.5
-    A[7, 6] = 7.5
-    A[7, 7] = 7.5
-    A[7, 8] = 6.375
-    A[7, 9] = 12.5625
-    A[7, 10] = 15.9766
-    A[7, 11] = 33.7891
-
-    A[8, 0] = -0.625
-    A[8, 1] = -0.3125
-    A[8, 8] = 0.25
-    A[8, 9] = -0.25
-    A[8, 10] = -0.875
-    A[8, 11] = -1.625
-
-    A[9, 0] = -1.25
-    A[9, 1] = -0.9375
-    A[9, 8] = -0.25
-    A[9, 9] = 0.25
-    A[9, 10] = -0.875
-    A[9, 11] = -1.625
-
-    A[10, 10] = 1.25
-    A[10, 11] = 1.25
-    A[11, 10] = -0.25
-    A[11, 11] = 0.25
-
-    return A
+    raise NotImplementedError(
+        "drazin_example_result has been moved to the test suite; import it from tests instead"
+    )
 
 
 def generalized_exponential(
@@ -1004,21 +858,6 @@ def generalized_exponential(
 
 
 if __name__ == "__main__":
-    A = drazin_example_matrix()
-    print("------------------ A ------------------")
-    print(A)
-    A_D, k = drazin(A, tol=1e-8)
-    A_exp = drazin_example_result()
-
-    print("------------------ A_D ------------------")
-    print(A_D)
-
-    print("------------------ Drazin conditions ------------------")
-    A_k = np.linalg.matrix_power(A, 3)
-    e_pow = np.linalg.norm(A @ A_k @ A_D - A_k, np.inf)
-    e_doubleinv = np.linalg.norm(A_D @ A @ A_D - A_D, np.inf)
-    e_com = np.linalg.norm(A @ A_D - A_D @ A, np.inf)
-    print(f"|| A @ A^k @ A_D - A^k ||_inf = {e_pow:.2e}")
-    print(f"|| A_D @ A @ A_D - A_D ||_inf = {e_doubleinv:.2e}")
-    print(f"|| A @ A_D - A_D @ A ||_inf = {e_com:.2e}")
-    print(f"error against reference: {np.linalg.norm(A_D - A_exp, np.inf):.2e}")
+    print(
+        "KoopmanHillProjection module; run tests with pytest to validate Drazin implementations."
+    )

@@ -271,8 +271,8 @@ if __name__ == "__main__":
     main(
         cases=["B"],
         smoothings=[np.inf],
-        Ns_HBM=(5,),
-        Ns_plot=(5,),
+        Ns_HBM=(2,),
+        Ns_plot=(2,),
         L_DFT=2**12,
         max_residual=1e-9,
     )
