@@ -7,6 +7,7 @@ from scipy.linalg import (
     lu_factor,
     lu_solve,
     solve_sylvester,
+    qr,  # scipy qr decomposition allows for pivoting and rank-reveal, numpy does not
 )
 import warnings
 
@@ -857,15 +858,17 @@ def generalized_exponential(
     return exp @ P_0, P_0, a
 
 
-def drazin_rothblum(A, tol):
+def drazin_rothblum(A, tol=1e-8):
     A_i = A
     B_i = np.eye(A.shape[0])
 
     for k in range(A_i.shape[0]):
-        Q, A_i, P = np.linalg.qr(A_i, pivoting=True)
-        # find zero rows of R
+        Q, A_i, _ = qr(
+            A_i, pivoting=True
+        )  # with pivoting, but the actual pivot matrix does not matter
+        # find zero rows of A_i
         zero_rows = np.where(np.abs(A_i.diagonal()) < tol)[0]
-        B_i = Q.T @ B_i[:, P]
+        B_i = Q.T @ B_i
         if len(zero_rows) == 0:
             break
 
