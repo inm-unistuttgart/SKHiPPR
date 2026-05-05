@@ -710,7 +710,12 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
 
 
-def drazin_ord2(A, tol=0, ax_plot=None, x_value=None,):
+def drazin_ord2(
+    A,
+    tol=0,
+    ax_plot=None,
+    x_value=None,
+):
     A_i = 0.00005 * A
     while np.linalg.norm(A_i - A_i @ A @ A_i, 2) > np.linalg.norm(A, 2):
         A_i = 0.5 * A_i
@@ -727,7 +732,13 @@ def drazin_ord2(A, tol=0, ax_plot=None, x_value=None,):
     return A_i
 
 
-def drazin_ord9(A, tol=1e-8, ax_plot=None, x_value=None, verbose=False,):
+def drazin_ord9(
+    A,
+    tol=1e-8,
+    ax_plot=None,
+    x_value=None,
+    verbose=False,
+):
     """Drazin inverse computation of 9-th order convergence, as proposed by Soleymani2013 (Algorithm 3).
 
     Reference: F. Soleymani and P.S. Stanimirovic, 2013, "A higher order iterative method for computing the Drazin inverse", The Scientific World Journal,  https://doi.org/10.1155/2013/708647
@@ -746,11 +757,26 @@ def drazin_ord9(A, tol=1e-8, ax_plot=None, x_value=None, verbose=False,):
     A_kp1 = A  # A ** (k+1)
     W = A / (np.linalg.norm(A, np.inf) ** 2)  # initial guess for regular A: Eq. (2)
 
+    norm_min = np.inf
+    k_min = k
+
+    norm_next = np.linalg.norm(I - A * W, np.inf)
     # Determine initial matrix - non-functioning for the example :(
-    while np.linalg.norm(I - A  W, np.inf) > 1:
+    while norm_next > 1:
+        if norm_min > norm_next:
+            norm_min = norm_next
+            k_min = k
+
         k += 1
         if k > A.shape[0]:
-            raise RuntimeError("Drazin inverse: No converging initial guess found!")
+            print(
+                f"Drazin inverse: No converging initial guess (norm < 1) found! Computing the index of the matrix using repeated SVD."
+            )
+            k, A_k, A_kp1 = compute_index(A)
+            print(f"Computed index {k}.")
+            W = 2 / np.trace(A_kp1) * A_k  # Eq. (29) of the paper
+            break
+
         A_k = A_kp1
         A_kp1 = A @ A_kp1
         W = 2 / np.trace(A_kp1) * A_k  # Eq. (29) of the paper
@@ -766,6 +792,20 @@ def drazin_ord9(A, tol=1e-8, ax_plot=None, x_value=None, verbose=False,):
         if verbose:
             print(np.linalg.norm(W - W_prev, np.inf))
     return W
+
+
+def compute_index(A):
+    """Compute the algebraic index of a matrix A, i.e., the smallest integer k such that rank(A^k) = rank(A^(k+1))."""
+    A_k = np.eye(A.shape[0])
+    A_kp1 = A
+    k = 0
+    while np.linalg.matrix_rank(A_k) != np.linalg.matrix_rank(A_kp1):
+        A_k = A_kp1
+        A_kp1 = A @ A_kp1
+        k += 1
+        if k > A.shape[0]:
+            raise RuntimeError("Matrix index computation did not converge.")
+    return k, A_k, A_kp1
 
 
 def drazin_example_matrix():
