@@ -752,46 +752,42 @@ def drazin_ord9(
     I9 = 9 * I
     I12 = 12 * I
 
+    # brute-force search for index:
+    # see if iteration converges - if not increase the index
+
     k = 0  # k is the algebraic index of the matrix, 0 when the matrix is regular
     A_k = I  #  A ** k
     A_kp1 = A  # A ** (k+1)
     W = A / (np.linalg.norm(A, np.inf) ** 2)  # initial guess for regular A: Eq. (2)
 
-    norm_min = np.inf
-    k_min = k
+    while k < A.shape[0]:
+        num_iter = 0
+        delta = 1
 
-    norm_next = np.linalg.norm(I - A * W, np.inf)
-    # Determine initial matrix - non-functioning for the example :(
-    while norm_next > 1:
-        if norm_min > norm_next:
-            norm_min = norm_next
-            k_min = k
+        while delta < 1e9 and num_iter < 15 or delta < 1:
+            num_iter += 1
+            if delta < tol:
+                # converged
+                return W, k
 
+            # iteration step: Eq. (13) of paper
+            W_prev = W
+            psi = A @ W
+            chi = I7 + psi @ (I9 + psi @ (I5 + psi))
+            theta = psi @ chi
+            W = -0.125 * W @ chi @ (I12 + theta @ (I6 + theta))
+            delta = np.linalg.norm(W - W_prev, np.inf)
+            if verbose:
+                print(f"k = {k}, {num_iter}-th it., delta = {delta}")
+
+        # diverged at current index, increase index and try again
         k += 1
-        if k > A.shape[0]:
-            print(
-                f"Drazin inverse: No converging initial guess (norm < 1) found! Computing the index of the matrix using repeated SVD."
-            )
-            k, A_k, A_kp1 = compute_index(A)
-            print(f"Computed index {k}.")
-            W = 2 / np.trace(A_kp1) * A_k  # Eq. (29) of the paper
-            break
-
         A_k = A_kp1
         A_kp1 = A @ A_kp1
-        W = 2 / np.trace(A_kp1) * A_k  # Eq. (29) of the paper
+        W = 2 / np.linalg.trace(A_kp1) * A_k
 
-    # Iteration: Eq. (13) of the paper
-    W_prev = np.inf
-    while np.linalg.norm(W - W_prev, np.inf) > tol:
-        W_prev = W
-        psi = A @ W
-        chi = I7 + psi @ (I9 + psi @ (I5 + psi))
-        theta = psi @ chi
-        W = -0.125 * W @ chi @ (I12 + theta @ (I6 + theta))
-        if verbose:
-            print(np.linalg.norm(W - W_prev, np.inf))
-    return W
+    # did not converge for any index
+    raise RuntimeError("Drazin inverse computation did not converge.")
 
 
 def compute_index(A):
@@ -1011,7 +1007,7 @@ if __name__ == "__main__":
     A = drazin_example_matrix()
     print("------------------ A ------------------")
     print(A)
-    A_D = drazin(A, tol=1e-8)
+    A_D, k = drazin(A, tol=1e-8)
     A_exp = drazin_example_result()
 
     print("------------------ A_D ------------------")
