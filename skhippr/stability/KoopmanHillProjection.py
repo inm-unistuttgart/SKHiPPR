@@ -710,7 +710,7 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
 
 
-def drazin_ord2(A, tol=0, ax_plot=None, x_value=None):
+def drazin_ord2(A, tol=0, ax_plot=None, x_value=None,):
     A_i = 0.00005 * A
     while np.linalg.norm(A_i - A_i @ A @ A_i, 2) > np.linalg.norm(A, 2):
         A_i = 0.5 * A_i
@@ -727,13 +727,13 @@ def drazin_ord2(A, tol=0, ax_plot=None, x_value=None):
     return A_i
 
 
-def drazin_ord9(A, tol, ax_plot=None, x_value=None):
-    """Drazin inverse computation of 9-th order convergence, as proposed by Soleymani2013 (Algorithm 3)."""
+def drazin_ord9(A, tol=1e-8, ax_plot=None, x_value=None, verbose=False,):
+    """Drazin inverse computation of 9-th order convergence, as proposed by Soleymani2013 (Algorithm 3).
 
-    # Find the index of A: k such that rank(A^k) = rank(A^(k+1))
-    k = 3  # we know this for the example -- for now
+    Reference: F. Soleymani and P.S. Stanimirovic, 2013, "A higher order iterative method for computing the Drazin inverse", The Scientific World Journal,  https://doi.org/10.1155/2013/708647
+    """
 
-    # Multiples of the identity matrix
+    # Multiples of the identity matrix, needed later
     I = np.eye(A.shape[0])
     I5 = -5 * I
     I6 = 6 * I
@@ -741,14 +741,21 @@ def drazin_ord9(A, tol, ax_plot=None, x_value=None):
     I9 = 9 * I
     I12 = 12 * I
 
-    # Handle the case k = 0 (regular inverse) separately -- in Algo 3 handled via conjugate transpose
-    if k == 0:
-        return np.linalg.inv(A)
+    k = 0  # k is the algebraic index of the matrix, 0 when the matrix is regular
+    A_k = I  #  A ** k
+    A_kp1 = A  # A ** (k+1)
+    W = A / (np.linalg.norm(A, np.inf) ** 2)  # initial guess for regular A: Eq. (2)
 
-    # Initialize the iterated matrix: Eq. (29) of the paper
-    A_k = np.linalg.matrix_power(A, k)
-    W = 2 / np.trace(A @ A_k) * A_k
+    # Determine initial matrix - non-functioning for the example :(
+    while np.linalg.norm(I - A  W, np.inf) > 1:
+        k += 1
+        if k > A.shape[0]:
+            raise RuntimeError("Drazin inverse: No converging initial guess found!")
+        A_k = A_kp1
+        A_kp1 = A @ A_kp1
+        W = 2 / np.trace(A_kp1) * A_k  # Eq. (29) of the paper
 
+    # Iteration: Eq. (13) of the paper
     W_prev = np.inf
     while np.linalg.norm(W - W_prev, np.inf) > tol:
         W_prev = W
@@ -756,7 +763,8 @@ def drazin_ord9(A, tol, ax_plot=None, x_value=None):
         chi = I7 + psi @ (I9 + psi @ (I5 + psi))
         theta = psi @ chi
         W = -0.125 * W @ chi @ (I12 + theta @ (I6 + theta))
-        print(np.linalg.norm(W - W_prev, np.inf))
+        if verbose:
+            print(np.linalg.norm(W - W_prev, np.inf))
     return W
 
 
