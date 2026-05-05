@@ -857,6 +857,26 @@ def generalized_exponential(
     return exp @ P_0, P_0, a
 
 
+def drazin_rothblum(A, tol):
+    A_i = A
+    B_i = np.eye(A.shape[0])
+
+    for k in range(A_i.shape[0]):
+        Q, A_i, P = np.linalg.qr(A_i, pivoting=True)
+        # find zero rows of R
+        zero_rows = np.where(np.abs(A_i.diagonal()) < tol)[0]
+        B_i = Q.T @ B_i[:, P]
+        if len(zero_rows) == 0:
+            break
+
+        A_i[zero_rows, :] = B_i[zero_rows, :]
+        B_i[zero_rows, :] = 0
+
+    # k is now the index of A and A_i is an identity matrix
+    A_D = np.linalg.matrix_power(A_i, k + 1) @ np.linalg.matrix_power(A, k)
+    return A_D, k
+
+
 if __name__ == "__main__":
     print(
         "KoopmanHillProjection module; run tests with pytest to validate Drazin implementations."
