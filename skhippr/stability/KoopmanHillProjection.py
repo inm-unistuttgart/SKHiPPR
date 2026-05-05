@@ -580,6 +580,65 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         return np.real(funda_mat)
 
 
+def drazin(A, tol=0, ax_plot=None, x_value=None):
+    """Compute the Drazin inverse of a matrix A using the Schur decomposition.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        The input square matrix.
+    tol : float, optional
+        Tolerance for determining the rank (default is 0).
+    x_value: float, optional
+        x value(s) to plot the eigenvalues at, if multiple cases are to be compared in one plot.
+        If None (default), the eigenvalues are plotted at their index
+    Returns
+    -------
+    np.ndarray
+        The Drazin inverse of the matrix A.
+    """
+    return drazin_ord9(A, tol, ax_plot=ax_plot, x_value=x_value)
+
+    if ax_plot is not None:
+        eigenvalues = np.diag(T)
+
+        if x_value is None:
+            x_vals = np.arange(len(eigenvalues))
+        else:
+            x_vals = x_value * np.ones_like(eigenvalues)
+        # eigenvalues_plot = np.zeros_like(eigenvalues)
+        # for k, eigenvalue in enumerate(eigenvalues):
+        #     eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
+
+        # _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
+        ax_plot.semilogy(
+            x_vals,
+            np.abs(eigenvalues),  # [idx_unique]),
+            "x",
+        )
+
+    R = T[:n_cutoff, :n_cutoff]
+    N = T[n_cutoff:, n_cutoff:]
+    C = T[:n_cutoff, n_cutoff:]
+
+    W = np.eye(n, dtype=complex)
+
+    if np.linalg.norm(C, np.inf) > tol:
+        print(
+            "Drazin inverse computation: Non-zero coupling block detected. Using Sylvester."
+        )
+
+        W_nz = solve_sylvester(R, -N, -C)
+        W[:n_cutoff, n_cutoff:] = W_nz
+
+    # if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
+    #     warnings.warn(
+    #         "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
+    #     )
+
+    # if np.linalg.norm(Z @ Z.T.conj
+
+
 def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     """Compute the Drazin inverse of a matrix A.
 
@@ -697,7 +756,7 @@ def drazin_ord9(A, tol, ax_plot=None, x_value=None):
         chi = I7 + psi @ (I9 + psi @ (I5 + psi))
         theta = psi @ chi
         W = -0.125 * W @ chi @ (I12 + theta @ (I6 + theta))
-
+        print(np.linalg.norm(W - W_prev, np.inf))
     return W
 
 
@@ -904,8 +963,8 @@ if __name__ == "__main__":
     A = drazin_example_matrix()
     print("------------------ A ------------------")
     print(A)
-    # A_D = drazin_ord9(A, tol=1e-8)[0]
-    A_D = drazin_example_result()
+    A_D = drazin(A, tol=1e-8)
+    A_exp = drazin_example_result()
 
     print("------------------ A_D ------------------")
     print(A_D)
@@ -918,3 +977,4 @@ if __name__ == "__main__":
     print(f"|| A @ A^k @ A_D - A^k ||_inf = {e_pow:.2e}")
     print(f"|| A_D @ A @ A_D - A_D ||_inf = {e_doubleinv:.2e}")
     print(f"|| A @ A_D - A_D @ A ||_inf = {e_com:.2e}")
+    print(f"error against reference: {np.linalg.norm(A_D - A_exp, np.inf):.2e}")
