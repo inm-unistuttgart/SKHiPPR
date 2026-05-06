@@ -859,16 +859,16 @@ def generalized_exponential(
 
 
 def drazin_rothblum(A, tol=1e-8):
+    """Not wuite working"""
     A_i = A
     B_i = np.eye(A.shape[0])
 
     for k in range(A_i.shape[0]):
-        Q, A_i, _ = qr(
-            A_i, pivoting=True
-        )  # with pivoting, but the actual pivot matrix does not matter
-        # find zero rows of A_i
-        zero_rows = np.where(np.abs(A_i.diagonal()) < tol)[0]
-        B_i = Q.T @ B_i
+        Q, R, p = qr(A_i, pivoting=True)
+        # count zero rows of R
+        zero_rows = np.where(np.abs(R.diagonal()) < tol)[0]
+        # apply the same operations to B_i
+        B_bar = Q.T @ B_i[:, p]
         if len(zero_rows) == 0:
             break
 
@@ -878,6 +878,80 @@ def drazin_rothblum(A, tol=1e-8):
     # k is now the index of A and A_i is an identity matrix
     A_D = np.linalg.matrix_power(A_i, k + 1) @ np.linalg.matrix_power(A, k)
     return A_D, k
+
+
+def drazin_rothblum_custom(A, tol=1e-8):
+    """Rothblum's algorithm with custom Gauss-Jordan elimination"""
+
+    pass
+
+
+def row_reduced_echelon_form(A, B=None, tol=1e-8, in_place=False):
+    """Bring matrix A to row-reduced echelon form by Gauss-Jordan elimination.
+    Apply the same procedures also to B if provided."""
+
+    if not in_place:
+        A = A.copy()
+        if B is not None:
+            B = B.copy()
+
+    n_rows, n_cols = A.shape
+
+    idx_row = 0
+    for idx_col in range(n_cols):
+
+        # Find the pivot row: remaining row with largest element in the current column
+        pivot_row = np.argmax(np.abs(A[idx_row:, idx_col])) + idx_row
+        if np.abs(A[pivot_row, idx_col]) < tol:
+            # only zeros in the remaining rows of this column
+            # set everyting to exactly zero and move on without increasing the row index
+            A[idx_row:, idx_col] = 0
+            continue
+
+        # Swap the current row with the pivot row
+        A[[idx_row, pivot_row]] = A[[pivot_row, idx_row]]
+        if B is not None:
+            B[[idx_row, pivot_row]] = B[[pivot_row, idx_row]]
+
+        # Normalize the pivot row
+        if B is not None:
+            B[idx_row] /= A[idx_row, idx_col]
+        A[idx_row] /= A[idx_row, idx_col]
+
+        # Eliminate the current column in the rows below
+        for r in range(idx_row + 1, n_rows):
+            factor = A[r, idx_col]
+            A[r] -= factor * A[idx_row]
+            if B is not None:
+                B[r] -= factor * B[idx_row]
+
+        idx_row += 1
+    return A, B
+
+
+def back_substitution(A, B=None, tol=1e-8, in_place=False):
+    """Perform back-substitution on a matrix in row-reduced echelon form to make it contain only ones and zeros.
+    Apply the same operations also to B."""
+    if not in_place:
+        A = A.copy()
+        if B is not None:
+            B = B.copy()
+
+    n_rows, n_cols = A.shape
+    idx_col = n_cols - 1
+
+    for idx_row in range(n_rows - 1, -1, -1):
+        if abs(A[idx_row, idx_col]) < tol:
+            continue
+
+        # eliminate the current column in the rows above
+        for r in range(idx_row - 1, -1, -1):
+            factor = A[r, idx_col]
+            A[r] -= factor * A[idx_row]
+            if B is not None:
+                B[r] -= factor * B[idx_row]
+        idx_col -= 1
+    return A, B
 
 
 if __name__ == "__main__":

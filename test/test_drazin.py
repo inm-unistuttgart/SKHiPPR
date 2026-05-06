@@ -17,6 +17,8 @@ from skhippr.stability.KoopmanHillProjection import (
     drazin_ord9,
     drazin_rothblum,
     compute_index,
+    row_reduced_echelon_form,
+    back_substitution,
 )
 
 implementations = [drazin_rothblum]
@@ -241,6 +243,131 @@ def verify_drazin_criteria(A, A_D, k, tol=1e-8):
         "crit3_pass": crit3_pass,
         "all_pass": crit1_pass and crit2_pass and crit3_pass,
     }
+
+
+class TestGaussJordan:
+    """Tests for row-reduced echelon form and back-substitution algorithms."""
+
+    def is_rref(self, A, tol=0):
+        """Check whether A is in reduced row-echelon form.
+
+        Conditions checked:
+        - Each nonzero row has a leading 1.
+        - Leading 1s move strictly to the right in lower rows.
+        """
+        A = A.copy()
+        n_rows, _ = A.shape
+        first_prev = -1
+        for r in range(n_rows):
+            row = A[r]
+            nz = np.where(np.abs(row) > tol)[0]
+            if nz.size == 0:
+                continue
+            first = nz[0]
+            # leading value must be 1
+            if A[r, first] != 1.0:
+                return False
+            # leading positions strictly increasing
+            if first <= first_prev:
+                return False
+            first_prev = first
+        return True
+
+    def test_rref_and_backsub_nonsingular(self):
+        """For nonsingular A, rref -> identity and back_substitution yields identity; B becomes inverse."""
+        np.random.seed(928574)
+        n = 8
+        A = np.random.randn(n, n)
+        # ensure invertible
+        while np.linalg.cond(A) > 1e6:
+            A = np.random.randn(n, n)
+
+        B = np.eye(n)
+
+        A_rref, B_trans = row_reduced_echelon_form(A, B, in_place=False)
+        assert self.is_rref(A_rref, tol=1e-8)
+
+        # After full Gauss-Jordan on a nonsingular square matrix the result should be identity
+        A_final, B_final = back_substitution(A_rref, B_trans, in_place=False)
+
+        assert np.allclose(A_final, np.eye(n), atol=1e-14)
+
+        # B_final should be the inverse of original A
+        assert np.allclose(B_final @ A, np.eye(n), atol=1e-7)
+
+    def test_rref_singular(self):
+        """RREF should work for singular matrices and maintain operations on B."""
+        # Construct rank-deficient matrix
+        n = 7
+        A = np.random.randn(n, n)
+
+        # make one row a linear combination of other rows
+        factors = np.random.randn(n - 1)
+        A[-1, :] = 0
+        for i in range(n - 1):
+            A[-1, :] += factors[i] * A[i, :]
+
+        # put the linearly dependent row somewhere
+        pos = np.random.randint(0, n)
+        A[[pos, -1], :] = A[[-1, pos], :]
+
+        A_rref, B_rref = row_reduced_echelon_form(A, A, in_place=False)
+
+        assert self.is_rref(A_rref, tol=0)
+        assert np.allclose(
+            B_rref, A_rref, atol=1e-14
+        ), f" discrepancy between A and B is {np.linalg.norm(B_rref - A_rref, np.inf)}"
+
+        # Back substitution should not change rref property and should keep same row ops on B
+        A_bs, B_bs = back_substitution(A_rref, B_rref, in_place=False)
+        assert self.is_rref(A_bs, tol=0)
+        assert np.allclose(A_bs, B_bs, atol=1e-14, rtol=1e-14)
+
+        # check that last row of A is zero
+        assert np.all(np.abs(A_rref[-1, :]) == 0)
+        assert np.all(np.abs(A_bs[-1, :]) == 0)
+
+    def test_in_place_behavior(self):
+        """If in_place=True mutate inputs; if in_place=False keep inputs unchanged."""
+        np.random.seed(2026)
+        n = 6
+        A0 = np.random.randn(n, n)
+        while np.linalg.cond(A0) > 1e6:
+            A0 = np.random.randn(n, n)
+        B0 = np.eye(n)
+
+        # in_place=False: original A and B must remain unchanged
+        A_false = A0.copy()
+        B_false = B0.copy()
+        A_rref_false, B_rref_false = row_reduced_echelon_form(
+            A_false, B_false, in_place=False
+        )
+        assert np.allclose(A_false, A0)
+        assert np.allclose(B_false, B0)
+        A_bs_false, B_bs_false = back_substitution(
+            A_rref_false, B_rref_false, in_place=False
+        )
+        assert np.allclose(A_rref_false, A_rref_false.copy())
+        assert np.allclose(B_rref_false, B_rref_false.copy())
+
+        # in_place=True: passed arrays should be overwritten
+        A_true = A0.copy()
+        B_true = B0.copy()
+        A_rref_true, B_rref_true = row_reduced_echelon_form(
+            A_true, B_true, in_place=True
+        )
+        assert np.allclose(A_true, A_rref_true)
+        assert np.allclose(B_true, B_rref_true)
+        assert not np.allclose(A_true, A0)
+        assert not np.allclose(B_true, B0)
+
+        A_before_bs = A_true.copy()
+        B_before_bs = B_true.copy()
+        A_bs_true, B_bs_true = back_substitution(A_true, B_true, in_place=True)
+        assert np.allclose(A_true, A_bs_true)
+        assert np.allclose(B_true, B_bs_true)
+        assert not np.allclose(A_true, A_before_bs)
+        assert not np.allclose(B_true, B_before_bs)
 
 
 # ============================================================================
@@ -511,4 +638,4 @@ class TestNonsingularMatrix:
 
 if __name__ == "__main__":
     # pytest.main([__file__, "-v", "-k", "TestNonsingularMatrix"])
-    pytest.main([__file__, "-v", "-k", "TestExampleMatrix"])
+    pytest.main([__file__, "-v", "-k", "TestGaussJordan"])
