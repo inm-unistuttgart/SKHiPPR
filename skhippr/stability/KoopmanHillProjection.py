@@ -890,13 +890,14 @@ def drazin_rothblum_custom(A, tol=1e-8):
     doi: https://doi.org/10.1016/0024-3795(87)90219-9
     """
 
-    A = A.copy
+    A_orig = A
+    A = A.copy()
     n = A.shape[0]
     B = np.eye(n)
 
     for k in range(n):
         A_bar, B_bar = row_reduced_echelon_form(A, B, tol=tol, in_place=False)
-        idx_zero = np.where(np.abs(A_bar.diagonal()) < tol)[0]
+        idx_zero = np.where(np.sum(np.abs(A_bar), axis=1) < tol)[0]
         m = n - len(idx_zero)
 
         if m == n:
@@ -904,7 +905,10 @@ def drazin_rothblum_custom(A, tol=1e-8):
             break
 
         # shuffle step
+        A = A_bar
         A[idx_zero, :] = B_bar[idx_zero, :]
+
+        B = B_bar
         B[idx_zero, :] = 0
 
     # k is now the index of A.
@@ -918,7 +922,7 @@ def drazin_rothblum_custom(A, tol=1e-8):
         )
 
     # Drazin inverse formula
-    A_D = np.linalg.matrix_power(A_hat, k + 1) @ np.linalg.matrix_power(A, k)
+    A_D = np.linalg.matrix_power(A_hat, k + 1) @ np.linalg.matrix_power(A_orig, k)
     return A_D, k
 
 
@@ -950,9 +954,11 @@ def row_reduced_echelon_form(A, B=None, tol=1e-8, in_place=False):
             B[[idx_row, pivot_row]] = B[[pivot_row, idx_row]]
 
         # Normalize the pivot row
+        pivot = A[idx_row, idx_col]
+        print(1 / pivot)
         if B is not None:
-            B[idx_row] /= A[idx_row, idx_col]
-        A[idx_row] /= A[idx_row, idx_col]
+            B[idx_row] /= pivot
+        A[idx_row] /= pivot
 
         # Eliminate the current column in the rows below
         for r in range(idx_row + 1, n_rows):
