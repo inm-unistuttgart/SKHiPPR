@@ -708,7 +708,7 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
         R, np.eye(n_cutoff), lower=False
     )
 
-    return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n_cutoff / n
+    return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n - n_cutoff
 
 
 def drazin_ord2(
@@ -955,7 +955,8 @@ def row_reduced_echelon_form(A, B=None, tol=1e-8, in_place=False):
 
         # Normalize the pivot row
         pivot = A[idx_row, idx_col]
-        print(1 / pivot)
+        if abs(1 / pivot) > 1e2:
+            print(1 / pivot)
         if B is not None:
             B[idx_row] /= pivot
         A[idx_row] /= pivot

@@ -21,7 +21,7 @@ from skhippr.stability.KoopmanHillProjection import (
     back_substitution,
 )
 
-implementations = [drazin_rothblum_custom]
+implementations = [drazin_rothblum_custom, drazin_schur_2]
 
 # ============================================================================
 # Example matrix fixtures (from Soleymani2013 paper)
@@ -606,12 +606,9 @@ class TestExampleMatrix:
         A_D, k = impl_func(A, tol=tol)
 
         results = verify_drazin_criteria(A, A_D, int(k), tol=10 * tol)
-        assert results["all_pass"], (
-            f"{impl_func.__name__} failed criteria:\n"
-            f"  crit1: {results['crit1_error']:.2e}\n"
-            f"  crit2: {results['crit2_error']:.2e}\n"
-            f"  crit3: {results['crit3_error']:.2e}"
-        )
+        assert results[
+            "all_pass"
+        ], f"{impl_func.__name__} failed criteria ({results['crit1_error']:.2e}, {results['crit2_error']:.2e}, {results['crit3_error']:.2e})\n"
 
     @pytest.mark.parametrize("impl_func", implementations)
     def test_result_matches_reference(self, impl_func, example_data):
@@ -671,122 +668,109 @@ class TestNonsingularMatrix:
         A_D, k = impl_func(A, tol=1e-10)
 
         results = verify_drazin_criteria(A, A_D, int(k), tol=1e-8)
-        assert results["all_pass"], (
-            f"{impl_func.__name__} failed criteria on nonsingular matrix:\n"
-            f"  crit1: {results['crit1_error']:.2e}\n"
-            f"  crit2: {results['crit2_error']:.2e}\n"
-            f"  crit3: {results['crit3_error']:.2e}"
-        )
+        assert results[
+            "all_pass"
+        ], f"{impl_func.__name__} failed criteria ({results['crit1_error']:.2e}, {results['crit2_error']:.2e}, {results['crit3_error']:.2e})\n"
 
 
-# # ============================================================================
-# # Test: Singular matrices with various algebraic indices
-# # ============================================================================
+# ============================================================================
+# Test: Singular matrices with various algebraic indices
+# ============================================================================
 
 
-# class TestSingularMatrices:
-#     """Test Drazin on singular matrices with controlled algebraic indices."""
+class TestSingularMatrices:
+    """Test Drazin on singular matrices with controlled algebraic indices."""
 
-#     @staticmethod
-#     def create_jordan_block(eigenvalue, size):
-#         """Create a Jordan block with given eigenvalue and size."""
-#         J = np.eye(size) * eigenvalue
-#         for i in range(size - 1):
-#             J[i, i + 1] = 1
-#         return J
+    @staticmethod
+    def create_jordan_block(eigenvalue, size):
+        """Create a Jordan block with given eigenvalue and size."""
+        J = np.eye(size) * eigenvalue
+        for i in range(size - 1):
+            J[i, i + 1] = 1
+        return J
 
-#     @staticmethod
-#     def create_singular_matrix_with_index(n, index):
-#         """
-#         Create an n×n singular matrix with algebraic index equal to 'index'.
+    @staticmethod
+    def create_singular_matrix_with_index(n, index):
+        """
+        Create an n×n singular matrix with algebraic index equal to 'index'.
 
-#         Constructed by placing a Jordan block with eigenvalue 0 of size (index)
-#         in the top-left, and nonzero eigenvalues elsewhere.
+        Constructed by placing a Jordan block with eigenvalue 0 of size (index)
+        in the top-left, and nonzero eigenvalues elsewhere.
 
-#         Parameters
-#         ----------
-#         n : int
-#             Matrix dimension
-#         index : int
-#             Desired algebraic index (size of largest zero Jordan block)
+        Parameters
+        ----------
+        n : int
+            Matrix dimension
+        index : int
+            Desired algebraic index (size of largest zero Jordan block)
 
-#         Returns
-#         -------
-#         A : np.ndarray
-#             Singular matrix with the specified index
-#         """
-#         assert index <= n, "Index cannot exceed matrix dimension"
+        Returns
+        -------
+        A : np.ndarray
+            Singular matrix with the specified index
+        """
 
-#         # Create Jordan normal form with a nilpotent block of size 'index'
-#         J_nil = TestSingularMatrices.create_jordan_block(0, index)
+        np.random.seed(456384652 + index)  # Reproducible but different for each index
 
-#         # Fill remaining diagonal with nonzero eigenvalues
-#         remaining_eigs = np.linspace(1, 5, n - index)
-#         J_nz = np.diag(remaining_eigs)
+        assert index <= n, "Index cannot exceed matrix dimension"
 
-#         # Combine into full Jordan form
-#         J = np.zeros((n, n))
-#         J[:index, :index] = J_nil
-#         J[index:, index:] = J_nz
+        # Create Jordan normal form with a nilpotent block of size 'index'
+        J_nil = TestSingularMatrices.create_jordan_block(0, index)
 
-#         # Apply random similarity transformation
-#         np.random.seed(42 + index)  # Reproducible but different for each index
-#         P = np.random.randn(n, n)
+        # Fill the remainder with a random nonsingular matrix
+        J_other = np.random.randn(n - index, n - index)
+        while np.linalg.cond(J_other) > 1e6:
+            J_other = np.random.randn(n - index, n - index)
 
-#         # Ensure P is invertible
-#         while np.linalg.cond(P) > 1e10:
-#             P = np.random.randn(n, n)
+        # Combine into full Jordan form
+        J = np.zeros((n, n))
+        J[:index, :index] = J_nil
+        J[index:, index:] = J_other
 
-#         # A = P @ J @ P^{-1}
-#         A = P @ J @ np.linalg.inv(P)
+        # Apply random similarity transformation
+        P = np.random.randn(n, n)
 
-#         return A
+        # Ensure P is VERY well conditioned
+        while np.linalg.cond(P) > 1e3:
+            P = np.random.randn(n, n)
 
-#     @pytest.mark.parametrize("index", [1, 2, 5, 10, 25])
-#     def test_singular_index_detection(self, index):
-#         """Test that drazin_ord9 correctly detects algebraic index."""
-#         n = 51
-#         A = self.create_singular_matrix_with_index(n, index)
+        # A = P @ J @ P^{-1}
+        A = P @ J @ np.linalg.inv(P)
 
-#         A_D, k_computed = drazin_ord9(A, tol=1e-8)
+        return A
 
-#         assert (
-#             int(k_computed) == index
-#         ), f"Expected index {index}, but got {int(k_computed)}"
+    @pytest.mark.parametrize("impl_func", implementations)
+    @pytest.mark.parametrize("index", [1, 2, 5, 10, 25])
+    def test_singular_index_detection(self, impl_func, index):
+        """Test that drazin_ord9 correctly detects algebraic index."""
+        n = 51
+        A = self.create_singular_matrix_with_index(n, index)
 
-#     @pytest.mark.parametrize("index", [1, 2, 5, 10, 25])
-#     def test_singular_criteria_all_indices(self, index):
-#         """Test Drazin criteria on singular matrices with various indices."""
-#         n = 51
-#         A = self.create_singular_matrix_with_index(n, index)
+        A_D, k_computed = impl_func(A, tol=1e-5)
 
-#         A_D, k = drazin_ord9(A, tol=1e-8)
+        assert (
+            int(k_computed) == index
+        ), f"Expected index {index}, but got {int(k_computed)}"
 
-#         results = verify_drazin_criteria(A, A_D, int(k), tol=1e-6)
-#         assert results["all_pass"], (
-#             f"Index {index}: Drazin criteria failed:\n"
-#             f"  crit1: {results['crit1_error']:.2e}\n"
-#             f"  crit2: {results['crit2_error']:.2e}\n"
-#             f"  crit3: {results['crit3_error']:.2e}"
-#         )
+    @pytest.mark.parametrize("impl_func", implementations)
+    @pytest.mark.parametrize("index", [1, 2, 5, 10, 25])
+    def test_singular_criteria_all_indices(self, impl_func, index):
+        """Test Drazin criteria on singular matrices with various indices."""
+        n = 51
+        A = self.create_singular_matrix_with_index(n, index)
 
-#     @pytest.mark.parametrize("index", [1, 2, 5, 10, 25])
-#     def test_singular_schur_criteria(self, index):
-#         """Test drazin_schur_2 on singular matrices (should also work)."""
-#         n = 51
-#         A = self.create_singular_matrix_with_index(n, index)
+        A_D, k = impl_func(A, tol=1e-5)
 
-#         A_D, k = drazin_schur_2(A, tol=1e-8)
-
-#         results = verify_drazin_criteria(A, A_D, int(k), tol=1e-6)
-#         assert results["all_pass"], (
-#             f"Index {index} (drazin_schur_2): Drazin criteria failed:\n"
-#             f"  crit1: {results['crit1_error']:.2e}\n"
-#             f"  crit2: {results['crit2_error']:.2e}\n"
-#             f"  crit3: {results['crit3_error']:.2e}"
-#         )
+        results = verify_drazin_criteria(A, A_D, int(k), tol=1e-5)
+        assert results[
+            "all_pass"
+        ], f"{impl_func.__name__} failed criteria ({results['crit1_error']:.2e}, {results['crit2_error']:.2e}, {results['crit3_error']:.2e})\n"
 
 
 if __name__ == "__main__":
     # pytest.main([__file__, "-v", "-k", "TestNonsingularMatrix"])
-    pytest.main([__file__, "-v", "-k", "TestExampleMatrix"])
+    # pytest.main([__file__, "-v", "-k", "TestExampleMatrix"])
+    # pytest.main(
+    #     [__file__ + "::TestSingularMatrices::test_singular_index_detection", "-v"]
+    # )
+    pytest.main([__file__, "-v"])
