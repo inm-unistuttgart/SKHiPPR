@@ -881,9 +881,45 @@ def drazin_rothblum(A, tol=1e-8):
 
 
 def drazin_rothblum_custom(A, tol=1e-8):
-    """Rothblum's algorithm with custom Gauss-Jordan elimination"""
+    """Rothblum's algorithm with custom Gauss-Jordan elimination.
 
-    pass
+    Reference:
+    K.M. Anstreicher and U.G. Rothblum,
+    Using Gauss-Jordan elimination to compute the Index, generalized nullspaces and Drazin inverse,
+    Linear Algebra Appl., 85(1987), 221-239,
+    doi: https://doi.org/10.1016/0024-3795(87)90219-9
+    """
+
+    A = A.copy
+    n = A.shape[0]
+    B = np.eye(n)
+
+    for k in range(n):
+        A_bar, B_bar = row_reduced_echelon_form(A, B, tol=tol, in_place=False)
+        idx_zero = np.where(np.abs(A_bar.diagonal()) < tol)[0]
+        m = n - len(idx_zero)
+
+        if m == n:
+            # A_bar is nonsingular, terminal condition satisfied
+            break
+
+        # shuffle step
+        A[idx_zero, :] = B_bar[idx_zero, :]
+        B[idx_zero, :] = 0
+
+    # k is now the index of A.
+    # Make A_bar the identity matrix, then B_bar becomes A_hat
+    eye, A_hat = back_substitution(A_bar, B_bar, tol=tol, in_place=True)
+
+    # Verify that eye is indeed the identity matrix
+    if np.linalg.norm(eye - np.eye(n), np.inf) > tol:
+        raise RuntimeError(
+            "Drazin inverse computation: Back substitution did not yield identity matrix."
+        )
+
+    # Drazin inverse formula
+    A_D = np.linalg.matrix_power(A_hat, k + 1) @ np.linalg.matrix_power(A, k)
+    return A_D, k
 
 
 def row_reduced_echelon_form(A, B=None, tol=1e-8, in_place=False):
