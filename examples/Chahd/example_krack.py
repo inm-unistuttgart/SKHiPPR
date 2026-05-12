@@ -14,8 +14,8 @@ from skhippr.visualization.continuation import plot_floquet_multiplier_continuat
 
 
 def main():
-    ode = KrackExample(omega=1.55)
-    fourier = Fourier(N_HBM=50, L_DFT=2**12, n_dof=ode.n_dof)
+    ode = KrackExample(omega=1.58)
+    fourier = Fourier(N_HBM=30, L_DFT=2**10, n_dof=ode.n_dof)
     initial_guess = np.zeros((ode.n_dof, 2 * fourier.N_HBM + 1)).flatten()
     hbm = HBMSystem(
         ode,
@@ -31,16 +31,16 @@ def main():
         initial_system=hbm,
         solver=NewtonSolver(),
         stepsize=0.01,
-        stepsize_range=(0.01, 0.1),
+        stepsize_range=(0.01, 0.05),
         initial_direction=1,
         continuation_parameter="omega",
         verbose=True,
-        num_steps=60,
+        num_steps=80,
     ):
         branch.append(bp)
 
     plot_continuation(branch, plot_fun)
-    plot_floquet_multiplier_continuation(branch)
+    plot_floquet_multiplier_continuation(branch, marker=".", linestyle="none")
 
 
 def plot_fun(bp):
