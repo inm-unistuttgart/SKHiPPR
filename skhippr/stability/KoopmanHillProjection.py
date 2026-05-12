@@ -497,9 +497,11 @@ class KoopmanHillDAE(KoopmanHillProjection):
         self.tol_drazin = tol_drazin
 
     @override
-    def fundamental_matrix(self, t_over_period, hbm: HBMEquationDAE, omega=None):
+    def fundamental_matrix(
+        self, t_over_period, hbm: HBMEquationDAE, omega=None, update=True
+    ):
         C = self.C_time(t_over_period)
-        hill_matrix = hbm.hill_matrix()
+        hill_matrix = hbm.hill_matrix(update=update)
 
         if omega is None:
             omega = hbm.omega
@@ -598,7 +600,7 @@ def drazin(A, tol=0, ax_plot=None, x_value=None):
     np.ndarray
         The Drazin inverse of the matrix A.
     """
-    return drazin_ord9(A, tol, ax_plot=ax_plot, x_value=x_value)
+    return drazin_schur_2(A, tol, ax_plot=ax_plot, x_value=x_value)
 
     if ax_plot is not None:
         eigenvalues = np.diag(T)

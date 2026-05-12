@@ -42,3 +42,4 @@ plots/
 *.png
 *.tex
 *.tikz
+*.mat
