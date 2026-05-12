@@ -153,11 +153,6 @@ def main():
     plot_floquet_exponent_continuation(branch=frc)
     _, animation1 = animate_floquet_multipliers(hbm_set=frc, scaling="static")
     _, animation2 = animate_floquet_exponents(hbm_set=frc, scaling="static")
-    # save_pdf(ax, "testSaves/continuationPlot")
-    # save_tikz(ax, "testSaves\\continuationPlot")
-    # save_png(ax,"continuationplot")
-    # save_animation(animation, "animationGifTest.gif")
-    # save_animation(animation, "animation_mp4_test.mp4")
     return (
         animation1,
         animation2,

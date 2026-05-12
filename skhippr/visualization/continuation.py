@@ -236,7 +236,6 @@ def plot_floquet_multiplier_continuation(
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
     alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
 
     for i in range(num_multipliers):
         magnitudes_i = all_magnitudes[:, i]
@@ -252,7 +251,6 @@ def plot_floquet_multiplier_continuation(
             ys_stable,
             color=stable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -261,7 +259,6 @@ def plot_floquet_multiplier_continuation(
             ys_unstable,
             color=unstable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -354,7 +351,6 @@ def plot_floquet_exponent_continuation(
     xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
     ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
     alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
 
     for i in range(num_exponents):
         exponents_i = all_exponents[:, i]
@@ -371,7 +367,6 @@ def plot_floquet_exponent_continuation(
             ys_stable,
             color=stable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -380,7 +375,6 @@ def plot_floquet_exponent_continuation(
             ys_unstable,
             color=unstable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
