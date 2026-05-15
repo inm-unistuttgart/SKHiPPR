@@ -36,6 +36,7 @@ class AbstractODE(AbstractEquation):
         super().__init__(stability_method=stability_method)
         self.autonomous = autonomous
         self.n_dof = n_dof
+        self.has_nontrivial_omega_derivative = False
 
     @abstractmethod
     def dynamics(self, t=None, x=None) -> np.ndarray:
@@ -160,6 +161,17 @@ class AbstractODE(AbstractEquation):
         """Requires subclasses to implement a closed-form derivative with optional arguments ``t`` and ``x``."""
 
         return super().closed_form_derivative(variable)
+
+    def nontrivial_omega_derivative(self, t=None, x=None) -> np.ndarray:
+        """If the ODE has a nontrivial derivative with respect to omega, this method can be implemented to provide it. This is relevant for the stability analysis of periodic orbits in forced systems."""
+
+        if not self.has_nontrivial_omega_derivative:
+            return 0
+
+        else:
+            raise NotImplementedError(
+                "Default to finite differences for omega derivative."
+            )
 
 
 class AbstractDAE(AbstractODE):
