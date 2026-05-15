@@ -82,6 +82,70 @@ class Jeffcott2(AbstractODE):
 
         return df_domega
 
+    def closed_form_derivative(self, variable, t=None, x=None):
+        """Closed-form derivative of the ODE w.r.t. state `x`.
+
+        Returns an array of shape (n_dof, n_dof, L) where L is the number
+        of time samples in `t` / the second dimension of `x`.
+        """
+        if variable != "x":
+            raise NotImplementedError("Only variable='x' is implemented here.")
+
+        if x is None:
+            x = self.x
+        if t is None:
+            t = self.t
+        self.check_dimensions(t, x)
+
+        # Ensure x has shape (n_dof, L)
+        x = np.atleast_2d(x)
+        n_dof, L = x.shape
+
+        q = x[:2, :]
+        dq = x[2:, :]
+
+        q0 = q[0, :]
+        q1 = q[1, :]
+        dq0 = dq[0, :]
+        dq1 = dq[1, :]
+
+        # factor_nonl = D_it*(q0*dq0 + q1*dq1) + 2*omega_t^2*(q0^2 + q1^2)
+        factor_nonl = self.D_it * (q0 * dq0 + q1 * dq1) + 2 * (self.omega_t**2) * (
+            q0**2 + q1**2
+        )
+
+        Js = np.zeros((n_dof, n_dof, L))
+
+        # f0 = dq0 -> df0/dx = [0,0,1,0]
+        Js[0, 2, :] = 1.0
+        # f1 = dq1 -> df1/dx = [0,0,0,1]
+        Js[1, 3, :] = 1.0
+
+        # Common coefficients
+        Dsum = self.D_if + self.D_e
+
+        # dR/dx for f2 (index 2)
+        Js[2, 0, :] = (
+            -1.0 - factor_nonl - q0 * (self.D_it * dq0 + 4 * (self.omega_t**2) * q0)
+        )
+        Js[2, 1, :] = -self.omega * self.D_if - q0 * (
+            self.D_it * dq1 + 4 * (self.omega_t**2) * q1
+        )
+        Js[2, 2, :] = -Dsum - self.D_it * q0**2
+        Js[2, 3, :] = -self.D_it * q0 * q1
+
+        # dR/dx for f3 (index 3)
+        Js[3, 0, :] = self.omega * self.D_if - q1 * (
+            self.D_it * dq0 + 4 * (self.omega_t**2) * q0
+        )
+        Js[3, 1, :] = (
+            -1.0 - factor_nonl - q1 * (self.D_it * dq1 + 4 * (self.omega_t**2) * q1)
+        )
+        Js[3, 2, :] = -self.D_it * q0 * q1
+        Js[3, 3, :] = -Dsum - self.D_it * q1**2
+
+        return Js
+
 
 def main():
     """Run a frequency response curve analysis for the Jeffcott rotor."""
@@ -98,7 +162,7 @@ def main():
     D_e = 0.1
     D_if = 0.1
     D_it = 0
-    e = 5e-4
+    e = 3e-4
 
     ode = Jeffcott2(D_e=D_e, D_if=D_if, D_it=D_it, omega_t=omega_t, omega=0.1, e=e)
 
@@ -139,7 +203,7 @@ def main():
         initial_system=initial_system,
         solver=solver,
         stepsize=0.1,
-        stepsize_range=(0.0001, 0.1),
+        stepsize_range=(0.0001, 0.02),
         continuation_parameter="omega",
         initial_direction=1,
         verbose=True,
@@ -159,10 +223,10 @@ def main():
     ax.set_xlabel(r"$\omega$")
     ax.set_ylabel(r"max radial displacement")
 
-    # _, animation1 = animate_floquet_multipliers(hbm_set=frc)
-    # _, animation2 = animate_floquet_exponents(hbm_set=frc)
+    _, animation1 = animate_floquet_multipliers(hbm_set=frc)
+    _, animation2 = animate_floquet_exponents(hbm_set=frc)
 
-    return  # animation1, animation2
+    return animation1, animation2
 
 
 if __name__ == "__main__":
