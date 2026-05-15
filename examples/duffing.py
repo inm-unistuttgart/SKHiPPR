@@ -151,8 +151,8 @@ def main():
     )
     plot_floquet_multiplier_continuation(branch=frc)
     plot_floquet_exponent_continuation(branch=frc)
-    _, animation1 = animate_floquet_multipliers(hbm_set=frc, scaling="static")
-    _, animation2 = animate_floquet_exponents(hbm_set=frc, scaling="static")
+    _, animation1 = animate_floquet_multipliers(hbm_set=frc)
+    _, animation2 = animate_floquet_exponents(hbm_set=frc)
     return (
         animation1,
         animation2,
