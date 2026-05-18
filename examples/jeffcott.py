@@ -21,6 +21,8 @@ from skhippr.visualization.cycles import (
     animate_floquet_multipliers,
 )
 
+from skhippr.visualization.data_export import save_tikz
+
 
 class Jeffcott2(AbstractODE):
     """3rd order model, Alcorta2023 Eq. (5)"""
@@ -162,7 +164,7 @@ def main():
     D_e = 0.1
     D_if = 0.1
     D_it = 0
-    e = 3e-4
+    e = 5e-4
 
     ode = Jeffcott2(D_e=D_e, D_if=D_if, D_it=D_it, omega_t=omega_t, omega=0.1, e=e)
 
@@ -223,6 +225,8 @@ def main():
     ax.set_xlabel(r"$\omega$")
     ax.set_ylabel(r"max radial displacement")
 
+    tikzplotlib.save("jeffcott.tikz", axis_width="5cm", axis_height="5cm")
+
     _, animation1 = animate_floquet_multipliers(hbm_set=frc)
     _, animation2 = animate_floquet_exponents(hbm_set=frc)
 
@@ -231,5 +235,4 @@ def main():
 
 if __name__ == "__main__":
     animations = main()
-    tikzplotlib.save("jeffcott.tikz", axis_width="5cm", axis_height="5cm")
     plt.show()
