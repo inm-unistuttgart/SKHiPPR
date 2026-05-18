@@ -15,7 +15,7 @@ from skhippr.visualization.cycles import animate_floquet_multipliers
 
 
 def main():
-    ode = SmoothKrackExample(omega=1.5, alpha=6)
+    ode = SmoothKrackExample(omega=1.5, alpha=20)
     fourier = Fourier(N_HBM=30, L_DFT=2**10, n_dof=ode.n_dof)
     initial_guess = np.zeros((ode.n_dof, 2 * fourier.N_HBM + 1)).flatten()
     hbm = HBMSystem(

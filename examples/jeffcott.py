@@ -2,10 +2,14 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import tikzplotlib
+from scipy.integrate import solve_ivp
 
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation
+from skhippr.cycles.shooting import ShootingBVP
+
 from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.solvers.continuation import BranchPoint, pseudo_arclength_continuator
@@ -149,26 +153,20 @@ class Jeffcott2(AbstractODE):
         return Js
 
 
-def main():
+def init_ode(l0=1.2, r=0.01, D_e=0.1, D_if=0.1, D_it=0, e=5e-4):
+    # case Alcorta2023 - p. 5 bottom right
+    omega_t = l0 / (np.sqrt(6) * r)
+    return Jeffcott2(D_e=D_e, D_if=D_if, D_it=D_it, omega_t=omega_t, omega=0.1, e=e)
+
+
+def main(ode=None):
     """Run a frequency response curve analysis for the Jeffcott rotor."""
+    if ode is None:
+        ode = init_ode()
 
     fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=4, real_formulation=True)
     stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
     solver = NewtonSolver(verbose=True, max_iterations=50)
-
-    # case Alcorta2023 - p. 5 bottom right
-    l0 = 1.2
-    r = 0.01
-    omega_t = l0 / (np.sqrt(6) * r)
-    print(omega_t)
-    D_e = 0.1
-    D_if = 0.1
-    D_it = 0
-    e = 5e-4
-
-    ode = Jeffcott2(D_e=D_e, D_if=D_if, D_it=D_it, omega_t=omega_t, omega=0.1, e=e)
-
-    # WAS IST D_IT????
 
     ts = fourier.time_samples(ode.omega)
     x0_samples = np.array(
@@ -227,12 +225,151 @@ def main():
 
     tikzplotlib.save("jeffcott.tikz", axis_width="5cm", axis_height="5cm")
 
-    _, animation1 = animate_floquet_multipliers(hbm_set=frc)
-    _, animation2 = animate_floquet_exponents(hbm_set=frc)
+    # _, animation1 = animate_floquet_multipliers(hbm_set=frc)
+    # _, animation2 = animate_floquet_exponents(hbm_set=frc)
 
-    return animation1, animation2
+    animation1 = None
+    animation2 = None
+
+    return ode, (animation1, animation2)
+
+
+def compute_time_solution(
+    ode, omega, x_0=(0, 0, 0, 0), num_periods=15, points_per_period=200
+):
+    ode.omega = omega
+    ode.t = 0
+    ode.x = np.array([0, 0, 0, 0])
+
+    shoot = ShootingBVP(ode=ode, T=2 * np.pi / ode.omega)
+
+    t_eval = np.linspace(
+        0, num_periods * shoot.T_solution, num_periods * points_per_period + 1
+    )
+
+    x = shoot.x_time(t_eval=t_eval)
+    return t_eval, x
+
+
+def animate_phase_portrait(ode, omega, length_tail=10, path=None):
+    t_eval, x = compute_time_solution(
+        ode,
+        omega=omega,
+        num_periods=60,
+        points_per_period=min(30, int(length_tail / 1.5)),
+    )
+    idx_start = 0
+    idx_end = length_tail
+
+    fig, ax = plt.subplots(1, 1)
+    ax.set_ylim(-0.005, 0.005)
+    ax.set_xlim(-0.005, 0.005)
+
+    # plot the tail
+    (tail,) = ax.plot(x[0, idx_start:idx_end], x[1, idx_start:idx_end], color="black")
+    # plot a dot at the current point
+    (dot,) = ax.plot(x[0, idx_end], x[1, idx_end], "o", color="black")
+
+    def update(frame):
+        idx_start = frame
+        idx_end = min(frame + length_tail, x.shape[1])
+
+        tail.set_data(x[0, idx_start:idx_end], x[1, idx_start:idx_end])
+        dot.set_data([x[0, idx_end]], [x[1, idx_end]])
+        return tail, dot
+
+    anim = FuncAnimation(
+        fig, update, frames=len(t_eval) - length_tail, interval=1, repeat=True
+    )
+
+    return anim
+
+
+def plot_time_history(ode, omegas):
+    for omega in omegas:
+        ode.omega = omega
+        ode.t = 0
+        ode.x = np.array([0, 0, 0, 0])
+        shoot = ShootingBVP(ode=ode, T=2 * np.pi / ode.omega)
+        t_eval = np.linspace(0, 10 * shoot.T_solution, 2000)
+        x = shoot.x_time(t_eval=t_eval)
+        plt.figure()
+        plt.plot(x[0, :], x[1, :])
+        plt.xlabel("y")
+        plt.ylabel("z")
+        plt.title(f"Phase portrait for omega={omega}")
+
+
+def compute_frequency_sweep(ode, t_0=0, t_end=300, omega_start=0.1, omega_end=3):
+    ts = np.linspace(t_0, t_end, 1000)
+    x_0 = np.array([0, 0, 0, 0])
+
+    def dynamics(t, x):
+        ode.omega = omega_sweep(t, t_0, t_end, omega_start, omega_end)
+        return ode.dynamics(t, x)
+
+    sol = solve_ivp(
+        fun=dynamics,
+        t_span=(t_0, t_end),
+        y0=x_0,
+        t_eval=ts,
+    )
+    return sol.t, sol.y
+
+
+def omega_sweep(t, t_0, t_end, omega_start, omega_end):
+    return omega_start + (omega_end - omega_start) * (t - t_0) / (t_end - t_0)
+
+
+def animate_frequency_sweep(
+    ode, t_0=0, t_end=2000, omega_start=0.1, omega_end=3, length_tail=100
+):
+    t, x = compute_frequency_sweep(ode, t_0, t_end, omega_start, omega_end)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.set_ylim(-0.008, 0.008)
+    ax.set_xlim(-0.008, 0.008)
+
+    theta = omega_start * t_0
+    x_curr = x[:2, length_tail]
+    (tail,) = ax.plot(x[0, :length_tail], x[1, :length_tail], color="blue")
+    (dot,) = ax.plot(*x_curr, "o", color="blue")
+
+    phis = np.linspace(0, 2 * np.pi, 100)
+    circle_x = 0.005 * np.array([np.cos(phis), np.sin(phis)])
+    (circle,) = ax.plot(
+        *(circle_x + x_curr[:, np.newaxis]), color="black", linestyle="-"
+    )
+    S = x_curr + np.array([0.002 * np.cos(theta), 0.002 * np.sin(theta)])
+    (com,) = ax.plot(*S, "o", color="black")
+
+    def update(frame):
+        idx_start = frame
+        idx_end = min(frame + length_tail, x.shape[1])
+
+        omega = omega_sweep(t[idx_end], t_0, t_end, omega_start, omega_end)
+        theta = omega * t[idx_end]
+
+        x_curr = x[:2, idx_end]
+        ax.set_title(f"omega={omega:.2f}")
+
+        tail.set_data(x[0, idx_start:idx_end], x[1, idx_start:idx_end])
+        dot.set_data([x[0, idx_end]], [x[1, idx_end]])
+        circle.set_data(*(circle_x + x_curr[:, np.newaxis]))
+        S = x_curr + np.array([0.002 * np.cos(theta), 0.002 * np.sin(theta)])
+        com.set_data(*[[x] for x in S])
+
+        return tail, dot, circle, com
+
+    anim = FuncAnimation(fig, update, frames=len(t), interval=1, repeat=True)
+
+    return anim
 
 
 if __name__ == "__main__":
-    animations = main()
+    # ode, animations = main()
+    ode = init_ode()
+    anim = animate_phase_portrait(ode, omega=2, length_tail=40)
+    anim2 = animate_frequency_sweep(ode, t_end=300)
+    # plot_time_history(ode, omegas=[0.5, 1.0, 1.9, 2.5])
     plt.show()
