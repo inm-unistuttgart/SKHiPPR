@@ -366,10 +366,21 @@ def animate_frequency_sweep(
     return anim
 
 
+def plot_omega_sweep(t_0, t_end, omega_start, omega_end):
+    ts = np.linspace(t_0, t_end, 1000)
+    omegas = [omega_sweep(t, t_0, t_end, omega_start, omega_end) for t in ts]
+    plt.figure()
+    plt.plot(ts, omegas)
+    plt.xlabel("Time")
+    plt.ylabel("Omega")
+    plt.title("Frequency sweep over time")
+
+
 if __name__ == "__main__":
+    plot_omega_sweep(t_0=0, t_end=1000, omega_start=0.1, omega_end=3)
     # ode, animations = main()
-    ode = init_ode()
-    anim = animate_phase_portrait(ode, omega=2, length_tail=40)
-    anim2 = animate_frequency_sweep(ode, t_end=300)
+    # ode = init_ode()
+    # anim = animate_phase_portrait(ode, omega=2, length_tail=40)
+    # anim2 = animate_frequency_sweep(ode, t_end=300)
     # plot_time_history(ode, omegas=[0.5, 1.0, 1.9, 2.5])
     plt.show()
