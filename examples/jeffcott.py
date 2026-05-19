@@ -301,8 +301,8 @@ def plot_time_history(ode, omegas):
 
 
 def compute_frequency_sweep(ode, t_0=0, t_end=300, omega_start=0.1, omega_end=3):
-    ts = np.linspace(t_0, t_end, 1000)
-    x_0 = np.array([0, 0, 0, 0])
+    ts = np.linspace(t_0, t_end, (t_end - t_0) * 3)
+    x_0 = np.array([0.001, 0, 0, 0])
 
     def dynamics(t, x):
         ode.omega = omega_sweep(t, t_0, t_end, omega_start, omega_end)
@@ -318,7 +318,15 @@ def compute_frequency_sweep(ode, t_0=0, t_end=300, omega_start=0.1, omega_end=3)
 
 
 def omega_sweep(t, t_0, t_end, omega_start, omega_end):
-    return omega_start + (omega_end - omega_start) * (t - t_0) / (t_end - t_0)
+    return omega_start + (omega_end - omega_start) * omega_sweep_function(
+        t - t_0
+    ) / omega_sweep_function(t_end - t_0)
+
+
+def omega_sweep_function(delta_t):
+    """Modify the shape of the sweep function. Must be zero at delta_t=0 and increase monotonously."""
+    return np.sqrt(delta_t)
+    # return delta_t
 
 
 def animate_frequency_sweep(
@@ -361,7 +369,7 @@ def animate_frequency_sweep(
 
         return tail, dot, circle, com
 
-    anim = FuncAnimation(fig, update, frames=len(t), interval=1, repeat=True)
+    anim = FuncAnimation(fig, update, frames=len(t), interval=0.0001, repeat=True)
 
     return anim
 
@@ -377,10 +385,25 @@ def plot_omega_sweep(t_0, t_end, omega_start, omega_end):
 
 
 if __name__ == "__main__":
-    plot_omega_sweep(t_0=0, t_end=1000, omega_start=0.1, omega_end=3)
+    # t_end = 2500
+
     # ode, animations = main()
-    # ode = init_ode()
-    # anim = animate_phase_portrait(ode, omega=2, length_tail=40)
-    # anim2 = animate_frequency_sweep(ode, t_end=300)
+    ode = init_ode()
+    for omega in [0.5, 1.0, 1.5, 2.5]:
+        t_eval, x = compute_time_solution(ode, omega=omega, num_periods=60)
+        plt.figure()
+        plt.plot(x[0, :], x[1, :])
+        plt.xlabel("y")
+        plt.ylabel("z")
+        plt.title(f"Phase portrait for omega={omega}")
+        anim = animate_phase_portrait(ode, omega=omega, length_tail=40)
+    # plot_omega_sweep(t_0=0, t_end=t_end, omega_start=0.5, omega_end=3)
+    # anim2 = animate_frequency_sweep(
+    #     ode,
+    #     t_end=t_end,
+    #     omega_start=0,
+    #     omega_end=2.5,
+    #     length_tail=200,
+    # )
     # plot_time_history(ode, omegas=[0.5, 1.0, 1.9, 2.5])
     plt.show()
