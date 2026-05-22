@@ -223,9 +223,13 @@ def plot_frc():
 
             if idx == 1:
 
+                x_time = branch_point.equations[0].x_time()
+                phi = np.atan2(x_time[0, :], -x_time[1, :])
+
                 omegas[stb].append(branch_point.omega)
                 amps[stb].append(
-                    np.max(np.abs(branch_point.equations[0].x_time()[0, :]))
+                    # np.max(np.abs(branch_point.equations[0].x_time()[0, :]))
+                    np.max(phi)
                 )
 
             axs[idx].plot(
@@ -250,12 +254,12 @@ def plot_frc():
 
     plt.title("Pendulum DAE FRC")
     plt.xlabel("omega")
-    plt.ylabel("y max")
+    plt.ylabel("phi")
 
-    tikzplotlib.save("plots/pendulum_frc_dae")
+    tikzplotlib.save("plots/pendulum_frc_dae_phi")
 
 
 if __name__ == "__main__":
-    plot_single_solution()
+    # plot_single_solution()
     plot_frc()
     plt.show()

@@ -136,10 +136,12 @@ def fundamat_over_time(
         )
 
     if description is not None:
+        ax = np.empty((hbm.fourier.n_dof, hbm.fourier.n_dof), dtype=object)
         # Plot all entries of fundamental solution matrix over time
-        _, ax = plt.subplots(hbm.fourier.n_dof, hbm.fourier.n_dof)
+        # _, ax = plt.subplots(hbm.fourier.n_dof, hbm.fourier.n_dof)
         for i in range(hbm.fourier.n_dof):
             for j in range(hbm.fourier.n_dof):
+                _, ax[i, j] = plt.subplots(1, 1)
                 ax[i, j].plot(ts, Phis[i, j, :], label="real")
                 # ax[i, j].plot(ts, np.imag(Phis[i, j, :]), "--", label="imag")
                 ax[i, j].set_ylabel(f"Phi[{i},{j}]")
@@ -184,7 +186,12 @@ def fundamat_over_time(
         ax_rank.set_xlabel("t/T")
 
         if path != "":
-            tikzplotlib.save(f"{path}fundamental_solution_{description}.tikz")
+            for i in range(hbm.fourier.n_dof):
+                for j in range(hbm.fourier.n_dof):
+                    plt.sca(ax[i, j])
+                    tikzplotlib.save(
+                        f"{path}fundamental_solution_{description}_{i}{j}.tikz"
+                    )
 
     return Phis, ts
 
@@ -196,9 +203,11 @@ def plot_J_over_time(hbm: HBMEquationDAE, description=None, path=""):
 
     if description is not None:
         # Plot all entries of Jacobian over time
-        _, ax = plt.subplots(hbm.fourier.n_dof, hbm.fourier.n_dof)
+        ax = np.empty((hbm.fourier.n_dof, hbm.fourier.n_dof), dtype=object)
+        # _, ax = plt.subplots(hbm.fourier.n_dof, hbm.fourier.n_dof)
         for i in range(hbm.fourier.n_dof):
             for j in range(hbm.fourier.n_dof):
+                _, ax[i, j] = plt.subplots(1, 1)
                 ax[i, j].plot(ts, np.real(Js[i, j, :]), label="real")
                 ax[i, j].set_ylabel(f"J[{i},{j}]")
                 ax[i, j].set_xlabel("t/T")
@@ -207,7 +216,10 @@ def plot_J_over_time(hbm: HBMEquationDAE, description=None, path=""):
         ax[0, 0].set_title(f"J(t) matrix {description}")
 
         if path != "":
-            tikzplotlib.save(f"{path}Jacobian_{description}.tikz")
+            for i in range(hbm.fourier.n_dof):
+                for j in range(hbm.fourier.n_dof):
+                    plt.sca(ax[i, j])
+                    tikzplotlib.save(f"{path}J_{description}_{i}{j}.tikz")
 
 
 def solve_hbm(
@@ -360,9 +372,9 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
 if __name__ == "__main__":
 
     fourier = Fourier(N_HBM=30, L_DFT=2**13, n_dof=5, real_formulation=True)
-    name_case = "A"
+    name_case = "Schuetz2"
 
-    for smoothing in [np.inf, 50]:
+    for smoothing in [np.inf, 200]:
         hbm = solve_hbm(name_case, smoothing=smoothing, fourier=fourier)
         plot_J_over_time(
             hbm,
@@ -372,7 +384,7 @@ if __name__ == "__main__":
         Phis = fundamat_over_time(
             hbm,
             L=200,
-            description=f"Funda_mat_{name_case}_inf_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
+            description=f"Funda_mat_{name_case}_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
             path="examples/dissertation_bayer/friction/plots/",
             path_ref=f"examples/dissertation_bayer/friction/data/Phi_t_ref_{name_case}.mat",
         )

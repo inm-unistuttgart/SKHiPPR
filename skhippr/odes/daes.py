@@ -15,13 +15,25 @@ class PendulumDAE(AbstractDAE):
     def __init__(self, m, d, g, l, F, omega, phi, stability_method=None):
 
         M = np.diag([1, 1, m, m, 0])
-        super().__init__(M=M, autonomous=False, stability_method=stability_method)
+        super().__init__(
+            n_dof=5,
+            autonomous=False,
+            stability_method=stability_method,
+            M_is_constant=True,
+            invertible=False,
+        )
+        self._M_small = M
         self.d = d
         self.g = g
         self.l = l
         self.F = F
         self.omega = omega
         self.phi = phi
+        self.masses = [1, 1, m, m]
+
+    @override
+    def M_small(self, t=None, x=None):
+        return self._M_small
 
     @override
     def dynamics(self, t=None, x=None) -> np.ndarray:

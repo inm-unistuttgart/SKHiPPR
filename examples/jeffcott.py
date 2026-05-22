@@ -25,7 +25,7 @@ from skhippr.visualization.cycles import (
     animate_floquet_multipliers,
 )
 
-from skhippr.visualization.data_export import save_tikz
+from skhippr.visualization.data_export import save_tikz, save_animation
 
 
 class Jeffcott2(AbstractODE):
@@ -235,51 +235,140 @@ def main(ode=None):
 
 
 def compute_time_solution(
-    ode, omega, x_0=(0, 0, 0, 0), num_periods=15, points_per_period=200
+    ode,
+    omega,
+    x_0=(0, 0, 0, 0),
+    num_periods=15,
+    points_per_period=200,
+    t_0=0,
+    t_end=None,
 ):
     ode.omega = omega
     ode.t = 0
-    ode.x = np.array([0, 0, 0, 0])
+    ode.x = np.array(x_0)
 
     shoot = ShootingBVP(ode=ode, T=2 * np.pi / ode.omega)
 
-    t_eval = np.linspace(
-        0, num_periods * shoot.T_solution, num_periods * points_per_period + 1
-    )
+    if t_end is None:
+        t_end = num_periods * shoot.T_solution
+        num_points = num_periods * points_per_period + 1
+    else:
+        num_points = 10 * int((t_end - t_0)) + 1
+
+    t_eval = np.linspace(0, t_end, num_points)
 
     x = shoot.x_time(t_eval=t_eval)
     return t_eval, x
 
 
-def animate_phase_portrait(ode, omega, length_tail=10, path=None):
+def coords_washingmachine(t, x, omega, radius=0.003):
+    phis = np.linspace(0, 2 * np.pi, 100)
+    theta = omega * t
+    circle_coords = x[:, np.newaxis] + radius * np.array([np.cos(phis), np.sin(phis)])
+    e = 0.5 * radius
+    S = x[:2] + np.array([e * np.cos(theta), e * np.sin(theta)])
+    return circle_coords, S
+
+
+def animate_washingmachine(
+    ts, xs, omegas, length_tail=10, lim=0.005, interval=1, speedup=3
+):
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["mathtext.fontset"] = "cm"
+
+    fig, ax = plt.subplots(1, 1, figsize=(7.2, 7.2), dpi=100, constrained_layout=True)
+    fig.patch.set_facecolor("#f7f7f9")
+    ax.set_facecolor("#fdfdfd")
+    ax.set_ylim(-lim, lim)
+    ax.set_xlim(-lim, lim)
+    ax.set_aspect("equal", adjustable="box")
+    ax.tick_params(axis="both", labelsize=14, width=1.2, length=6)
+    ax.grid(True, color="#d4d6db", linewidth=0.8, alpha=0.7)
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+        spine.set_color("#2a2a2a")
+
+    radius = lim * 2 / 3
+
+    if np.isscalar(omegas):
+        omega = omegas
+    else:
+        omega = omegas[0]
+
+    circle_x, S = coords_washingmachine(ts[0], xs[:2, 0], omega, radius)
+
+    (tail,) = ax.plot(
+        xs[0, :length_tail],
+        xs[1, :length_tail],
+        color="#0b5fa5",
+        linewidth=2.2,
+        alpha=0.95,
+    )
+    (dot,) = ax.plot(
+        xs[0, 0],
+        xs[1, 0],
+        "o",
+        color="#0b5fa5",
+        markersize=8,
+        markeredgecolor="white",
+        markeredgewidth=1.0,
+    )
+    (circle,) = ax.plot(*circle_x, color="#2a2a2a", linestyle="-", linewidth=1.6)
+    (com,) = ax.plot(
+        *S,
+        "o",
+        color="#c43c39",
+        markersize=7,
+        markeredgecolor="white",
+        markeredgewidth=0.9,
+    )
+
+    ax.set_title(rf"$\omega={omega:.2f}$", fontsize=20, pad=14)
+    ax.set_xlabel(r"$y$", fontsize=18)
+    ax.set_ylabel(r"$z$", fontsize=18)
+
+    def update(frame):
+        idx_start = speedup * frame
+        idx_end = min(speedup * frame + length_tail, xs.shape[1] - 1)
+
+        current_omega = omegas if np.isscalar(omegas) else omegas[idx_end]
+
+        ax.set_title(rf"$\omega={current_omega:.2f}$", fontsize=20, pad=14)
+
+        circle_x, S = coords_washingmachine(
+            ts[idx_end], xs[:2, idx_end], current_omega, radius
+        )
+
+        tail.set_data(xs[0, idx_start:idx_end], xs[1, idx_start:idx_end])
+        dot.set_data([xs[0, idx_end]], [xs[1, idx_end]])
+        circle.set_data(*circle_x)
+        com.set_data(*[[x] for x in S])
+
+        return tail, dot, circle, com
+
+    anim = FuncAnimation(fig, update, frames=len(ts), interval=interval, repeat=True)
+
+    return anim
+
+
+def animate_phase_portrait(ode, omega, length_tail=10, lim=None, path=None):
     t_eval, x = compute_time_solution(
         ode,
         omega=omega,
         num_periods=60,
         points_per_period=min(30, int(length_tail / 1.5)),
     )
-    idx_start = 0
-    idx_end = length_tail
-
-    fig, ax = plt.subplots(1, 1)
-    ax.set_ylim(-0.005, 0.005)
-    ax.set_xlim(-0.005, 0.005)
-
-    # plot the tail
-    (tail,) = ax.plot(x[0, idx_start:idx_end], x[1, idx_start:idx_end], color="black")
-    # plot a dot at the current point
-    (dot,) = ax.plot(x[0, idx_end], x[1, idx_end], "o", color="black")
-
-    def update(frame):
-        idx_start = frame
-        idx_end = min(frame + length_tail, x.shape[1])
-
-        tail.set_data(x[0, idx_start:idx_end], x[1, idx_start:idx_end])
-        dot.set_data([x[0, idx_end]], [x[1, idx_end]])
-        return tail, dot
-
-    anim = FuncAnimation(
-        fig, update, frames=len(t_eval) - length_tail, interval=1, repeat=True
+    if lim is None:
+        lim = 1.2 * np.max(x[1, :])
+    anim = animate_washingmachine(
+        ts=t_eval,
+        xs=x,
+        omegas=omega,
+        length_tail=length_tail,
+        lim=0.005,
+        interval=1,
+        speedup=3,
     )
 
     return anim
@@ -314,7 +403,9 @@ def compute_frequency_sweep(ode, t_0=0, t_end=300, omega_start=0.1, omega_end=3)
         y0=x_0,
         t_eval=ts,
     )
-    return sol.t, sol.y
+    omegas = [omega_sweep(t, t_0, t_end, omega_start, omega_end) for t in sol.t]
+
+    return sol.t, sol.y, np.array(omegas)
 
 
 def omega_sweep(t, t_0, t_end, omega_start, omega_end):
@@ -332,45 +423,11 @@ def omega_sweep_function(delta_t):
 def animate_frequency_sweep(
     ode, t_0=0, t_end=2000, omega_start=0.1, omega_end=3, length_tail=100
 ):
-    t, x = compute_frequency_sweep(ode, t_0, t_end, omega_start, omega_end)
+    t, x, omegas = compute_frequency_sweep(ode, t_0, t_end, omega_start, omega_end)
 
-    fig, ax = plt.subplots(1, 1)
-    ax.set_ylim(-0.008, 0.008)
-    ax.set_xlim(-0.008, 0.008)
-
-    theta = omega_start * t_0
-    x_curr = x[:2, length_tail]
-    (tail,) = ax.plot(x[0, :length_tail], x[1, :length_tail], color="blue")
-    (dot,) = ax.plot(*x_curr, "o", color="blue")
-
-    phis = np.linspace(0, 2 * np.pi, 100)
-    circle_x = 0.005 * np.array([np.cos(phis), np.sin(phis)])
-    (circle,) = ax.plot(
-        *(circle_x + x_curr[:, np.newaxis]), color="black", linestyle="-"
+    anim = animate_washingmachine(
+        t, x, omegas, length_tail=length_tail, lim=0.005, interval=1
     )
-    S = x_curr + np.array([0.002 * np.cos(theta), 0.002 * np.sin(theta)])
-    (com,) = ax.plot(*S, "o", color="black")
-
-    def update(frame):
-        idx_start = frame
-        idx_end = min(frame + length_tail, x.shape[1])
-
-        omega = omega_sweep(t[idx_end], t_0, t_end, omega_start, omega_end)
-        theta = omega * t[idx_end]
-
-        x_curr = x[:2, idx_end]
-        ax.set_title(f"omega={omega:.2f}")
-
-        tail.set_data(x[0, idx_start:idx_end], x[1, idx_start:idx_end])
-        dot.set_data([x[0, idx_end]], [x[1, idx_end]])
-        circle.set_data(*(circle_x + x_curr[:, np.newaxis]))
-        S = x_curr + np.array([0.002 * np.cos(theta), 0.002 * np.sin(theta)])
-        com.set_data(*[[x] for x in S])
-
-        return tail, dot, circle, com
-
-    anim = FuncAnimation(fig, update, frames=len(t), interval=0.0001, repeat=True)
-
     return anim
 
 
@@ -385,18 +442,40 @@ def plot_omega_sweep(t_0, t_end, omega_start, omega_end):
 
 
 if __name__ == "__main__":
-    # t_end = 2500
+    t_end = 1000
 
     # ode, animations = main()
     ode = init_ode()
-    for omega in [0.5, 1.0, 1.5, 2.5]:
-        t_eval, x = compute_time_solution(ode, omega=omega, num_periods=60)
+    anims = []
+    for omega in [0.5, 1, 1.5, 2.5]:
+        t_eval, x = compute_time_solution(
+            ode,
+            omega=omega,
+            t_end=40 * np.pi,
+            x_0=(-0.0006, 0, 0, 0),
+        )
         plt.figure()
         plt.plot(x[0, :], x[1, :])
         plt.xlabel("y")
         plt.ylabel("z")
         plt.title(f"Phase portrait for omega={omega}")
-        anim = animate_phase_portrait(ode, omega=omega, length_tail=40)
+        anims.append(
+            animate_washingmachine(
+                ts=t_eval,
+                xs=x,
+                omegas=omega,
+                length_tail=200,
+                lim=0.005,
+                interval=1,
+                speedup=5,
+            )
+        )
+        save_animation(
+            anims[-1],
+            f"jeffcott_fast_omega_{omega:.2f}.gif",
+            fps=100,
+        )
+        # anim = animate_phase_portrait(ode, omega=omega, length_tail=40)
     # plot_omega_sweep(t_0=0, t_end=t_end, omega_start=0.5, omega_end=3)
     # anim2 = animate_frequency_sweep(
     #     ode,
