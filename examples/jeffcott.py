@@ -174,7 +174,7 @@ def main(ode=None, fourier=None, omegas_return=()):
     stability_method = (
         None  # KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
     )
-    solver = NewtonSolver(verbose=True, max_iterations=50)
+    solver = NewtonSolver(verbose=True, max_iterations=10)
 
     ts = fourier.time_samples(ode.omega)
     x0_samples = np.array(
@@ -205,19 +205,19 @@ def main(ode=None, fourier=None, omegas_return=()):
         equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
     )
 
-    frc: list[BranchPoint] = []
+    frc_forward: list[BranchPoint] = []
 
     for branch_point in pseudo_arclength_continuator(
         initial_system=initial_system,
         solver=solver,
         stepsize=0.1,
-        stepsize_range=(0.0001, 0.02),
+        stepsize_range=(0.00001, 0.02),
         continuation_parameter="omega",
         initial_direction=1,
         verbose=True,
         num_steps=200,
     ):
-        frc.append(branch_point)
+        frc_forward.append(branch_point)
 
         if len(omegas_return) > 0 and branch_point.omega > omegas_return[0]:
             hbms_return.append(branch_point.equations[0])
@@ -226,22 +226,73 @@ def main(ode=None, fourier=None, omegas_return=()):
         if branch_point.omega > 2.4:
             pass
 
-        if branch_point.omega > 3:
+        if branch_point.omega > 3.2 or branch_point.omega < 0:
             break
 
+    ode.omega = 5
+    hbm = HBMEquation(
+        ode=ode,
+        omega=ode.omega,
+        fourier=fourier,
+        initial_guess=X0,
+        period_k=1,
+        stability_method=stability_method,
+    )
+
+    hbm.residual(update=True)
+
+    solver.solve_equation(equation=hbm, unknown="X")
+    solver.verbose = False
+
+    initial_system = EquationSystem(
+        equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
+    )
+
+    # frc_backward = []
+    # for branch_point in pseudo_arclength_continuator(
+    #     initial_system=initial_system,
+    #     solver=solver,
+    #     stepsize=0.1,
+    #     stepsize_range=(0.00001, 0.02),
+    #     continuation_parameter="omega",
+    #     initial_direction=-1,
+    #     verbose=True,
+    #     num_steps=200,
+    # ):
+    #     frc_backward.append(branch_point)
+
+    #     if len(omegas_return) > 0 and branch_point.omega > omegas_return[0]:
+    #         hbms_return.append(branch_point.equations[0])
+    #         omegas_return.pop(0)
+
+    #     if branch_point.omega > 2.4:
+    #         pass
+
+    #     if branch_point.omega > 5.2 or branch_point.omega < 0:
+    #         break
+
     ax = plot_continuation(
-        frc,
+        frc_forward,
         plot_fun=lambda point: np.max(
             np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
         ),
         marker="x",
     )
+    # ax = plot_continuation(
+    #     frc_backward,
+    #     ax=ax,
+    #     plot_fun=lambda point: np.max(
+    #         np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
+    #     ),
+    #     marker="x",
+    #     color="yellow",
+    # )
     ax.set_xlabel(r"$\omega$")
     ax.set_ylabel(r"max radial displacement")
 
     tikzplotlib.save("jeffcott.tikz", axis_width="5cm", axis_height="5cm")
 
-    _, animation1 = animate_floquet_multipliers(hbm_set=frc)
+    _, animation1 = animate_floquet_multipliers(hbm_set=frc_forward)
     # _, animation2 = animate_floquet_exponents(hbm_set=frc)
 
     # animation1 = None
