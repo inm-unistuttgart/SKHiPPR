@@ -14,7 +14,10 @@ from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.solvers.continuation import BranchPoint, pseudo_arclength_continuator
 from skhippr.solvers.newton import NewtonSolver
-from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillSubharmonic,
+    KoopmanHillProjection,
+)
 from skhippr.visualization.continuation import (
     plot_continuation,
     plot_floquet_exponent_continuation,
@@ -32,7 +35,9 @@ from skhippr.visualization.data_export import save_tikz, save_animation
 class Jeffcott2(AbstractODE):
     """3rd order model, Alcorta2023 Eq. (5)"""
 
-    def __init__(self, D_e, D_if, D_it, omega_t, omega, e):
+    def __init__(
+        self, D_e, D_if, D_it, omega_t, omega, e, r=np.inf, normal_stiffness=1, eta=1e-5
+    ):
         super().__init__(autonomous=False, n_dof=4)
         self.D_e = D_e
         self.D_if = D_if
@@ -41,6 +46,9 @@ class Jeffcott2(AbstractODE):
         self.omega = omega
         self.e = e
         self.has_nontrivial_omega_derivative = True
+        self.r = r
+        self.normal_stiffness = normal_stiffness
+        self.eta = eta
 
     def dynamics(self, t=None, x=None):
         if x is None:
@@ -74,6 +82,22 @@ class Jeffcott2(AbstractODE):
             f[2 + i, ...] -= factor_nonl * q[i, ...]
             f[2 + i, ...] += forcing[i, ...]
 
+        # contact force
+        if self.r < np.inf:
+            amplitude = np.linalg.norm(q, axis=0)
+            gap = self.r - amplitude
+
+            contact_force = np.zeros_like(amplitude)
+            for kk, amp in enumerate(np.atleast_1d(amplitude)):
+                # avoid division by zero, otherwise the gap is open
+                if amp > self.eta:
+                    smoothed_gap = 0.5 * (
+                        -gap[kk] + np.sqrt(gap[kk] ** 2 + 4 * self.eta**2)
+                    )
+                    contact_force[kk] = self.normal_stiffness * smoothed_gap
+
+            f[2:, ...] += contact_force * q / amplitude
+
         return f
 
     def nontrivial_omega_derivative(self, t=None, x=None):
@@ -95,6 +119,12 @@ class Jeffcott2(AbstractODE):
         Returns an array of shape (n_dof, n_dof, L) where L is the number
         of time samples in `t` / the second dimension of `x`.
         """
+
+        if self.r < np.inf:
+            raise NotImplementedError(
+                "This is not yet implemented for the Jeffcott rotor example WITH CONTACT."
+            )
+
         if variable != "x":
             raise NotImplementedError("Only variable='x' is implemented here.")
 
@@ -154,16 +184,35 @@ class Jeffcott2(AbstractODE):
         return Js
 
 
-def init_ode(l0=1.2, r=0.01, D_e=0.1, D_if=0.1, D_it=0, e=5e-4):
+def init_ode(
+    l0=1.2,
+    r=0.01,
+    D_e=0.1,
+    D_if=0.1,
+    D_it=0,
+    e=5e-4,
+    radius_contact=np.inf,
+    smoothing=1e-5,
+):
     # case Alcorta2023 - p. 5 bottom right
     omega_t = l0 / (np.sqrt(6) * r)
-    return Jeffcott2(D_e=D_e, D_if=D_if, D_it=D_it, omega_t=omega_t, omega=0.1, e=e)
+    return Jeffcott2(
+        D_e=D_e,
+        D_if=D_if,
+        D_it=D_it,
+        omega_t=omega_t,
+        omega=0.1,
+        e=e,
+        r=radius_contact,
+        eta=smoothing,
+    )
 
 
 def main(ode=None, fourier=None, omegas_return=()):
     """Run a frequency response curve analysis for the Jeffcott rotor."""
     if ode is None:
         ode = init_ode()
+    ode.omega = 0.1
 
     if fourier is None:
         fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=4, real_formulation=True)
@@ -171,10 +220,8 @@ def main(ode=None, fourier=None, omegas_return=()):
     omegas_return = list(omegas_return)
     hbms_return = []
 
-    stability_method = (
-        None  # KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
-    )
-    solver = NewtonSolver(verbose=True, max_iterations=10)
+    stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
+    solver = NewtonSolver(verbose=True, max_iterations=50)
 
     ts = fourier.time_samples(ode.omega)
     x0_samples = np.array(
@@ -200,6 +247,7 @@ def main(ode=None, fourier=None, omegas_return=()):
 
     solver.solve_equation(equation=hbm, unknown="X")
     solver.verbose = False
+    solver.max_iterations = 10
 
     initial_system = EquationSystem(
         equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
@@ -211,11 +259,11 @@ def main(ode=None, fourier=None, omegas_return=()):
         initial_system=initial_system,
         solver=solver,
         stepsize=0.1,
-        stepsize_range=(0.00001, 0.02),
+        stepsize_range=(0.00001, 0.2),
         continuation_parameter="omega",
         initial_direction=1,
         verbose=True,
-        num_steps=200,
+        num_steps=30,
     ):
         frc_forward.append(branch_point)
 
@@ -226,50 +274,8 @@ def main(ode=None, fourier=None, omegas_return=()):
         if branch_point.omega > 2.4:
             pass
 
-        if branch_point.omega > 3.2 or branch_point.omega < 0:
+        if branch_point.omega > 12 or branch_point.omega < 0.1:
             break
-
-    ode.omega = 5
-    hbm = HBMEquation(
-        ode=ode,
-        omega=ode.omega,
-        fourier=fourier,
-        initial_guess=X0,
-        period_k=1,
-        stability_method=stability_method,
-    )
-
-    hbm.residual(update=True)
-
-    solver.solve_equation(equation=hbm, unknown="X")
-    solver.verbose = False
-
-    initial_system = EquationSystem(
-        equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
-    )
-
-    # frc_backward = []
-    # for branch_point in pseudo_arclength_continuator(
-    #     initial_system=initial_system,
-    #     solver=solver,
-    #     stepsize=0.1,
-    #     stepsize_range=(0.00001, 0.02),
-    #     continuation_parameter="omega",
-    #     initial_direction=-1,
-    #     verbose=True,
-    #     num_steps=200,
-    # ):
-    #     frc_backward.append(branch_point)
-
-    #     if len(omegas_return) > 0 and branch_point.omega > omegas_return[0]:
-    #         hbms_return.append(branch_point.equations[0])
-    #         omegas_return.pop(0)
-
-    #     if branch_point.omega > 2.4:
-    #         pass
-
-    #     if branch_point.omega > 5.2 or branch_point.omega < 0:
-    #         break
 
     ax = plot_continuation(
         frc_forward,
@@ -636,11 +642,84 @@ def FM_error(FM, FM_ref):
     return np.linalg.norm(FM - FM_ref)
 
 
-if __name__ == "__main__":
-    t_end = 1000
+def animate_FMs_with_guarantee(ode=None, fourier=None, subh=False):
+    if ode is None:
+        ode = init_ode()
 
-    ode = init_ode(e=0.0011)
-    anims = analyze_convergence(ode=ode, Ns=10, omega=2.0001)
+    ode.omega = 0.1
+
+    if fourier is None:
+        fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=4, real_formulation=True)
+
+    if subh:
+        stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
+    else:
+        stability_method = KoopmanHillProjection(fourier, tol=1e-4, autonomous=False)
+    solver = NewtonSolver(verbose=True, max_iterations=50)
+
+    ts = fourier.time_samples(ode.omega)
+    x0_samples = np.array(
+        [
+            ode.e * np.cos(ode.omega * ts),
+            ode.e * np.sin(ode.omega * ts),
+            -ode.e * ode.omega * np.sin(ode.omega * ts),
+            ode.e * ode.omega * np.cos(ode.omega * ts),
+        ]
+    )
+    X0 = fourier.DFT(x0_samples)
+
+    hbm = HBMEquation(
+        ode=ode,
+        omega=ode.omega,
+        fourier=fourier,
+        initial_guess=X0,
+        period_k=1,
+        stability_method=stability_method,
+    )
+
+    hbm.residual(update=True)
+
+    solver.solve_equation(equation=hbm, unknown="X")
+    solver.verbose = False
+    solver.max_iterations = 10
+
+    initial_system = EquationSystem(
+        equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
+    )
+
+    frc_forward: list[BranchPoint] = []
+
+    for branch_point in pseudo_arclength_continuator(
+        initial_system=initial_system,
+        solver=solver,
+        stepsize=0.1,
+        stepsize_range=(0.00001, 0.2),
+        continuation_parameter="omega",
+        initial_direction=1,
+        verbose=True,
+        num_steps=30,
+    ):
+        frc_forward.append(branch_point)
+
+        if branch_point.omega > 3:
+            break
+
+    plot_continuation(
+        frc_forward,
+        plot_fun=lambda point: np.max(
+            np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
+        ),
+        marker="x",
+    )
+    anim = animate_floquet_multipliers(hbm_set=frc_forward, interval=200)
+    return anim
+
+
+if __name__ == "__main__":
+
+    ode = init_ode(e=5e-4, D_it=0.1, r=0.01, radius_contact=np.inf, smoothing=1e-3)
+    anim = animate_FMs_with_guarantee(ode=ode, subh=True)
+    # anims = analyze_convergence(ode=ode, Ns=10, omega=1.5)
     # anims = frc_animations_for_talk()
 
     # anim = animate_phase_portrait(ode, omega=omega, length_tail=40)
