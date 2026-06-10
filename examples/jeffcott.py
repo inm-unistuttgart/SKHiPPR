@@ -2,6 +2,11 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["mathtext.fontset"] = "cm"
+
+
 from matplotlib.animation import FuncAnimation
 import tikzplotlib
 from scipy.integrate import solve_ivp
@@ -20,8 +25,6 @@ from skhippr.stability.KoopmanHillProjection import (
 )
 from skhippr.visualization.continuation import (
     plot_continuation,
-    plot_floquet_exponent_continuation,
-    plot_floquet_multiplier_continuation,
 )
 from skhippr.visualization.cycles import (
     animate_floquet_exponents,
@@ -29,7 +32,7 @@ from skhippr.visualization.cycles import (
     plot_phase,
 )
 
-from skhippr.visualization.data_export import save_tikz, save_animation
+from skhippr.visualization.data_export import save_animation
 
 
 class Jeffcott2(AbstractODE):
@@ -208,20 +211,18 @@ def init_ode(
     )
 
 
-def main(ode=None, fourier=None, omegas_return=()):
-    """Run a frequency response curve analysis for the Jeffcott rotor."""
+def init_hbm(ode=None, omega=None, fourier=None, solver=None):
     if ode is None:
         ode = init_ode()
-    ode.omega = 0.1
+
+    if omega is not None:
+        ode.omega = omega
 
     if fourier is None:
         fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=4, real_formulation=True)
 
-    omegas_return = list(omegas_return)
-    hbms_return = []
-
-    stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
-    solver = NewtonSolver(verbose=True, max_iterations=50)
+    if solver is None:
+        solver = NewtonSolver(verbose=True, max_iterations=50)
 
     ts = fourier.time_samples(ode.omega)
     x0_samples = np.array(
@@ -240,71 +241,78 @@ def main(ode=None, fourier=None, omegas_return=()):
         fourier=fourier,
         initial_guess=X0,
         period_k=1,
-        stability_method=stability_method,
+        stability_method=KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False),
     )
 
     hbm.residual(update=True)
-
     solver.solve_equation(equation=hbm, unknown="X")
-    solver.verbose = False
-    solver.max_iterations = 10
+
+    return hbm
+
+
+def continuation(hbm=None, solver=None, **kwargs_cont):
+    if hbm is None:
+        hbm = init_hbm()
+
+    if solver is None:
+        solver = NewtonSolver(verbose=False, max_iterations=8)
 
     initial_system = EquationSystem(
         equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
     )
 
-    frc_forward: list[BranchPoint] = []
+    continuation_args = {
+        "stepsize": 0.1,
+        "stepsize_range": (0.00001, 0.2),
+        "initial_direction": 1,
+        "verbose": True,
+        "num_steps": 30,
+    }
+
+    continuation_args.update(kwargs_cont)
 
     for branch_point in pseudo_arclength_continuator(
         initial_system=initial_system,
         solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.00001, 0.2),
         continuation_parameter="omega",
-        initial_direction=1,
-        verbose=True,
-        num_steps=30,
+        **continuation_args,
     ):
-        frc_forward.append(branch_point)
+        yield branch_point
 
-        if len(omegas_return) > 0 and branch_point.omega > omegas_return[0]:
-            hbms_return.append(branch_point.equations[0])
-            omegas_return.pop(0)
 
-        if branch_point.omega > 2.4:
-            pass
-
-        if branch_point.omega > 12 or branch_point.omega < 0.1:
+def yield_hbm_at_omegas(hbm=None, solver=None, omegas_return=(), **kwargs_cont):
+    omegas_return = sorted(omegas_return)
+    if solver is None:
+        solver = NewtonSolver(verbose=False, max_iterations=15)
+    for branch_point in continuation(hbm=hbm, solver=solver, **kwargs_cont):
+        if len(omegas_return) == 0:
             break
+        if branch_point.omega > omegas_return[0]:
+            omega = omegas_return.pop(0)
+            hbm = branch_point.equations[0]
+            hbm.omega = omega
+            solver.solve_equation(equation=hbm, unknown="X")
+            yield hbm
+
+
+def plot_frc(hbm=None, solver=None, path_tikz=None, **kwargs_continuation):
+    """Run a frequency response curve analysis for the Jeffcott rotor."""
+    frc = [bp for bp in continuation(hbm, solver, **kwargs_continuation)]
 
     ax = plot_continuation(
-        frc_forward,
+        frc,
         plot_fun=lambda point: np.max(
             np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
         ),
         marker="x",
     )
-    # ax = plot_continuation(
-    #     frc_backward,
-    #     ax=ax,
-    #     plot_fun=lambda point: np.max(
-    #         np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
-    #     ),
-    #     marker="x",
-    #     color="yellow",
-    # )
     ax.set_xlabel(r"$\omega$")
     ax.set_ylabel(r"max radial displacement")
 
-    tikzplotlib.save("jeffcott.tikz", axis_width="5cm", axis_height="5cm")
+    if path_tikz is not None:
+        tikzplotlib.save(path_tikz, axis_width="5cm", axis_height="5cm")
 
-    _, animation1 = animate_floquet_multipliers(hbm_set=frc_forward)
-    # _, animation2 = animate_floquet_exponents(hbm_set=frc)
-
-    # animation1 = None
-    animation2 = None
-
-    return ode, [animation1, animation2], hbms_return
+    return ax, frc
 
 
 def compute_time_solution(
@@ -317,7 +325,7 @@ def compute_time_solution(
     t_end=None,
 ):
     ode.omega = omega
-    ode.t = 0
+    ode.t = t_0
     ode.x = np.array(x_0)
 
     shoot = ShootingBVP(ode=ode, T=2 * np.pi / ode.omega)
@@ -328,7 +336,7 @@ def compute_time_solution(
     else:
         num_points = 10 * int((t_end - t_0)) + 1
 
-    t_eval = np.linspace(0, t_end, num_points)
+    t_eval = np.linspace(t_0, t_end, num_points)
 
     x = shoot.x_time(t_eval=t_eval)
     return t_eval, x
@@ -346,8 +354,6 @@ def coords_washingmachine(t, x, omega, radius=0.003):
 def animate_washingmachine(
     ts, xs, omegas, length_tail=10, lim=0.005, interval=1, speedup=3
 ):
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["mathtext.fontset"] = "cm"
 
     fig, ax = plt.subplots(1, 1, figsize=(7.2, 7.2), dpi=100, constrained_layout=True)
     fig.patch.set_facecolor("#f7f7f9")
@@ -425,7 +431,7 @@ def animate_washingmachine(
     return anim
 
 
-def animate_phase_portrait(ode, omega, length_tail=10, lim=None, path=None):
+def animate_phase_portrait(ode, omega, length_tail=10, lim=None):
     t_eval, x = compute_time_solution(
         ode,
         omega=omega,
@@ -462,60 +468,12 @@ def plot_time_history(ode, omegas):
         plt.title(f"Phase portrait for omega={omega}")
 
 
-def compute_frequency_sweep(ode, t_0=0, t_end=300, omega_start=0.1, omega_end=3):
-    ts = np.linspace(t_0, t_end, (t_end - t_0) * 3)
-    x_0 = np.array([0.001, 0, 0, 0])
-
-    def dynamics(t, x):
-        ode.omega = omega_sweep(t, t_0, t_end, omega_start, omega_end)
-        return ode.dynamics(t, x)
-
-    sol = solve_ivp(
-        fun=dynamics,
-        t_span=(t_0, t_end),
-        y0=x_0,
-        t_eval=ts,
-    )
-    omegas = [omega_sweep(t, t_0, t_end, omega_start, omega_end) for t in sol.t]
-
-    return sol.t, sol.y, np.array(omegas)
-
-
-def omega_sweep(t, t_0, t_end, omega_start, omega_end):
-    return omega_start + (omega_end - omega_start) * omega_sweep_function(
-        t - t_0
-    ) / omega_sweep_function(t_end - t_0)
-
-
-def omega_sweep_function(delta_t):
-    """Modify the shape of the sweep function. Must be zero at delta_t=0 and increase monotonously."""
-    return np.sqrt(delta_t)
-    # return delta_t
-
-
-def animate_frequency_sweep(
-    ode, t_0=0, t_end=2000, omega_start=0.1, omega_end=3, length_tail=100
+def phase_portrait_animations_for_talk(
+    ode=None, omegas=(0.5, 1.0, 1.5, 2.5), speedup=5, path=None
 ):
-    t, x, omegas = compute_frequency_sweep(ode, t_0, t_end, omega_start, omega_end)
+    if ode is None:
+        ode = init_ode()
 
-    anim = animate_washingmachine(
-        t, x, omegas, length_tail=length_tail, lim=0.005, interval=1
-    )
-    return anim
-
-
-def plot_omega_sweep(t_0, t_end, omega_start, omega_end):
-    ts = np.linspace(t_0, t_end, 1000)
-    omegas = [omega_sweep(t, t_0, t_end, omega_start, omega_end) for t in ts]
-    plt.figure()
-    plt.plot(ts, omegas)
-    plt.xlabel("Time")
-    plt.ylabel("Omega")
-    plt.title("Frequency sweep over time")
-
-
-def frc_animations_for_talk(omegas=(0.5, 1.0, 1.5, 2.5)):
-    ode = init_ode()
     anims = []
     for omega in omegas:
         t_eval, x = compute_time_solution(
@@ -537,94 +495,103 @@ def frc_animations_for_talk(omegas=(0.5, 1.0, 1.5, 2.5)):
                 length_tail=200,
                 lim=0.005,
                 interval=1,
-                speedup=5,
+                speedup=speedup,
             )
         )
-        save_animation(
-            anims[-1],
-            f"jeffcott_fast_omega_{omega:.2f}.gif",
-            fps=100,
-        )
+        if path is not None:
+            save_animation(
+                anims[-1],
+                f"{path}_omega_{omega:.2f}.gif",
+                fps=30,
+            )
     return anims
 
 
-def analyze_convergence(Ns=35, omega=0.85, ode=None):
+def analyze_convergence(
+    Ns,
+    fourier_ref=None,
+    omegas=(0.85,),
+    ode=None,
+    solver=None,
+    subh=False,
+    animate=False,
+):
+
+    # Initialization
+    if fourier_ref is None:
+        fourier_ref = Fourier(
+            N_HBM=np.max(Ns), L_DFT=300, n_dof=4, real_formulation=True
+        )
+    hbm = init_hbm(ode=ode, omega=0.1, fourier=fourier_ref)
 
     if np.isscalar(Ns):
         Ns = list(range(1, Ns + 1))
 
-    fourier = Fourier(N_HBM=np.max(Ns), L_DFT=300, n_dof=4, real_formulation=True)
-    _, anims, hbms = main(ode=ode, fourier=fourier, omegas_return=[omega])
+    if solver is None:
+        solver = NewtonSolver(verbose=True, max_iterations=10)
 
-    solver = NewtonSolver(verbose=True, max_iterations=50)
-    ax_phase = None
-    # ts = fourier.time_samples(ode.omega)
-    # x0_samples = 10 * np.array(
-    #     [
-    #         ode.e * np.cos(ode.omega * ts),
-    #         ode.e * np.sin(ode.omega * ts),
-    #         -ode.e * ode.omega * np.sin(ode.omega * ts),
-    #         ode.e * ode.omega * np.cos(ode.omega * ts),
-    #     ]
-    # )
+    anims = []
 
-    try:
-
-        hbm: HBMEquation = hbms[0]
-
-    except IndexError:
-        print("Did not get complete branch")
-        return anims
-
-    hbms = []
-
-    for N in Ns:
-        fourier = hbm.fourier.__replace__(N_HBM=N)
-        hbms.append(
-            HBMEquation(
-                ode=hbm.ode,
-                omega=hbm.omega,
-                fourier=fourier,
-                initial_guess=fourier.DFT(hbm.x_time()),
-                period_k=1,
-                stability_method=KoopmanHillSubharmonic(
+    for hbm in yield_hbm_at_omegas(hbm=hbm, omegas_return=omegas, num_steps=1000):
+        print(f"Computed HBM solution for with omega={hbm.omega:.4f}")
+        hbms = []
+        for N in Ns:
+            fourier = hbm.fourier.__replace__(N_HBM=N)
+            if subh:
+                stability_method = KoopmanHillSubharmonic(
                     fourier, tol=1e-4, autonomous=False
-                ),
+                )
+            else:
+                stability_method = KoopmanHillProjection(
+                    fourier, tol=1e-4, autonomous=False
+                )
+            hbms.append(
+                HBMEquation(
+                    ode=hbm.ode,
+                    omega=hbm.omega,
+                    fourier=fourier,
+                    initial_guess=fourier.DFT(hbm.x_time()),
+                    period_k=1,
+                    stability_method=stability_method,
+                )
             )
+
+            solver.solve_equation(equation=hbms[-1], unknown="X")
+            print(hbms[-1].eigenvalues)
+
+        # FM animation
+        if animate:
+            plot_phase(hbms[-1])
+            ax, anim = animate_floquet_multipliers(hbm_set=hbms)
+            ax.set_title(f"Floquet multipliers (omega={hbms[-1].omega})")
+            anims.append(anim)
+
+        # FM error
+        FM_ref = hbms[-1].eigenvalues
+        plt.figure()
+        errors = [FM_error(hbm.eigenvalues, FM_ref) for hbm in hbms]
+        plt.plot(Ns, errors, "x-")
+        plt.xlabel("N_HBM")
+        plt.ylabel("Error in Floquet multipliers")
+        plt.title(f"FM Convergence (omega = {hbms[-1].omega})")
+
+        # J Fourier coefficients
+        J_coeffs = hbms[-1].ode_coeffs()
+        labels = (
+            ["J_0"]
+            + [f"J_c{k}" for k in range(1, N + 1)]
+            + [f"J_s{k}" for k in range(1, N + 1)]
         )
+        plt.figure()
+        plt.bar(
+            labels,
+            [np.linalg.norm(J_coeffs[:, :, k], 2) for k in range(J_coeffs.shape[2])],
+        )
+        plt.yscale("log")
+        lines = hbms[-1].exponential_decay_parameters(threshold=1e-14)
 
-        solver.solve_equation(equation=hbms[-1], unknown="X")
-        print(hbms[-1].eigenvalues)
-
-    # Phase plot
-    ax_phase = plot_phase(hbms[-1], ax=ax_phase)
-
-    # FM animation
-    anims.append(animate_floquet_multipliers(hbm_set=hbms))
-
-    # FM error
-    FM_ref = hbms[-1].eigenvalues
-    plt.figure()
-    errors = [FM_error(hbm.eigenvalues, FM_ref) for hbm in hbms]
-    plt.plot(Ns, errors, "x-")
-    plt.xlabel("N_HBM")
-    plt.ylabel("Error in Floquet multipliers")
-    plt.title("Convergence of Floquet multipliers with N_HBM")
-
-    # J Fourier coefficients
-    J_coeffs = hbms[-1].ode_coeffs()
-    labels = (
-        ["J_0"]
-        + [f"J_c{k}" for k in range(1, N + 1)]
-        + [f"J_s{k}" for k in range(1, N + 1)]
-    )
-    plt.figure()
-    plt.bar(
-        labels, [np.linalg.norm(J_coeffs[:, :, k], 2) for k in range(J_coeffs.shape[2])]
-    )
-    plt.yscale("log")
-    lines = hbm.exponential_decay_parameters(threshold=1e-14)
-    print(lines)
+        plt.title(f"Jacobian FCs (omega={hbms[-1].omega})")
+        print(lines)
 
     return anims
 
@@ -718,18 +685,14 @@ def animate_FMs_with_guarantee(ode=None, fourier=None, subh=False):
 if __name__ == "__main__":
 
     ode = init_ode(e=5e-4, D_it=0.1, r=0.01, radius_contact=np.inf, smoothing=1e-3)
-    anim = animate_FMs_with_guarantee(ode=ode, subh=True)
-    # anims = analyze_convergence(ode=ode, Ns=10, omega=1.5)
-    # anims = frc_animations_for_talk()
+    hbm = init_hbm(ode=ode, omega=0.1)
 
-    # anim = animate_phase_portrait(ode, omega=omega, length_tail=40)
-    # plot_omega_sweep(t_0=0, t_end=t_end, omega_start=0.5, omega_end=3)
-    # anim2 = animate_frequency_sweep(
-    #     ode,
-    #     t_end=t_end,
-    #     omega_start=0,
-    #     omega_end=2.5,
-    #     length_tail=200,
-    # )
-    # plot_time_history(ode, omegas=[0.5, 1.0, 1.9, 2.5])
+    _, frc = plot_frc(hbm=hbm)
+    anims = []
+    # anims = phase_portrait_animations_for_talk(ode)
+    anims.append(animate_floquet_multipliers(hbm_set=frc, interval=200))
+    anims += analyze_convergence(
+        Ns=10, omegas=(0.85,), ode=ode, subh=False, animate=True
+    )
+
     plt.show()
