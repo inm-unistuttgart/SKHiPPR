@@ -9,7 +9,6 @@ plt.rcParams["mathtext.fontset"] = "cm"
 
 from matplotlib.animation import FuncAnimation
 import tikzplotlib
-from scipy.integrate import solve_ivp
 
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation
@@ -27,7 +26,6 @@ from skhippr.visualization.continuation import (
     plot_continuation,
 )
 from skhippr.visualization.cycles import (
-    animate_floquet_exponents,
     animate_floquet_multipliers,
     plot_phase,
 )

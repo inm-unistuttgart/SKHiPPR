@@ -9,9 +9,8 @@ from scipy.linalg import (
     solve_sylvester,
     qr,  # scipy qr decomposition allows for pivoting and rank-reveal, numpy does not
 )
-import warnings
 
-from skhippr.Fourier import Fourier, round_to_significant_digits
+from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
 from skhippr.stability.AbstractStabilityHBM import AbstractStabilityHBM
 
