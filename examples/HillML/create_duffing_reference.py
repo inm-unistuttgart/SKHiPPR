@@ -15,7 +15,6 @@ from skhippr.visualization.continuation import plot_continuation
 from skhippr.visualization.data_export import save_animation, save_png
 from generate_stability_data import generate_stability_data
 
-
 """ Parameters """
 # PARAMS = {
 #     "alpha": 0.5,
@@ -25,12 +24,12 @@ from generate_stability_data import generate_stability_data
 # }
 
 PARAMS = {
-    "alpha": 1,
-    "beta": 0.5,
-    "F": 0.3,
+    "alpha": 1.13,
+    "beta": -0.2,
+    "F": 0.15,
     "delta": 0.1,
 }
-N_HBM = 26
+N_HBM = 5
 L_DFT = 2**8
 SOLVER_TOL = 1e-10
 NUM_STEPS = 400
@@ -78,12 +77,7 @@ def main():
     anims.append(animate_floquet_exponents(frc)[1])
     anims.append(animate_floquet_multipliers(frc)[1])
 
-    for anim, label in zip(anims, ["FE", "FM"]):
-        save_animation(anim, filename.replace(".csv", f"_{label}.gif"))
-
-    save_png(ax, filename.replace(".csv", "_FRC.png"))
-
-    return anims, ax
+    return anims, ax, filename
 
 
 def plot_fun(bp):
@@ -91,6 +85,8 @@ def plot_fun(bp):
 
 
 if __name__ == "__main__":
-    anims, ax = main()
-    save_png(ax)
+    anims, ax, filename = main()
+    for anim, label in zip(anims, ["FE", "FM"]):
+        save_animation(anim, filename.replace(".csv", f"_{label}.gif"))
+    save_png(ax, filename.replace(".csv", "_FRC.png"))
     plt.show()
