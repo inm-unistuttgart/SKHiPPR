@@ -67,7 +67,7 @@ class HillODE(AbstractODE):
                 J[1, 1, ...] = -self.damping
                 J[1, 0, ...] = -self.a
 
-                J[1, 0, ...] -= self.b * self.g_fcn(tau)
+                J[1, 0, ...] -= np.squeeze(self.b * self.g_fcn(tau))
                 return J
 
             case "b":

@@ -10,6 +10,8 @@ from typing import override
 import numpy as np
 from copy import copy
 
+from scipy.integrate import solve_ivp
+
 from skhippr.Fourier import Fourier
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.equations.EquationSystem import EquationSystem
@@ -22,6 +24,8 @@ from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillSubharmonic,
 )
 import matplotlib.pyplot as plt
+
+from skhippr.visualization.data_export import save_pdf, save_png
 
 
 class FixedHarmonic(AbstractEquation):
@@ -84,36 +88,147 @@ class InceStruttSystem(EquationSystem):
         )
 
 
-def main():
-    a_grid = np.linspace(-0.5, 3, 21)
-    b_grid = np.linspace(0, 5, num=21)
+class InceStruttShootingEquation(AbstractEquation):
+    def __init__(self, ode: MathieuODE, period_doubling=False):
+        self.ode = ode
+        if period_doubling:
+            self.traceval = -2
+        else:
+            self.traceval = 2
+        self.T = 2 * np.pi / self.ode.omega
+        super().__init__(stability_method=None)
 
-    fourier = Fourier(N_HBM=10, L_DFT=60, n_dof=2, real_formulation=True)
+    def __setattr__(self, name, value):
+        if name in ("a", "b"):
+            setattr(self.ode, name, value)
+        return super().__setattr__(name, value)
+
+    def determine_monodromy_matrix(self):
+        Phi = np.eye(2)
+        for k in range(2):
+            sol = solve_ivp(
+                self.ode.dynamics,
+                (0, self.T),
+                Phi[:, k],
+                t_eval=[self.T],
+                atol=1e-9,
+                rtol=1e-9,
+            )
+            Phi[:, k] = sol.y[:, -1]
+        return Phi
+
+    def residual_function(self):
+        # Integrate over one period and compute the trace of the monodromy matrix
+        Phi = self.determine_monodromy_matrix()
+        trace = np.trace(Phi)
+        return np.atleast_1d(trace - self.traceval)
+
+    def closed_form_derivative(self, variable):
+        raise NotImplementedError(
+            "Derivative of shooting residual w.r.t. parameters not implemented. Consider using finite differences or automatic differentiation."
+        )
+
+
+def plot_ince_strutt(N_HBM=10, subh=True, a_max=3, b_max=5, pixelsize=0.2):
+    a_min = -0.5
+    num_a = int((a_max - a_min) / pixelsize) + 1
+    num_b = int(b_max / pixelsize) + 1
+    a_grid = np.linspace(-0.5, a_max, num=num_a)
+    b_grid = np.linspace(0, b_max, num=num_b)
+
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=60, n_dof=2, real_formulation=True)
     X = np.zeros((2 * fourier.N_HBM + 1) * fourier.n_dof)
     ode = SmoothedMeissner(
         t=0, x=np.array([0.0, 0.0]), a=1, b=1, omega=1, damping=0, smoothing=1
     )
+
+    if subh:
+        stabmethod = KoopmanHillSubharmonic(fourier=fourier)
+    else:
+        stabmethod = KoopmanHillProjection(fourier=fourier)
     hbm = HBMEquation(
         ode=ode,
         omega=ode.omega,
         fourier=fourier,
         initial_guess=X,
-        stability_method=KoopmanHillSubharmonic(fourier=fourier),
-        period_k=2,
+        stability_method=stabmethod,
+        period_k=1,
     )
     _, magnitudes_fm = ince_strutt_rastered(a_grid, b_grid, hbm)
     ax = plot_magnitude(magnitudes_fm, logscale=True, a_grid=a_grid, b_grid=b_grid)
 
+    return ax, (hbm, ode, a_grid, b_grid)
+
+
+def shoot_stab_bdry(ode, a_0, b_0=0.05, period_doubling=False, b_max=3, a_min=-0.5):
+    shoot_eq = InceStruttShootingEquation(ode, period_doubling=period_doubling)
+    solver = NewtonSolver(verbose=True)
+
+    bdry = []
+    for direction in (1, -1):
+        print(f"initial guess: a = {a_0}, b = {b_0}, direction = {direction}")
+        shoot_eq.a = a_0
+        shoot_eq.ode.a = a_0
+        shoot_eq.b = b_0
+        shoot_eq.ode.b = b_0
+
+        sys = EquationSystem(equations=[shoot_eq], unknowns=["a"])
+        solver.solve(sys)
+        solver.verbose = False
+
+        for branch_point in pseudo_arclength_continuator(
+            sys,
+            solver,
+            continuation_parameter="b",
+            num_steps=100,
+            stepsize=0.05,
+            initial_direction=direction,
+        ):
+            print(f"next branch point: a = {branch_point.a}, b = {branch_point.b}")
+
+            if direction > 0:
+                bdry.append([branch_point.a, branch_point.b])
+            else:
+                bdry.insert(0, [branch_point.a, branch_point.b])
+
+            if branch_point.b > b_max or branch_point.b < 0 or branch_point.a < a_min:
+                break
+
+    return np.array(bdry)
+
+
+def compute_all_stab_bdries(ode, a_max, a_min, b_max, ax=None, **kwargs_plot):
+    b_0s = [0.03, 0.03, 0.03, 0.5, 0.5, 1.75, 1.75]
+    a_0s = [0, 0.24, 0.26, 0.95, 1.1, 2.35, 2.5]
+    pds = [False, True, True, False, False, True, True]
+    bdries = []
+
+    for a_base, b_base, pd in zip(a_0s, b_0s, pds):
+        if a_base > a_max:
+            continue
+
+        a_0 = a_base
+        b_0 = b_base
+        bdry = shoot_stab_bdry(
+            ode, a_0=a_0, b_0=b_0, period_doubling=pd, b_max=b_max, a_min=a_min
+        )
+        bdries.append(bdry)
+        if ax is not None:
+            ax.plot(bdry[:, 0], bdry[:, 1], **kwargs_plot)
+
+    return bdries
+
+
+def plot_stab_bdry_hbm(hbm, ode, a_grid, b_grid, ax):
     # Continuation along stability boundary
 
-    as_tongue_2 = [0.24, 0.26, 2.24, 2.26]
-    as_tongue = [2.25, 2.5]
+    as_tongue = [0]
     solver = NewtonSolver(verbose=True)
 
     for a in as_tongue:
         solver.verbose = True
         hbm.ode.a = a
-        hbm.ode.b = 1
+        hbm.ode.b = 0.1
         hbm.X[2] = 1  # nonzero initial guess
         hbm.X[3] = -ode.omega
         sys_IS = InceStruttSystem(hbm, varying_parameter="a")
@@ -145,7 +260,7 @@ def main():
                 not min(b_grid) < branch_point.b < max(b_grid)
             ):
                 break
-        plt.plot(_as, bs)
+        ax.plot(_as, bs)
 
 
 def ince_strutt_rastered(a_grid: Iterable, b_grid: Iterable, hbm: HBMEquation):
@@ -153,7 +268,7 @@ def ince_strutt_rastered(a_grid: Iterable, b_grid: Iterable, hbm: HBMEquation):
 
     solver = NewtonSolver()
     ince_strutt = []
-    magnitude_fm = np.zeros((len(a_grid), len(b_grid)))
+    magnitude_fm = np.zeros((len(b_grid), len(a_grid)))
 
     for k, b in enumerate(b_grid):
         list_b = []
@@ -213,7 +328,48 @@ def test_plotting_magnitudes():
     plt.show()
 
 
+def plot_ince_strutt_bdries(ode, axs, a_grid, b_grid):
+    bdries = compute_all_stab_bdries(
+        ode,
+        a_max=max(a_grid),
+        a_min=min(a_grid),
+        b_max=max(b_grid),
+    )
+
+    for ax in axs:
+        for bdry in bdries:
+            ax.plot(bdry[:, 0], bdry[:, 1], "r-")
+        ax.set_xlim(min(a_grid), max(a_grid))
+        ax.set_ylim(min(b_grid), max(b_grid))
+
+    return bdries
+
+
 if __name__ == "__main__":
+
+    N_HBM = 3
+    a_max = 3.5
+    b_max = 3
+    pixelsize = 0.01
+
+    subhs = [True, False]
+    labels = ["subharmonic", "direct"]
+
+    ode = MathieuODE(t=0, x=np.array([0.0, 0.0]), a=1, b=1, omega=1, damping=0)
     # test_plotting_magnitudes()
-    main()
+    axs = []
+    for subh, label in zip(subhs, labels):
+        ax, (_, ode, a_grid, b_grid) = plot_ince_strutt(
+            N_HBM=N_HBM, subh=subh, a_max=a_max, b_max=b_max, pixelsize=0.01
+        )
+        axs.append(ax)
+        ax.set_title(f"N = {N_HBM}, {label}")
+
+    plot_ince_strutt_bdries(ode, axs, a_grid, b_grid)
+    for ax, label in zip(axs, labels):
+        save_png(ax, f"ince_strutt_N_{N_HBM}_{label}.png", dpi=900)
+
+    # plot_stab_bdry(*args, ax)
+    # shoot_stab_bdry(ode, a_0=0.0, period_doubling=False, b_max=3)
+
     plt.show()

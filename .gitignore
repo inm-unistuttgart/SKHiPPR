@@ -43,3 +43,4 @@ plots/
 *.tex
 *.tikz
 *.mat
+*.svg
