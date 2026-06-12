@@ -3,12 +3,17 @@ import csv
 from collections.abc import Generator
 import numpy as np
 
+from numpy.random import MT19937, RandomState, SeedSequence
+
 from skhippr.Fourier import Fourier
 from skhippr.cycles.hbm import HBMEquation
+from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
 from skhippr.solvers.continuation import BranchPoint, pseudo_arclength_continuator
 
+from parse_csv import DataPoint
 
-def generate_stability_data_branch(
+
+def generate_branch_stability_data(
     filename,
     initial_system,
     solver,
@@ -61,6 +66,57 @@ def generate_stability_data_branch(
         print(
             f"ratio stable/unstable: {num_stable}/{num_ustbl} = {num_stable/(num_stable+num_ustbl):.2f}"
         )
+
+
+def generate_random_stability_data(
+    filename,
+    N_HBM,
+    n_dof,
+    num_samples,
+    norm_decay_fun=lambda k: 1,
+    real_formulation=True,
+    seed=None,
+):
+
+    rs = RandomState(MT19937(SeedSequence(seed)))
+
+    # L_DFT is unimportant and is only used to sample and plot the function J(t) if desired
+    fourier = Fourier(
+        n_dof=n_dof, N_HBM=N_HBM, real_formulation=real_formulation, L_DFT=512
+    )
+
+    if os.path.exists(filename):
+        answer = input(f"File {filename} already exists. Overwrite? [y/N] ")
+        if answer.strip().lower() not in {"y", "yes"}:
+            raise RuntimeError(f"File {filename} already exists")
+
+    num_stable = 0
+    num_ustbl = 0
+
+    with open(filename, "w", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+
+        init_csv(fourier, writer, "sample no.")
+
+        for k in range(num_samples):
+            param = k
+            arclength = k
+
+            J_const = rs.normal(size=(n_dof, n_dof))
+            J_c = np.zeros((n_dof, n_dof, 2 * fourier.N_HBM))
+            J_s = np.zeros((n_dof, n_dof, 2 * fourier.N_HBM))
+            for k in range(2 * fourier.N_HBM + 1):
+                for J in (J_c, J_s):
+                    J[:, :, k] = rs.normal(size=(n_dof, n_dof))
+                    J[:, :, k] = (
+                        norm_decay_fun(k) / np.linalg.norm(J[:, :, k], 2) * J[:, :, k]
+                    )
+                    J[:, :, k] = J[:, :, k] * rs.uniform(0, 1)
+
+                    if fourier.real_formulation:
+                        J_s[:, :, k - 1] = norm_decay_fun(k) * rs.normal(
+                            size=(n_dof, n_dof)
+                        )
 
 
 def init_csv(fourier: Fourier, writer, name_param: str):
