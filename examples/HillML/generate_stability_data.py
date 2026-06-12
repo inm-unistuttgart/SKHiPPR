@@ -8,7 +8,7 @@ from skhippr.cycles.hbm import HBMEquation
 from skhippr.solvers.continuation import BranchPoint, pseudo_arclength_continuator
 
 
-def generate_stability_data(
+def generate_stability_data_branch(
     filename,
     initial_system,
     solver,
@@ -53,7 +53,8 @@ def generate_stability_data(
             else:
                 num_ustbl += 1
 
-            to_csv(writer, bp.equations[0], continuation_parameter, arclength)
+            stab_info = extract_info_from_hbm(bp.equations[0], continuation_parameter)
+            to_csv(writer, arclength=arclength, **stab_info)
 
             yield bp
 
@@ -92,16 +93,25 @@ def init_csv(fourier: Fourier, writer, name_param: str):
     return header
 
 
+def extract_info_from_hbm(hbm: HBMEquation, name_param: str):
+    _, FMs = hbm.determine_stability(update=True)
+    param = np.squeeze(getattr(hbm, name_param))
+    X = hbm.X
+    hill_mat = hbm.hill_matrix(real_formulation=True, update=True)
+    return {"param": param, "FMs": FMs, "X": X, "hill_mat": hill_mat}
+
+
 def to_csv(
     writer,
-    hbm: HBMEquation,
-    name_param,
-    arclength,
+    X: np.ndarray,
+    hill_mat: np.ndarray,
+    FMs: np.ndarray,
+    param: float,
+    arclength: float,
 ):
-    _, FMs = hbm.determine_stability(update=True)
 
     # sort the FMs if n = 2
-    if hbm.fourier.n_dof == 2:
+    if len(FMs) == 2:
         if np.abs(np.imag(FMs[0])) > 1e-10:
             # sort by imaginary part, if the FMs are complex conjugate pairs
             idx = np.argsort(np.imag(FMs))
@@ -110,10 +120,6 @@ def to_csv(
             # otherwise sort by real part
             idx = np.argsort(np.real(FMs))
             FMs = FMs[idx]
-
-    param = np.squeeze(getattr(hbm, name_param))
-    X = hbm.X
-    hill_mat = hbm.hill_matrix(real_formulation=True, update=True)
 
     row = [param, arclength] + list(FMs) + list(X) + list(hill_mat.flatten(order="C"))
     writer.writerow(row)

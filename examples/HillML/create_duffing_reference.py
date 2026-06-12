@@ -13,7 +13,7 @@ from skhippr.visualization.cycles import (
 )
 from skhippr.visualization.continuation import plot_continuation
 from skhippr.visualization.data_export import save_animation, save_png
-from generate_stability_data import generate_stability_data
+from generate_stability_data import generate_stability_data_branch
 
 """ Parameters """
 # PARAMS = {
@@ -53,7 +53,7 @@ def main():
     )
 
     frc = list(
-        generate_stability_data(
+        generate_stability_data_branch(
             filename=filename,
             initial_system=hbm,
             solver=NewtonSolver(tolerance=1e-8, verbose=False),
