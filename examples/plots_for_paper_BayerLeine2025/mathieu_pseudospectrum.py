@@ -24,10 +24,10 @@ from skhippr.equations.PseudoSpectrumEquation import (
 )
 
 
-def optimal_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False):
+def optimal_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False, k=1):
     """
     Computes the optimal error bound for the solution of a Mathieu-type equation using the Harmonic Balance Method (HBM).
-    The error bound is calculated based on the norms of the Fourier coefficient matrices of the system, assuming that the Fourier coefficient matrices have finite support and only J_0 and J_1 are nonzero.
+    The error bound is calculated based on the norms of the Fourier coefficient matrices of the system, assuming that the Fourier coefficient matrices have finite support and only J_0 and J_k are nonzero.
     The formulas for the error are derived in Bayer & Leine (2025).
 
     Parameters
@@ -67,10 +67,23 @@ def optimal_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False):
     if subharmonic:
         N = 2 * N
 
-    if beta < N / (4 * t):
-        E = (8 * gamma * t / N) ** N * (np.exp(N) - 1)
+    epsi_opt = 2 * (4 * gamma * t / N) ** (1 / k)
+    a_opt = gamma * (2 / epsi_opt) ** k
+
+    if a_opt >= beta:
+        E = epsi_opt**N * (np.exp(4 * a_opt * t) - 1)
+
     else:
-        E = (2 * gamma / beta) ** N * (np.exp(4 * beta * t) - 1)
+        # optimal bound touches both constraints
+        a_opt = beta
+        b_opt = (np.log(beta) - np.log(gamma)) / k
+
+        E = (2 * np.exp(-b_opt)) ** N * (np.exp(4 * a_opt * t) - 1)
+
+    # if beta < N / (4 * t):
+    #     E = (8 * gamma * t / N) ** N * (np.exp(N) - 1)
+    # else:
+    #     E = (2 * gamma / beta) ** N * (np.exp(4 * beta * t) - 1)
 
     return E
 

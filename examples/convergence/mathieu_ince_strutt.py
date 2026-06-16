@@ -347,13 +347,13 @@ def plot_ince_strutt_bdries(ode, axs, a_grid, b_grid):
 
 if __name__ == "__main__":
 
-    N_HBM = 3
+    N_HBM = 6
     a_max = 3.5
     b_max = 3
     pixelsize = 0.01
 
-    subhs = [True, False]
-    labels = ["subharmonic", "direct"]
+    subhs = [False]
+    labels = ["direct"]
 
     ode = MathieuODE(t=0, x=np.array([0.0, 0.0]), a=1, b=1, omega=1, damping=0)
     # test_plotting_magnitudes()

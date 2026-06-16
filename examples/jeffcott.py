@@ -685,10 +685,10 @@ if __name__ == "__main__":
     ode = init_ode(e=5e-4, D_it=0.1, r=0.01, radius_contact=np.inf, smoothing=1e-3)
     hbm = init_hbm(ode=ode, omega=0.1)
 
-    _, frc = plot_frc(hbm=hbm)
+    # _, frc = plot_frc(hbm=hbm)
     anims = []
-    # anims = phase_portrait_animations_for_talk(ode)
-    anims.append(animate_floquet_multipliers(hbm_set=frc, interval=200))
+    # # anims = phase_portrait_animations_for_talk(ode)
+    # anims.append(animate_floquet_multipliers(hbm_set=frc, interval=200))
     anims += analyze_convergence(
         Ns=10, omegas=(0.85,), ode=ode, subh=False, animate=True
     )
