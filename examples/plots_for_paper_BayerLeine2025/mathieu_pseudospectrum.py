@@ -21,10 +21,11 @@ from skhippr.stability.KoopmanHillProjection import (
 from skhippr.equations.PseudoSpectrumEquation import (
     does_pseudospectrum_include,
     compute_pseudospectrum,
+    finite_support_error_bound,
 )
 
 
-def optimal_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False, k=1):
+def mathieu_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False, k=1):
     """
     Computes the optimal error bound for the solution of a Mathieu-type equation using the Harmonic Balance Method (HBM).
     The error bound is calculated based on the norms of the Fourier coefficient matrices of the system, assuming that the Fourier coefficient matrices have finite support and only J_0 and J_k are nonzero.
@@ -57,35 +58,10 @@ def optimal_error_bound(hbm: HBMEquation, t: float, subharmonic: bool = False, k
     hbm.ode.b = 0
     J_0 = hbm.ode.closed_form_derivative("x")
     hbm.ode.b = b
-    beta = np.linalg.norm(J_0, 2)
 
     J_1 = np.array([[0, 0], [-0.5 * b, 0]])
-    gamma = np.linalg.norm(J_1)
 
-    # Optimal error bound - see Bayer&Leine, 2025
-    N = hbm.fourier.N_HBM
-    if subharmonic:
-        N = 2 * N
-
-    epsi_opt = 2 * (4 * gamma * t / N) ** (1 / k)
-    a_opt = gamma * (2 / epsi_opt) ** k
-
-    if a_opt >= beta:
-        E = epsi_opt**N * (np.exp(4 * a_opt * t) - 1)
-
-    else:
-        # optimal bound touches both constraints
-        a_opt = beta
-        b_opt = (np.log(beta) - np.log(gamma)) / k
-
-        E = (2 * np.exp(-b_opt)) ** N * (np.exp(4 * a_opt * t) - 1)
-
-    # if beta < N / (4 * t):
-    #     E = (8 * gamma * t / N) ** N * (np.exp(N) - 1)
-    # else:
-    #     E = (2 * gamma / beta) ** N * (np.exp(4 * beta * t) - 1)
-
-    return E
+    return finite_support_error_bound(J_0, J_1, hbm.fourier.N_HBM, t, subharmonic, k=k)
 
 
 def plot_FMs_with_guarantee(ode, N, subh, ax=None, color=None, **kwargs):
@@ -102,7 +78,7 @@ def plot_FMs_with_guarantee(ode, N, subh, ax=None, color=None, **kwargs):
     if ax is None:
         ax = plot_FM(hbm, stability_method)
 
-    E = optimal_error_bound(hbm, hbm.T_solution, subh)
+    E = mathieu_error_bound(hbm, hbm.T_solution, subh)
 
     print(f"N = {fourier.N_HBM}: E = {E}")
 
@@ -252,7 +228,7 @@ def plot_N_over_a(ode, a_values, E_des=1e-6, fourier_ref=None, subh=True):
 
             # 0. guaranteed error
             if np.isnan(N_vals[0, k]) or np.isnan(N_vals[1, k]):
-                E_opt = optimal_error_bound(hbm, t=T, subharmonic=subh)
+                E_opt = mathieu_error_bound(hbm, t=T, subharmonic=subh)
                 if E_opt < E_des and np.isnan(N_vals[0, k]):
                     N_vals[0, k] = N
 
@@ -348,7 +324,7 @@ def plot_ince_strutt(ode, a_values, b_values, fourier, subh=True, logscale=True)
             FMs = hbm.eigenvalues
             Phi_T = stability_method.fundamental_matrix(t_over_period=1, hbm=hbm)
 
-            E_opt[idx_b, idx_a] = optimal_error_bound(hbm, t=T, subharmonic=subh)
+            E_opt[idx_b, idx_a] = mathieu_error_bound(hbm, t=T, subharmonic=subh)
             lambda_max[idx_b, idx_a] = np.max(np.abs(FMs))
 
             if hbm.stable:

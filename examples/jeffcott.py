@@ -32,6 +32,11 @@ from skhippr.visualization.cycles import (
 
 from skhippr.visualization.data_export import save_animation
 
+from skhippr.equations.PseudoSpectrumEquation import (
+    finite_support_error_bound,
+    compute_pseudospectrum,
+)
+
 
 class Jeffcott2(AbstractODE):
     """3rd order model, Alcorta2023 Eq. (5)"""
@@ -209,7 +214,7 @@ def init_ode(
     )
 
 
-def init_hbm(ode=None, omega=None, fourier=None, solver=None):
+def init_hbm(ode=None, omega=None, fourier=None, solver=None, subh=True):
     if ode is None:
         ode = init_ode()
 
@@ -233,13 +238,18 @@ def init_hbm(ode=None, omega=None, fourier=None, solver=None):
     )
     X0 = fourier.DFT(x0_samples)
 
+    if subh:
+        stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
+    else:
+        stability_method = KoopmanHillProjection(fourier, tol=1e-4, autonomous=False)
+
     hbm = HBMEquation(
         ode=ode,
         omega=ode.omega,
         fourier=fourier,
         initial_guess=X0,
         period_k=1,
-        stability_method=KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False),
+        stability_method=stability_method,
     )
 
     hbm.residual(update=True)
@@ -607,83 +617,59 @@ def FM_error(FM, FM_ref):
     return np.linalg.norm(FM - FM_ref)
 
 
+def compute_jeffcott_pseudospectrum(hbm, subharmonic=False):
+
+    coeffs = hbm.ode_coeffs()
+    J_0 = coeffs[:, :, 0]
+    J_c = coeffs[:, :, 2]
+    J_s = coeffs[:, :, hbm.fourier.N_HBM + 2]
+
+    J_1 = 0.5 * (J_c - 1j * J_s)
+
+    E = finite_support_error_bound(
+        J_0, J_1, hbm.fourier.N_HBM, t=hbm.T_solution, subharmonic=subharmonic, k=2
+    )
+
+    print(f"N = {hbm.fourier.N_HBM}: E = {E}")
+
+    Phi_T = hbm.stability_method.fundamental_matrix(t_over_period=1, hbm=hbm)
+    FMs, _ = np.linalg.eig(Phi_T)
+
+    z_pseudospectrum = []
+    if 1e-14 < E < 10:
+        for FM in FMs:
+            z_pseudospectrum += [
+                np.squeeze(lam)
+                for lam in compute_pseudospectrum(
+                    Phi_T, epsilon=E, z_init=FM, verbose=False, max_step=2e-4
+                )
+            ]
+            z_pseudospectrum += [np.nan]
+
+    return np.array(z_pseudospectrum)
+
+
 def animate_FMs_with_guarantee(ode=None, fourier=None, subh=False):
-    if ode is None:
-        ode = init_ode()
+    hbm = init_hbm(ode=ode, fourier=fourier, subh=subh)
 
-    ode.omega = 0.1
+    fig, ax = plt.subplots(1, 1, constrained_layout=True)
+    phis = np.linspace(0, 2 * np.pi, 100)
+    ax.plot(np.cos(phis), np.sin(phis), "k", linewidth=0.5)
+    pspec = compute_jeffcott_pseudospectrum(hbm, subharmonic=subh)
 
-    if fourier is None:
-        fourier = Fourier(N_HBM=25, L_DFT=300, n_dof=4, real_formulation=True)
-
-    if subh:
-        stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
-    else:
-        stability_method = KoopmanHillProjection(fourier, tol=1e-4, autonomous=False)
-    solver = NewtonSolver(verbose=True, max_iterations=50)
-
-    ts = fourier.time_samples(ode.omega)
-    x0_samples = np.array(
-        [
-            ode.e * np.cos(ode.omega * ts),
-            ode.e * np.sin(ode.omega * ts),
-            -ode.e * ode.omega * np.sin(ode.omega * ts),
-            ode.e * ode.omega * np.cos(ode.omega * ts),
-        ]
-    )
-    X0 = fourier.DFT(x0_samples)
-
-    hbm = HBMEquation(
-        ode=ode,
-        omega=ode.omega,
-        fourier=fourier,
-        initial_guess=X0,
-        period_k=1,
-        stability_method=stability_method,
-    )
-
-    hbm.residual(update=True)
-
-    solver.solve_equation(equation=hbm, unknown="X")
-    solver.verbose = False
-    solver.max_iterations = 10
-
-    initial_system = EquationSystem(
-        equations=[hbm], unknowns=["X"], equation_determining_stability=hbm
-    )
-
-    frc_forward: list[BranchPoint] = []
-
-    for branch_point in pseudo_arclength_continuator(
-        initial_system=initial_system,
-        solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.00001, 0.2),
-        continuation_parameter="omega",
-        initial_direction=1,
-        verbose=True,
-        num_steps=30,
-    ):
-        frc_forward.append(branch_point)
-
-        if branch_point.omega > 3:
-            break
-
-    plot_continuation(
-        frc_forward,
-        plot_fun=lambda point: np.max(
-            np.linalg.norm(point.equations[0].x_time()[:2, :], axis=0)
-        ),
-        marker="x",
-    )
-    anim = animate_floquet_multipliers(hbm_set=frc_forward, interval=200)
-    return anim
+    ax.plot(np.real(pspec), np.imag(pspec), "r")
 
 
 if __name__ == "__main__":
 
     ode = init_ode(e=5e-4, D_it=0.1, r=0.01, radius_contact=np.inf, smoothing=1e-3)
-    hbm = init_hbm(ode=ode, omega=0.1)
+    ode.omega = 0.85
+
+    N_HBM = 18
+
+    hbm = init_hbm(
+        ode=ode, fourier=Fourier(N_HBM=N_HBM, L_DFT=1024, n_dof=4), omega=0.85
+    )
 
     # _, frc = plot_frc(hbm=hbm)
     anims = []
@@ -692,5 +678,9 @@ if __name__ == "__main__":
     anims += analyze_convergence(
         Ns=10, omegas=(0.85,), ode=ode, subh=False, animate=True
     )
+
+    ode.omega = 1.6
+    animate_FMs_with_guarantee(ode=ode, fourier=hbm.fourier, subh=False)
+    animate_FMs_with_guarantee(ode=ode, fourier=hbm.fourier, subh=True)
 
     plt.show()
