@@ -390,8 +390,8 @@ if __name__ == "__main__":
     #         path_ref=f"examples/dissertation_bayer/friction/data/Phi_t_ref_{name_case}.mat",
     #     )
     main(
-        cases=["B", "A"],
-        smoothings=[np.inf, 10],
+        cases=["A", "B"],
+        smoothings=[np.inf],
         Ns_HBM=np.arange(1, 401),
         Ns_plot=(400,),
         L_DFT=2**12,
