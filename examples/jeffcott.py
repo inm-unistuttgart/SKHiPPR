@@ -510,7 +510,6 @@ def phase_portrait_animations_for_talk(
             save_animation(
                 anims[-1],
                 f"{path}_omega_{omega:.2f}.gif",
-                fps=30,
             )
     return anims
 
@@ -630,7 +629,7 @@ def compute_jeffcott_pseudospectrum(hbm, subharmonic=False):
         J_0, J_1, hbm.fourier.N_HBM, t=hbm.T_solution, subharmonic=subharmonic, k=2
     )
 
-    print(f"N = {hbm.fourier.N_HBM}: E = {E}")
+    print(f"N = {hbm.fourier.N_HBM}: E = {E}, om = {hbm.omega}")
 
     Phi_T = hbm.stability_method.fundamental_matrix(t_over_period=1, hbm=hbm)
     FMs, _ = np.linalg.eig(Phi_T)
@@ -649,15 +648,44 @@ def compute_jeffcott_pseudospectrum(hbm, subharmonic=False):
     return np.array(z_pseudospectrum)
 
 
-def animate_FMs_with_guarantee(ode=None, fourier=None, subh=False):
-    hbm = init_hbm(ode=ode, fourier=fourier, subh=subh)
-
-    fig, ax = plt.subplots(1, 1, constrained_layout=True)
+def animate_FMs_with_guarantee(
+    ode=None, omegas=(0.85,), fourier=None, subh=False, path=None
+):
+    fig, ax = plt.subplots(1, 1, constrained_layout=True, dpi=100, figsize=(7.2, 7.2))
     phis = np.linspace(0, 2 * np.pi, 100)
     ax.plot(np.cos(phis), np.sin(phis), "k", linewidth=0.5)
-    pspec = compute_jeffcott_pseudospectrum(hbm, subharmonic=subh)
+    ax.set_xlim(-1.5, 1.5)
+    ax.set_ylim(-1.5, 1.5)
 
-    ax.plot(np.real(pspec), np.imag(pspec), "r")
+    pspecs = []
+    omegas_res = []
+    FMs = []
+    for hbm in yield_hbm_at_omegas(
+        hbm=init_hbm(ode=ode, fourier=fourier, subh=subh), omegas_return=omegas
+    ):
+
+        pspecs.append(compute_jeffcott_pseudospectrum(hbm, subharmonic=subh))
+        FMs.append(hbm.eigenvalues)
+        omegas_res.append(hbm.omega)
+
+    hdl_spec = ax.plot([0], [0], "r")[0]
+    hdl_FM = ax.plot([0], [0], "kx")[0]
+
+    def update(frame):
+        pspec = pspecs[frame]
+        hdl_spec.set_data(pspec.real, pspec.imag)
+        hdl_FM.set_data(FMs[frame].real, FMs[frame].imag)
+        ax.set_title(f"omega={omegas_res[frame]}")
+
+    anim = FuncAnimation(fig, update, frames=len(pspecs), interval=200, repeat=True)
+
+    if path is not None:
+        save_animation(
+            anim,
+            f"{path}_preudospectrum.gif",
+        )
+
+    return anim
 
 
 if __name__ == "__main__":
@@ -665,7 +693,7 @@ if __name__ == "__main__":
     ode = init_ode(e=5e-4, D_it=0.1, r=0.01, radius_contact=np.inf, smoothing=1e-3)
     ode.omega = 0.85
 
-    N_HBM = 18
+    N_HBM = 10
 
     hbm = init_hbm(
         ode=ode, fourier=Fourier(N_HBM=N_HBM, L_DFT=1024, n_dof=4), omega=0.85
@@ -680,7 +708,25 @@ if __name__ == "__main__":
     )
 
     ode.omega = 1.6
-    animate_FMs_with_guarantee(ode=ode, fourier=hbm.fourier, subh=False)
-    animate_FMs_with_guarantee(ode=ode, fourier=hbm.fourier, subh=True)
+    omegas = np.linspace(1.4, 1.6, 20)
+    anims.append(
+        animate_FMs_with_guarantee(
+            ode=ode,
+            omegas=omegas,
+            fourier=hbm.fourier,
+            subh=False,
+            path="jeffcott_direct",
+        )
+    )
 
-    plt.show()
+    N_HBM = 5
+    hbm = init_hbm(
+        ode=ode, fourier=Fourier(N_HBM=N_HBM, L_DFT=1024, n_dof=4), omega=0.85
+    )
+    anims.append(
+        animate_FMs_with_guarantee(
+            ode=ode, omegas=omegas, fourier=hbm.fourier, subh=True, path="jeffcott_subh"
+        )
+    )
+
+    # plt.show()

@@ -167,7 +167,7 @@ def compute_pseudospectrum(
         initial_system=sys,
         solver=solver,
         verbose=verbose,
-        num_steps=50000,
+        num_steps=200000,
         stepsize_range=(0.01 * max_step, max_step),
     ):
         pseudo_spectrum.append(bp.re_z + +1j * bp.im_z)
