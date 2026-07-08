@@ -108,6 +108,7 @@ def analyze_N_convergence(
     ax_conv=None,
     csv_path=None,
     parameter=None,
+    stability_method_class=KoopmanHillProjection,
 ) -> HBMSystem:
     """
     Analyze the convergence of the Koopman-Hill projection with increasing number of harmonics (N_HBM)
@@ -165,7 +166,12 @@ def analyze_N_convergence(
     for N_HBM in range(1, N_max + 1):
         print(N_HBM)
         hbm_sys = setup_hbm_system(
-            solver=solver, ode=ode, fourier_ref=fourier_ref, N_HBM=N_HBM, x_t=x_t
+            solver=solver,
+            ode=ode,
+            fourier_ref=fourier_ref,
+            N_HBM=N_HBM,
+            x_t=x_t,
+            stability_method_class=stability_method_class,
         )
 
         FMs = hbm_sys.eigenvalues
@@ -286,6 +292,7 @@ def setup_hbm_system(
     fourier_ref,
     N_HBM,
     x_t=None,
+    stability_method_class=KoopmanHillProjection,
 ):
     """
     Sets up and solves a Harmonic Balance Method (HBM) problem for a given function and parameters. The function must have an equilibrium at 0.
@@ -317,7 +324,7 @@ def setup_hbm_system(
         omega=ode.omega,
         fourier=fourier,
         initial_guess=X_init,
-        stability_method=KoopmanHillProjection(fourier),
+        stability_method=stability_method_class(fourier),
     )
 
     solver.solve(hbm)
@@ -349,5 +356,6 @@ if __name__ == "__main__":
         N_max=70,
         csv_path="data_meissner_smoothed.csv",
         smoothing=vals_smoothing,
+        stability_method_class=KoopmanHillProjection,
     )
     plt.show()

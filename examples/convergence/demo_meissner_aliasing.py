@@ -13,6 +13,10 @@ import matplotlib.pyplot as plt
 from skhippr.odes.ltp import SmoothedMeissner, TruncatedMeissner
 from skhippr.Fourier import Fourier
 from skhippr.solvers.newton import NewtonSolver
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillProjection,
+    KoopmanHillSubharmonic,
+)
 
 from demo_mathieu_N_convergence import (
     analyze_N_convergence,
@@ -21,7 +25,12 @@ from demo_mathieu_N_convergence import (
 )
 
 
-def analyze_N_meissner_aliasing(N_max=60, Ls_DFT=(1024,), csv_path=None):
+def analyze_N_meissner_aliasing(
+    N_max=60,
+    Ls_DFT=(1024,),
+    csv_path=None,
+    stability_method_class=KoopmanHillProjection,
+):
     """
     Showcase the effect of aliasing error on KHP accuracy for the Meissner equation by varying the DFT length.
     See notes for an explanation of the observations.
@@ -90,6 +99,7 @@ def analyze_N_meissner_aliasing(N_max=60, Ls_DFT=(1024,), csv_path=None):
             ax_conv=ax_conv,
             csv_path=csv_path,
             parameter="L_DFT",
+            stability_method_class=stability_method_class,
         )
 
         # Plot the identified "square" function
@@ -128,6 +138,7 @@ def analyze_N_meissner_aliasing(N_max=60, Ls_DFT=(1024,), csv_path=None):
         parameter="L_DFT",
         params_plot=params_plot,
         ax_conv=ax_conv,
+        stability_method_class=KoopmanHillProjection,
     )
 
     ax_conv.legend()
@@ -138,9 +149,11 @@ def analyze_N_meissner_aliasing(N_max=60, Ls_DFT=(1024,), csv_path=None):
 if __name__ == "__main__":
     # Showcase the influence of L_DFT (i.e., the influence of aliasing) on the prediction accuracy of the Meissner eq.
 
-    analyze_N_meissner_aliasing(
-        N_max=20,
-        csv_path="data_meissner.csv",
-        Ls_DFT=(1024, 1025, 1026, 1027, 1028, 1029, 1030),
-    )
-    plt.show()
+    for stability_method_class in [KoopmanHillProjection, KoopmanHillSubharmonic]:
+        analyze_N_meissner_aliasing(
+            N_max=25,
+            csv_path="data_meissner.csv",
+            Ls_DFT=(2**10, 2**13, 2**9 - 2, 2**13 - 2),
+            stability_method_class=stability_method_class,
+        )
+        plt.show()
