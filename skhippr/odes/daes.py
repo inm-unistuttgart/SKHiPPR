@@ -40,9 +40,7 @@ class PendulumDAE(AbstractDAE):
             + self.F * np.sin(self.omega * t + self.phi)
         )
         f[3, ...] = (
-            2 * x[1] * x[4]
-            - self.masses[2] * self.g
-            - self.d / (self.l**2) * x[3, ...]
+            2 * x[1] * x[4] - self.masses[2] * self.g - self.d / (self.l**2) * x[3, ...]
         )
         f[4, ...] = x[0, ...] ** 2 + x[1, ...] ** 2 - self.l**2
 
@@ -200,7 +198,13 @@ class FrictionOscillator(AbstractDAE):
                 f"Length of forcing phases ({len(forcing_phases)}) must match length of stiffnesses ({len(stiffnesses)})."
             )
 
-        super().__init__(n_dof=5, autonomous=False, stability_method=stability_method, M_is_constant=True, invertible=False)
+        super().__init__(
+            n_dof=5,
+            autonomous=False,
+            stability_method=stability_method,
+            M_is_constant=True,
+            invertible=False,
+        )
         self.stiffnesses = stiffnesses
         self.dampings = dampings
         self.masses = masses
@@ -262,7 +266,7 @@ class FrictionOscillator(AbstractDAE):
 
     def M_small(self, t=None, x=None):
         return np.diag(np.hstack((np.ones(len(self.masses)), self.masses, 0)))
-    
+
     def forcing(self, t=None):
         if t is None:
             t = self.t
@@ -303,14 +307,14 @@ class FrictionOscillator(AbstractDAE):
         # Derivative of constraint equation
         dg_dqdot = np.zeros_like(self.lam)
         dg_dqdot[
-            self.prox_parameter + self.lam_crit
+            self.prox_parameter * self.lam_crit
             > np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
             ...,
         ] = 1
 
         dg_dlam = np.zeros_like(self.lam)
         dg_dlam[
-            self.prox_parameter + self.lam_crit
+            self.prox_parameter * self.lam_crit
             < np.abs(x[-2, ...] - self.prox_parameter * x[-1, ...]),
             ...,
         ] = self.prox_parameter
