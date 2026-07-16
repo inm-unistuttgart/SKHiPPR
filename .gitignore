@@ -35,3 +35,10 @@ __pycache__/
 docs_source/build/*
 examples/dissertation_bayer/plots/mathieu_spurious.tikz
 plots/
+hinged_hinged_N_10.tikz.pdf
+*.pdf
+*.tex
+*.svg
+*.gif
+*.tikz
+*.mat
