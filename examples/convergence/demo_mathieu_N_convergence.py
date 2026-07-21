@@ -156,13 +156,25 @@ def analyze_N_convergence(
         sol_shoot = None
         x_t = None
 
+    # print("HACK!!!!")
+    # Phi_T_ref = np.array(
+    #     [
+    #         [1.000022938650409, -0.005883294959915],
+    #         [-0.007797981796352, 1.000022938650409],
+    #     ]
+    # )
+
     FMs_ref = np.linalg.eig(Phi_T_ref).eigenvalues
+
+    # FMs_ref = np.array([1.006796255932213, 0.993249621368605])
+    # FMs_ref = np.array([0, 0])
 
     ax_conv, axs, plot_FMs = setup_plot(ax_conv, FMs_ref)
 
     errors = initialize_errors_with_param(ode, parameter, csv_path)
 
     for N_HBM in range(1, N_max + 1):
+
         print(N_HBM)
         hbm_sys = setup_hbm_system(
             solver=solver, ode=ode, fourier_ref=fourier_ref, N_HBM=N_HBM, x_t=x_t
@@ -173,7 +185,12 @@ def analyze_N_convergence(
             t_over_period=1, hbm=hbm_sys.equations[0]
         )
 
-        errors.append(np.linalg.norm(Phi_T - Phi_T_ref, ord=2))
+        # errors.append(np.linalg.norm(Phi_T - Phi_T_ref, ord=2))
+        errors.append(
+            np.minimum(
+                np.linalg.norm(FMs - FMs_ref), np.linalg.norm(np.flip(FMs) - FMs_ref)
+            )
+        )
         ax_conv.semilogy(N_HBM, errors[-1], ".", **params_plot)
 
         if "label" in params_plot:

@@ -139,8 +139,8 @@ if __name__ == "__main__":
     # Showcase the influence of L_DFT (i.e., the influence of aliasing) on the prediction accuracy of the Meissner eq.
 
     analyze_N_meissner_aliasing(
-        N_max=30,
+        N_max=20,
         csv_path="data_meissner.csv",
-        Ls_DFT=(512, 2048, 2046),
+        Ls_DFT=(512,),
     )
     plt.show()
