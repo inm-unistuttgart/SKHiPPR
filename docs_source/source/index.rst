@@ -57,5 +57,6 @@ Contents
    installation
    examples
    api
+   visualization
    legal_notice
 

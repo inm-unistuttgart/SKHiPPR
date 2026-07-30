@@ -1,4 +1,4 @@
-Usage -- Classes and functions
+Core API
 ========================================
 
 .. toctree::

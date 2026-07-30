@@ -150,7 +150,7 @@
         <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">Core API</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
 <li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
@@ -159,6 +159,7 @@
 <li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
 </ul>
 
@@ -450,8 +451,6 @@ document.write(`
         <li><a href="examples.html#module-examples.convergence.demo_mathieu_N_convergence">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     examples.convergence.demo_meissner_aliasing
 
@@ -459,6 +458,8 @@ document.write(`
         <li><a href="examples.html#module-examples.convergence.demo_meissner_aliasing">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     examples.duffing
 
@@ -471,6 +472,20 @@ document.write(`
 
       <ul>
         <li><a href="examples.html#module-examples.duffing_3d">module</a>
+</li>
+      </ul></li>
+      <li>
+    examples.duffing_visualization
+
+      <ul>
+        <li><a href="examples.html#module-examples.duffing_visualization">module</a>
+</li>
+      </ul></li>
+      <li>
+    examples.truss
+
+      <ul>
+        <li><a href="examples.html#module-examples.truss">module</a>
 </li>
       </ul></li>
       <li>
@@ -577,6 +592,10 @@ document.write(`
 </li>
         <li><a href="examples.html#examples.duffing_3d.main">(in module examples.duffing_3d)</a>
 </li>
+        <li><a href="examples.html#examples.duffing_visualization.main">(in module examples.duffing_visualization)</a>
+</li>
+        <li><a href="examples.html#examples.truss.main">(in module examples.truss)</a>
+</li>
         <li><a href="examples.html#examples.vanderpol_animation.main">(in module examples.vanderpol_animation)</a>
 </li>
       </ul></li>
@@ -600,11 +619,19 @@ document.write(`
 </li>
         <li><a href="examples.html#module-examples.duffing_3d">examples.duffing_3d</a>
 </li>
+        <li><a href="examples.html#module-examples.duffing_visualization">examples.duffing_visualization</a>
+</li>
+        <li><a href="examples.html#module-examples.truss">examples.truss</a>
+</li>
         <li><a href="examples.html#module-examples.vanderpol_animation">examples.vanderpol_animation</a>
 </li>
         <li><a href="hbm.html#module-skhippr.Fourier">skhippr.Fourier</a>
 </li>
         <li><a href="solvers.html#module-skhippr.solvers.continuation">skhippr.solvers.continuation</a>
+</li>
+        <li><a href="visualization.html#module-skhippr.visualization.cycles">skhippr.visualization.cycles</a>
+</li>
+        <li><a href="visualization.html#module-skhippr.visualization.equilibria">skhippr.visualization.equilibria</a>
 </li>
       </ul></li>
   </ul></td>
@@ -633,10 +660,22 @@ document.write(`
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="solvers.html#skhippr.solvers.continuation.BranchPoint.predict">predict() (skhippr.solvers.continuation.BranchPoint method)</a>
+      <li><a href="visualization.html#skhippr.visualization.equilibria.plot_eigenvalues">plot_eigenvalues() (in module skhippr.visualization.equilibria)</a>
+</li>
+      <li><a href="visualization.html#skhippr.visualization.equilibria.plot_equilibrium">plot_equilibrium() (in module skhippr.visualization.equilibria)</a>
+</li>
+      <li><a href="visualization.html#skhippr.visualization.cycles.plot_floquet_exponents">plot_floquet_exponents() (in module skhippr.visualization.cycles)</a>
+</li>
+      <li><a href="visualization.html#skhippr.visualization.cycles.plot_floquet_multipliers">plot_floquet_multipliers() (in module skhippr.visualization.cycles)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="visualization.html#skhippr.visualization.cycles.plot_period">plot_period() (in module skhippr.visualization.cycles)</a>
+</li>
+      <li><a href="visualization.html#skhippr.visualization.cycles.plot_phase">plot_phase() (in module skhippr.visualization.cycles)</a>
+</li>
+      <li><a href="solvers.html#skhippr.solvers.continuation.BranchPoint.predict">predict() (skhippr.solvers.continuation.BranchPoint method)</a>
+</li>
       <li><a href="solvers.html#skhippr.solvers.continuation.pseudo_arclength_continuator">pseudo_arclength_continuator() (in module skhippr.solvers.continuation)</a>
 </li>
   </ul></td>
@@ -699,8 +738,22 @@ document.write(`
         <li><a href="solvers.html#module-skhippr.solvers.continuation">module</a>
 </li>
       </ul></li>
+      <li>
+    skhippr.visualization.cycles
+
+      <ul>
+        <li><a href="visualization.html#module-skhippr.visualization.cycles">module</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    skhippr.visualization.equilibria
+
+      <ul>
+        <li><a href="visualization.html#module-skhippr.visualization.equilibria">module</a>
+</li>
+      </ul></li>
       <li><a href="odes.html#skhippr.odes.ltp.SmoothedMeissner">SmoothedMeissner (class in skhippr.odes.ltp)</a>
 </li>
       <li><a href="solvers.html#skhippr.solvers.newton.NewtonSolver.solve">solve() (skhippr.solvers.newton.NewtonSolver method)</a>

@@ -1,18 +1,26 @@
 """Demonstrates the complete the pseudo-arclength continuation workflow on a nonlinear equation.
 
-* Use of the :py:class:`~skhippr.equations.Circle.Circle` class as a concrete subclass of :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` for a problem formulation.
+* Use of the :py:class:`~skhippr.equations.Circle.Circle` class as a concrete subclass of :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` for a problem formulation
 * Illustrates how (one or multiple) multiple :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` objects are collected into an :py:class:`~skhippr.equations.EquationSystem.EquationSystem`
-* Continuation of a solution branch emerging from the :py:class:`~skhippr.equations.EquationSystem.EquationSystem` with and without an explicit continuation parameter.
-
+* Continuation of a solution branch emerging from the :py:class:`~skhippr.equations.EquationSystem.EquationSystem` with and without an explicit continuation parameter
+* Visualizing the continuation using SKHiPPR internal methods.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 
+# --- Solver---
 from skhippr.solvers.newton import NewtonSolver
-from skhippr.solvers.continuation import pseudo_arclength_continuator
+
+# --- Equations ---
 from skhippr.equations.Circle import CircleEquation, AngleEquation
 from skhippr.equations.EquationSystem import EquationSystem
+
+# --- Continuation ---
+from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoint
+
+# --- Visualization ---
+from skhippr.visualization.continuation import plot_continuation
 
 
 def main():
@@ -27,7 +35,7 @@ def main():
     #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
     #. Constructing another :py:class:`~skhippr.equations.EquationSystem.EquationSystem` by appending a second :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` subclass and solving it directly for ``y``.
     #. Using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
-    #. Plotting the results.
+    #. Plotting the results with :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Returns
     -------
@@ -132,10 +140,11 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
         The maximum value of the continuation parameter to stop the continuation.
     """
     # Set up the plot
-    plt.figure()
-    plt.title(f"Continuation with parameter {continuation_parameter}")
+    fig, ax = plt.subplots(1, 1)
+    ax.set_title(f"Continuation with parameter {continuation_parameter}")
     y1_prev = 0
 
+    branch: list[BranchPoint] = []
     # Iterate through points on the circle
     for branch_point in pseudo_arclength_continuator(
         initial_system=equ_sys,  # must be of type EquationSystem
@@ -147,8 +156,8 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
         stepsize_range=(0.05, 0.15),
         continuation_parameter=continuation_parameter,
     ):
-        # Plot the point
-        plt.plot(branch_point.y[0], branch_point.y[1], "k.")
+
+        branch.append(branch_point)
 
         # Stopping criteria etc. can be user-defined in the loop
         if (
@@ -163,6 +172,14 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
 
         y1_prev = branch_point.y[1]
 
+    plot_continuation(
+        branch=branch,
+        plot_fun=lambda point: point.y,
+        ax=ax,
+        linestyle="dotted"
+    )
+
+    # Make sure the plots are perfectly circular
     plt.axis("equal")
 
 

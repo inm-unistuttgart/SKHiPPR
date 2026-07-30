@@ -7,6 +7,7 @@ continuation along both excitation frequency and excitation amplitude.
 from collections.abc import Iterable
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerTuple # for legend label grouping
 from tqdm import tqdm  # for the progress bar
 
 # --- Fourier configuration ---
@@ -26,6 +27,15 @@ from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoint
 from skhippr.solvers.newton import NewtonSolver
 
+
+# --- Visualization ---
+from skhippr.visualization.cycles import (
+    plot_floquet_multipliers,
+    plot_floquet_exponents,
+    plot_phase
+)
+from skhippr.visualization.continuation import plot_continuation
+from skhippr.visualization.data_export import save_tikz, save_pdf
 
 def main():
     """
@@ -108,7 +118,20 @@ def main():
     )
 
     # --- Plot results ---
-    plot_all_responses(response_F, responses_omega + responses_F)
+    ax = plot_all_responses(
+        responses_omega,
+        stable_label = "stable $\omega$ responses",
+        unstable_label="unstable $\omega$ responses"
+        )
+    
+    ax = plot_all_responses(
+        responses_F,
+        ax=ax,
+        stable_color = "k",
+        unstable_color = "y",
+        stable_label = "stable F responses",
+        unstable_label = "unstable F responses"
+        )
 
 
 def initial_force_response(
@@ -209,78 +232,56 @@ def continue_from_continuation_curve(
                         break
     return responses
 
-
 def plot_all_responses(
-    initial_response: list[BranchPoint], other_responses: list[list[BranchPoint]]
-):
-    ax = plot_3D_frc(initial_response, "Initial response", plot_stability=True)
-    for response in other_responses:
-        plot_3D_frc(response, ax=ax, plot_stability=True)
-
-
-def plot_3D_frc(
-    list_of_points: Iterable[BranchPoint], label="", ax=None, plot_stability=True
+    responses: list[list[BranchPoint]],
+    ax = None,
+    **plot_kwargs
 ):
     """
     Plot a 3D curve of branch points with stability information.
 
-    Visualize a list of BranchPoint objects in 3D space, where the axes represent
+    Visualize a list of continuation branches in 3D space, where the axes represent
     the frequency (``omega``), forcing amplitude (``F``), and the maximum absolute value of the first
-    state variable (``|x_1|``). Points can be colored according to their stability.
+    state variable (``|x_1|``). 
+    
+    Illustrates creating a 3D ``plot_fun`` that can be passed to :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Parameters
     ----------
-    list_of_points : Iterable[BranchPoint]
-        A continuation curve to plot. Every :py:class:`~skhippr.cycles.continuation.BranchPoint` must have the attributes ``point.F`` and ``point.omega``.
-    label : str, optional
-        Label for the curve. Defaults to ``""``.
+    responses : Iterable[Iterable[BranchPoint]]
+        An :py:class:`collections.abc.Iterable" of several continuation curves to plot. Every :py:class:`~skhippr.cycles.continuation.BranchPoint` must have the attributes ``point.F`` and ``point.omega``.
     ax : matplotlib.axes._subplots.Axes3DSubplot, optional
         Existing 3D axes to plot on. If ``None``, a new figure and axes are created. Defaults to ``None``.
-    plot_stability : bool, optional
-        Whether to highlight stable and unstable points with different colors. Defaults to ``True``.
+    **plot_kwargs
+        Additional keyword arguments passed to ``plot_continuation``.
 
     Returns
     -------
     ax: matplotlib.axes._subplots.Axes3DSubplot
         The 3D axes with the plotted data.
     """
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
-
-    stable = np.array([point.stable for point in list_of_points])
-    omegas = np.array(
-        [np.squeeze(point.equations[0].omega) for point in list_of_points]
-    )
-    Fs = np.array([np.squeeze(point.equations[0].F) for point in list_of_points])
-    amplitudes = np.array(
-        [np.max(np.abs(point.equations[0].x_time()[0, :])) for point in list_of_points]
-    )
-
-    ax.plot(omegas, Fs, amplitudes, label=label)
-    if plot_stability:
-        ax.plot(
-            omegas[stable],
-            Fs[stable],
-            amplitudes[stable],
-            "r.",
-            label="stable",
-            markersize=1,
+    def plot_fun(point: BranchPoint) -> np.ndarray:
+        omega = point.equations[0].omega
+        F = point.equations[0].F
+        amplitude = np.max(np.abs(point.equations[0].x_time()[0, :]))
+        
+        # --- Returns the shapes: ``(1,)``, ``(1,)``, ``()`` --- 
+        # This is a valid configuration for ``plot_continuation``, since ``np.squeeze(element)``would return the same shape for each.
+        # Another functional output would be: ``return (omega, F, amplitude)``.
+        return omega, F, amplitude
+    
+    for response in responses:
+        ax = plot_continuation(
+        branch = response, 
+        plot_fun = plot_fun,
+        ax = ax,
+        **plot_kwargs, 
+        xlabel= "omega",
+        ylabel="F",
+        zlabel="|x_1|"
         )
-        ax.plot(
-            omegas[~stable],
-            Fs[~stable],
-            amplitudes[~stable],
-            "b.",
-            label="unstable",
-            markersize=1,
-        )
-
-    ax.set_xlabel("omega")
-    ax.set_ylabel("F")
-    ax.set_zlabel("|x_1|")
+    ax.set_title("Responses")
     return ax
-
 
 def visualize_solution(system: HBMSystem):
     """
@@ -300,16 +301,14 @@ def visualize_solution(system: HBMSystem):
     -------
         None
     """
-    _, axs = plt.subplots(nrows=1, ncols=2)
-    x_time = system.equations[0].x_time()
-    fourier = system.equations[0].fourier
-    axs[0].plot(x_time[0, :], x_time[1, :])
+
+    _, axs = plt.subplots(nrows=1, ncols=3)
+    axs[0] = plot_phase(hbm = system, ax = axs[0])
     axs[0].set_title("Phase plot of solution")
     axs[0].set_ylabel("x_1")
     axs[0].set_xlabel("x_0")
-
-    floquet_multipliers = system.eigenvalues
-    axs[1].plot(np.real(floquet_multipliers), np.imag(floquet_multipliers), "x")
+    fourier = system.equations[0].fourier
+    axs[1] = plot_floquet_multipliers(hbm = system, ax = axs[1])
     axs[1].set_title("Floquet multipliers")
     axs[1].plot(
         np.cos(fourier.time_samples_normalized),
@@ -317,7 +316,8 @@ def visualize_solution(system: HBMSystem):
         "k",
     )
     axs[1].axis("equal")
-
+    axs[2] = plot_floquet_exponents(hbm = system, ax = axs[2])
+    axs[2].set_title("Floquet exponents")
 
 if __name__ == "__main__":
     main()
