@@ -16,7 +16,13 @@ setup(
     author_email=author_email,
     description=description,
     long_description=long_description,
-    install_requires=["numpy>=1.26.4", "scipy>=1.13.0", "matplotlib >=3.10.1"],
+    install_requires=[
+        "numpy>=1.26.4",
+        "scipy>=1.13.0",
+        "matplotlib >=3.10.1",
+        "tqdm",
+        "pytest",
+    ],
     packages=find_packages(),
     python_requires=">=3.12",
 )
