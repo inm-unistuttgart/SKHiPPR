@@ -23,7 +23,12 @@ from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.solvers.continuation import BranchPoint
 
 # Visualization
-from skhippr.visualization.cycles import animate_period, animate_floquet_multipliers, animate_phase, animate_floquet_exponents
+from skhippr.visualization.cycles import (
+    animate_period,
+    animate_floquet_multipliers,
+    animate_phase,
+    animate_floquet_exponents,
+)
 from skhippr.visualization.continuation import plot_continuation
 from skhippr.visualization.data_export import save_animation
 
@@ -49,7 +54,7 @@ def main():
 
     # --- Continuation ---
     branch: list[BranchPoint] = []
-    nu_range = (ode.nu, 10)
+    nu_range = (ode.nu, 5)
     newton_solver.verbose = False
 
     for branch_point in pseudo_arclength_continuator(
@@ -67,24 +72,21 @@ def main():
             break
 
     # --- Create animations from the HBMEquations in the continuation branch ---
-    ax, animation0 = animate_phase(branch, scaling = "dynamic")
-    _, animation1 = animate_period(branch, scaling = "dynamic")
-    _, animation2 = animate_floquet_multipliers(branch, scaling = "unit_circle")
-    _, animation3 = animate_floquet_exponents(branch, scaling = "static")
+    ax, animation0 = animate_phase(branch, scaling="dynamic")
+    _, animation1 = animate_period(branch, scaling="dynamic")
+    _, animation2 = animate_floquet_multipliers(branch, scaling="unit_circle")
+    _, animation3 = animate_floquet_exponents(branch, scaling="static")
     plot_continuation(
         branch=branch,
-        plot_fun = lambda point: np.max(point.equations[0].x_time()[0,:]),
-        )
-    plot_continuation(
-        branch,
-        plot_fun = lambda point: point.omega
+        plot_fun=lambda point: np.max(point.equations[0].x_time()[0, :]),
     )
-    
+    plot_continuation(branch, plot_fun=lambda point: point.omega)
+
     # --- Export animations ---
     # Animations can be saved as a .gif and as video files such as .mp4.
     # Video formats require the user to have FFmpeg installed.
     save_animation(animation0, "plots/vanderpol_animations/phase_animation.gif")
-    
+
     return animation0, animation1, animation2, animation3
 
 
