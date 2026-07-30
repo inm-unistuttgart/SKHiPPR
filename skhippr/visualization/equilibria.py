@@ -1,0 +1,133 @@
+"""
+
+The :py:mod:`~skhippr.visualization.equilibria` module offers standardized functions for visualizing equilibria as well as equilibrium eigenvalues.
+Supported equations are instances of classes implementing :py:class:`~skhippr.odes.AbstractODE.AbstractODE` as well as :py:class:`~skhippr.equations.EquationSystem.EquationSystem` instances that contain such an object.
+
+It provides the functions:
+
+* :py:func:`~skhippr.visualization.equilibria.plot_equilibrium` for plotting the equilibrium in a standard x-y plane
+* :py:func:`~skhippr.visualization.equilibria.plot_eigenvalues` for making plots of the equation eigenvalues in the complex plane.
+
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from skhippr.odes.AbstractODE import AbstractODE
+from skhippr.equations.EquationSystem import EquationSystem
+from collections.abc import Sequence
+
+
+def plot_equilibrium(
+    ode: AbstractODE | EquationSystem,
+    ax=None,
+    idx: Sequence[int] = [0, 1],
+    **plot_kwargs
+):
+    """
+    Plot the equilibrium of an ordinary differential equation.
+
+    Parameters
+    ----------
+    ode : AbstractODE or EquationSystem
+        The ordinary differential equation or an equation system containing it.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    idx : Sequence[int], optional
+        Exactly two indices of the states to be considered
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the equilibrium.
+    """
+    generated_ax = False
+    if ax is None:
+        _, ax = plt.subplots(1, 1)
+        generated_ax = True
+    title = plot_kwargs.pop("title", "Equilibria")
+    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
+    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
+
+    equation = _get_equation_helper(ode=ode)
+    x = np.asarray(equation.x)
+    ax.plot(x[idx[0]], x[idx[1]], **kwargs)
+    if generated_ax:
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+    return ax
+
+
+def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
+    """
+    Plot the eigenvalues of an ordinary differential equation. If no :py:class:`matplotlib.axes.Axes` object is passed, the function wil also plot the imaginary axis.
+
+    Parameters
+    ----------
+    ode : AbstractODE or EquationSystem
+        The ordinary differential equation or an equation system containing it.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    **plot_kwargs
+        Additional keyword arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the the plotted eigenvalues.
+    """
+    generated_ax = False
+    if ax is None:
+        _, ax = plt.subplots(1, 1)
+        generated_ax = True
+    
+    title = plot_kwargs.pop("title", "Equilibria eigenvalues")
+    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
+    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
+    kwargs = {"marker" : "x"}
+    kwargs.update(plot_kwargs)
+    
+    equation = _get_equation_helper(ode=ode)
+    eigenvalues = np.asarray(equation.eigenvalues)
+    ax.scatter(
+        np.real(eigenvalues), np.imag(eigenvalues), **kwargs
+    )
+    if generated_ax:
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.legend(loc="best")
+        ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
+    return ax
+
+
+def _get_equation_helper(ode: AbstractODE | EquationSystem):
+    """
+    A helper function that returns an :py:class:`~skhippr.odes.AbstractODE.AbstractODE`.
+    Parameters
+    ----------
+    ode : AbstractODE or EquationSystem
+        An equation or system of equations.
+
+    Returns
+    -------
+    equation : AbstractODE
+        The first valid :py:class:`~skhippr.odes.AbstractODE.AbstractODE` found.
+
+    Raises
+    ------
+    ValueError
+        If ``ode`` does not contain any usable :py:class:`~skhippr.odes.AbstractODE.AbstractODE` instance.
+    """
+    if isinstance(ode, AbstractODE):
+        return ode
+    if isinstance(ode, EquationSystem):
+        for equation in ode.equations:
+            if isinstance(equation, AbstractODE):
+                return equation
+    raise ValueError("ode does not contain any usable AbstractODE instance")

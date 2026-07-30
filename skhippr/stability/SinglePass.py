@@ -15,7 +15,7 @@ class SinglePassRK(AbstractStabilityHBM):
     SinglePassRK implements single-pass fixed-step explicit Runge-Kutta methods for stability analysis in the context of Harmonic Balance Methods (HBM).
 
     Parameters:
-    ----------
+    -----------
     fourier : Fourier
         Fourier object containing discretization and transformation information.
     A : np.ndarray

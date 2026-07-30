@@ -42,6 +42,8 @@ from skhippr.odes.nonautonomous import Duffing
 from skhippr.cycles.hbm import HBMEquation
 from skhippr.stability.KoopmanHillProjection import KoopmanHillProjection
 
+from skhippr.visualization.cycles import plot_phase
+
 from skhippr.Fourier import Fourier
 
 
@@ -80,7 +82,7 @@ def main(solver, ode, fourier: Fourier, x_init=None, idx_k=None):
     )
     solver.solve_equation(hbm, "X")
     x_t = hbm.x_time()
-    ax_period = plot_period(hbm)
+    ax_period = plot_phase(hbm=hbm)
 
     # Identify exponential decay parameters
     threshold = 5e-15
@@ -103,7 +105,8 @@ def main(solver, ode, fourier: Fourier, x_init=None, idx_k=None):
     # Solution of linear system (beta = 0) for reference
     ode.beta = 0
     solver.solve_equation(hbm, "X")
-    plot_period(hbm, ax=ax_period, linestyle="--", color="black")
+    kwargs = {'linestyle': "--", 'color' : "black"}
+    plot_phase(hbm=hbm, ax=ax_period, **kwargs)
     ax_period.legend()
     x_t = hbm.x_time()
 
@@ -204,35 +207,6 @@ def plot_lines(
         else:
             y_vals = a - b * x_vals
         ax.plot(x_vals, y_vals, label=f"{k}: b = {b:.2f}, a={a:.2f}")
-
-
-def plot_period(hbm: HBMEquation, ax=None, **kwargs):
-    """
-    Plots the phase plot of a given HBMProblem instance.
-
-    Parameters
-    ----------
-    problem : HBMProblem
-        The problem instance containing the solution to be plotted. Must have a `x_time()` method
-    ax : matplotlib.axes.Axes, optional
-        The axes on which to plot. If None, a new figure and axes will be created.
-    **kwargs
-        Additional keyword arguments passed to `ax.plot()`.
-
-    Returns
-    -------
-    ax : matplotlib.axes.Axes
-        The axes with the plotted period response.
-
-    Notes
-    -----
-    The plot will be labeled with the value of `problem.beta`.
-    """
-    x_time = hbm.x_time()
-    if ax is None:
-        fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.plot(x_time[0, :], x_time[1, :], label=f"$\\beta={hbm.ode.beta}$", **kwargs)
-    return ax
 
 
 if __name__ == "__main__":

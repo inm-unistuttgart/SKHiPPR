@@ -1,0 +1,932 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>FFT and harmonic balance &#8212; SKHiPPR 2.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=789eb5fd"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'hbm';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Stability methods" href="stability.html" />
+    <link rel="prev" title="ODEs" href="odes.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">SKHiPPR 2.0 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="api.html">Usage – Classes and functions</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="equations.html">Formalizing equations and equation systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="solvers.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="odes.html">ODEs</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">FFT and harmonic balance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stability.html">Stability methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shooting.html">Addendum: Shooting method</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="legal_notice.html">Legal notice / Impressum</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/hbm.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>FFT and harmonic balance</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hbmequation-harmonic-balance-for-nonautonomous-odes"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code>: Harmonic balance for nonautonomous ODEs</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation"><code class="docutils literal notranslate"><span class="pre">HBMEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.x_time"><code class="docutils literal notranslate"><span class="pre">HBMEquation.x_time()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.aft"><code class="docutils literal notranslate"><span class="pre">HBMEquation.aft()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.residual_function"><code class="docutils literal notranslate"><span class="pre">HBMEquation.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">HBMEquation.closed_form_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.hill_matrix"><code class="docutils literal notranslate"><span class="pre">HBMEquation.hill_matrix()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.ode_coeffs"><code class="docutils literal notranslate"><span class="pre">HBMEquation.ode_coeffs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.ode_samples"><code class="docutils literal notranslate"><span class="pre">HBMEquation.ode_samples()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.stability_criterion"><code class="docutils literal notranslate"><span class="pre">HBMEquation.stability_criterion()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.exponential_decay_parameters"><code class="docutils literal notranslate"><span class="pre">HBMEquation.exponential_decay_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.error_bound_fundamental_matrix"><code class="docutils literal notranslate"><span class="pre">HBMEquation.error_bound_fundamental_matrix()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hbmsystem-treating-autonomous-and-nonautonomous-odes"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code>: Treating autonomous and nonautonomous ODEs</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMSystem"><code class="docutils literal notranslate"><span class="pre">HBMSystem</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor.residual_function"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor.closed_form_derivative()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-skhippr.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code>: Fast Fourier transform methods</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier"><code class="docutils literal notranslate"><span class="pre">Fourier</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.time_samples"><code class="docutils literal notranslate"><span class="pre">Fourier.time_samples()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.inv_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.inv_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.matrix_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.matrix_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.matrix_inv_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.matrix_inv_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.derivative_coeffs"><code class="docutils literal notranslate"><span class="pre">Fourier.derivative_coeffs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.differentiate"><code class="docutils literal notranslate"><span class="pre">Fourier.differentiate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.__replace__"><code class="docutils literal notranslate"><span class="pre">Fourier.__replace__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="fft-and-harmonic-balance">
+<h1><a class="toc-backref" href="#id1" role="doc-backlink">FFT and harmonic balance</a><a class="headerlink" href="#fft-and-harmonic-balance" title="Link to this heading">#</a></h1>
+<nav class="contents" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#fft-and-harmonic-balance" id="id1">FFT and harmonic balance</a></p>
+<ul>
+<li><p><a class="reference internal" href="#hbmequation-harmonic-balance-for-nonautonomous-odes" id="id2"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code>: Harmonic balance for nonautonomous ODEs</a></p></li>
+<li><p><a class="reference internal" href="#hbmsystem-treating-autonomous-and-nonautonomous-odes" id="id3"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code>: Treating autonomous and nonautonomous ODEs</a></p></li>
+<li><p><a class="reference internal" href="#module-skhippr.Fourier" id="id4"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code>: Fast Fourier transform methods</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="hbmequation-harmonic-balance-for-nonautonomous-odes">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code>: Harmonic balance for nonautonomous ODEs</a><a class="headerlink" href="#hbmequation-harmonic-balance-for-nonautonomous-odes" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.cycles.hbm.</span></span><span class="sig-name descname"><span class="pre">HBMEquation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><span class="pre">AbstractODE</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fourier</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#skhippr.Fourier.Fourier" title="skhippr.Fourier.Fourier"><span class="pre">Fourier</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_guess</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stability_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="stability.html#skhippr.stability.AbstractStabilityHBM.AbstractStabilityHBM" title="skhippr.stability.AbstractStabilityHBM.AbstractStabilityHBM"><span class="pre">AbstractStabilityHBM</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation" title="Link to this definition">#</a></dt>
+<dd><p><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code> is a subclass of <code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractEquation</span></code> which encodes the harmonic balance equations to find a periodic solution of a non-autonomous <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a> with periodic excitation.</p>
+<p>This class computes a nonlinear harmonic balance residual in the frequency domain using a <a class="reference internal" href="#skhippr.Fourier.Fourier" title="skhippr.Fourier.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code></a> object. The resulting nonlinear harmonic balance equations in the frequency domain are then solved using the methods of the parent <code class="xref py py-class docutils literal notranslate"><span class="pre">NewtonProblem</span></code> class.</p>
+<p>As the <code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code> is a subclass of <code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractCycleEquation</span></code>, attribute calls and updates are delegated to the underlying <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a> whenever applicable.</p>
+<p>Attributes:</p>
+<ul class="simple">
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">ode</span></code>: <a class="reference internal" href="odes.html#skhippr.odes.AbstractODE.AbstractODE" title="skhippr.odes.AbstractODE.AbstractODE"><code class="xref py py-class docutils literal notranslate"><span class="pre">AbstractODE</span></code></a> object representing the non-autonomous ODE of which a periodic solution is sought.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">omega</span></code>: Frequency of the system forcing.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">Fourier</span></code> object used to perform the FFT.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">X</span></code>: Vector of Fourier coefficients of the periodic solution.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">period_k</span></code>: The period time of the sought-after periodic solution is <code class="docutils literal notranslate"><span class="pre">period_k</span></code> times the forcing period given by <code class="docutils literal notranslate"><span class="pre">omega</span></code>.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">stability_method</span></code>: The stability method.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.x_time">
+<span class="sig-name descname"><span class="pre">x_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.x_time" title="Link to this definition">#</a></dt>
+<dd><p>Return the time series of the solution at the FFT sample points as a <code class="docutils literal notranslate"><span class="pre">self.ode.n_dof</span></code> x <code class="docutils literal notranslate"><span class="pre">self.fourier.L_DFT</span></code> array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.aft">
+<span class="sig-name descname"><span class="pre">aft</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.aft" title="Link to this definition">#</a></dt>
+<dd><p>Compute the HBM residual and its derivatives using the AFT (Alternating Frequency/Time) method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>np.ndarray</em><em>, </em><em>optional</em>) – State vector in the frequency domain. If None, uses self.X.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>R</strong> – Residual vector in the frequency domain.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.residual_function">
+<span class="sig-name descname"><span class="pre">residual_function</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.residual_function" title="Link to this definition">#</a></dt>
+<dd><p>Returns <code class="docutils literal notranslate"><span class="pre">self.aft(self.X)</span></code> as the residual function of the HBM equations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.closed_form_derivative">
+<span class="sig-name descname"><span class="pre">closed_form_derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.closed_form_derivative" title="Link to this definition">#</a></dt>
+<dd><p>Return the closed-form derivative of the residual function w.r.t. the variable. by Fourier transforming the corresponding derivatives in the time domain,evaluated at the samples.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.hill_matrix">
+<span class="sig-name descname"><span class="pre">hill_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">real_formulation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.hill_matrix" title="Link to this definition">#</a></dt>
+<dd><p>Return the Hill matrix, which is the derivative of the HBM equations w.r.t. <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>real_formulation</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, returns the Hill matrix in real formulation, otherwise in complex formulation.
+If None, uses the value of <code class="docutils literal notranslate"><span class="pre">self.fourier.real_formulation</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.ode_coeffs">
+<span class="sig-name descname"><span class="pre">ode_coeffs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.ode_coeffs" title="Link to this definition">#</a></dt>
+<dd><p>Extract and return the Fourier coefficients of the Jacobian matrix df/dx(x(t)) from the Hill matrix.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>In the real formulation, coefficients are computed according to Bayer et al. 2024, Eq.s (82)-(83) (see references), with the first N cos / sin coefficients appearing in the first row block.</p></li>
+<li><p>Otherwise, the most centered coefficients are taken from the central row block .</p></li>
+</ul>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D array of shape (n_dof, n_dof, 2*N_HBM+1) containing the Fourier coefficients of df/dx(x(t))</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Bayer et al. 2024, <a class="reference external" href="https://doi.org/10.1016/j.ijnonlinmec.2024.104894">https://doi.org/10.1016/j.ijnonlinmec.2024.104894</a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.ode_samples">
+<span class="sig-name descname"><span class="pre">ode_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fourier</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.ode_samples" title="Link to this definition">#</a></dt>
+<dd><p>Generate samples of the Jacobian matrix J(t) in time from the Hill matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fourier</strong> (<em>Optional</em>) – An object providing the <cite>matrix_inv_DFT</cite> method. If None, uses <cite>self.fourier</cite>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The df/dx(x(t)) at the FFT samples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.stability_criterion">
+<span class="sig-name descname"><span class="pre">stability_criterion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eigenvalues</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.stability_criterion" title="Link to this definition">#</a></dt>
+<dd><p>The stability criterion for the HBM equations is that all Floquet multipliers must have a modulus less than 1.
+If the ode is autonomous, the Floquet multiplier corresponding to the phase freedom is removed from the stability criterion.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.exponential_decay_parameters">
+<span class="sig-name descname"><span class="pre">exponential_decay_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5e-15</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.exponential_decay_parameters" title="Link to this definition">#</a></dt>
+<dd><p>Estimate the exponential decay of the Fourier coefficients of the Jacobian matrix J(t).</p>
+<p>This method computes parameters <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> such that the norm of the <code class="docutils literal notranslate"><span class="pre">k</span></code>-th Fourier coefficient
+of df/dx(x(t)) is bounded by <code class="docutils literal notranslate"><span class="pre">max(threshold,</span> <span class="pre">a</span> <span class="pre">*</span> <span class="pre">exp(-b</span> <span class="pre">*</span> <span class="pre">|k|))</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These decay parameters play a central role in the error bound of Bayer and Leine, 2025 (<a class="reference external" href="https://arxiv.org/pdf/2503.21318">https://arxiv.org/pdf/2503.21318</a>).</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – The minimum threshold for considering the norm of the coefficients.
+Defaults to 5e-15.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul>
+<li><p><em>np.ndarray</em> – an array of shape (<code class="docutils literal notranslate"><span class="pre">m</span></code>, 2) where each row contains
+a pair <code class="docutils literal notranslate"><span class="pre">[a,</span> <span class="pre">b]</span></code> for an exponential envelope which is exact at two Fourier coefficients and upperbounds the others.</p></li>
+<li><p><em>Warns</em> –</p>
+<dl class="simple">
+<dt>UserWarning: If the norm of the coefficients does not decay below the threshold within the</dt><dd><p>available harmonic range (<code class="docutils literal notranslate"><span class="pre">N_HBM</span></code>), a warning is issued suggesting to increase <code class="docutils literal notranslate"><span class="pre">N_HBM</span></code>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMEquation.error_bound_fundamental_matrix">
+<span class="sig-name descname"><span class="pre">error_bound_fundamental_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_as</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMEquation.error_bound_fundamental_matrix" title="Link to this definition">#</a></dt>
+<dd><p>Attempts to compute an error bound for the fundamental solution matrix at specified time(s) <code class="docutils literal notranslate"><span class="pre">t</span></code>.
+For each time instant, the lowest bound produced by a combination of <code class="docutils literal notranslate"><span class="pre">(a,</span> <span class="pre">b)</span></code> is returned.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If both <code class="docutils literal notranslate"><span class="pre">_as</span></code> and <code class="docutils literal notranslate"><span class="pre">bs</span></code> are provided, exponential decay parameters are not computed from the Hill matrix and the given parameters are used directly.</p></li>
+<li><p>If only one of them is provided, all applicable exponential</p></li>
+</ul>
+<p>decay parameter combinations are computed and the ones closest to the provided values are
+used.
+* If neither is provided, all possible combinations of decay parameters are considered.
+At each time instant, the combination of <code class="docutils literal notranslate"><span class="pre">(a,</span> <span class="pre">b)</span></code> that produces the lowest bound is used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<em>float</em><em> or </em><em>np.ndarray</em><em>, </em><em>optional</em>) – Time or array of times at which to evaluate the error bound. If None, uses the
+solution’s period.</p></li>
+<li><p><strong>_as</strong> (<em>array_like</em><em>, </em><em>optional</em>) – (Target) parameters for the exponential decay.</p></li>
+<li><p><strong>bs</strong> (<em>array_like</em><em>, </em><em>optional</em>) – (Target) parameters for the exponential decay.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>E_bound</strong> – Array of error bounds evaluated at each time in <code class="docutils literal notranslate"><span class="pre">t</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="hbmsystem-treating-autonomous-and-nonautonomous-odes">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code>: Treating autonomous and nonautonomous ODEs</a><a class="headerlink" href="#hbmsystem-treating-autonomous-and-nonautonomous-odes" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMSystem">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.cycles.hbm.</span></span><span class="sig-name descname"><span class="pre">HBMSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fourier</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_guess</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">period_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stability_method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="stability.html#skhippr.stability.AbstractStabilityHBM.AbstractStabilityHBM" title="skhippr.stability.AbstractStabilityHBM.AbstractStabilityHBM"><span class="pre">AbstractStabilityHBM</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">harmo_anchor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dof_anchor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMSystem" title="Link to this definition">#</a></dt>
+<dd><p>This subclass of <a class="reference internal" href="equations.html#skhippr.equations.EquationSystem.EquationSystem" title="skhippr.equations.EquationSystem.EquationSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">EquationSystem</span></code></a> instantiates a <a class="reference internal" href="#skhippr.cycles.hbm.HBMEquation" title="skhippr.cycles.hbm.HBMEquation"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code></a> and considers it as the first equation. The Fourier coefficient vector <code class="docutils literal notranslate"><span class="pre">X</span></code> is the first unknown.</p>
+<p>If the underlying ODE is autonomous, the frequency <code class="docutils literal notranslate"><span class="pre">omega</span></code> of the periodic solution is not known in advance and is appended to the unknowns. Correspondingly, a <a class="reference internal" href="#skhippr.cycles.hbm.HBMPhaseAnchor" title="skhippr.cycles.hbm.HBMPhaseAnchor"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code></a> equation is appended to the equations.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMPhaseAnchor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.cycles.hbm.</span></span><span class="sig-name descname"><span class="pre">HBMPhaseAnchor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fourier</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">harmo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dof</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMPhaseAnchor" title="Link to this definition">#</a></dt>
+<dd><p>This class implements an anchor equation for the harmonic balance method (HBM) in autonomous systems to ensure that the phase of a specified degree of freedom and harmonic of the periodic solution does not change during the HBM solution procedure.</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Complex formulation:</dt><dd><p>exp(i*phi) = X+/X- = const</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Real formulation:</dt><dd><p>-tan(phi) = c_k/s_k = const</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Hereby, <code class="docutils literal notranslate"><span class="pre">harmo</span></code> and <code class="docutils literal notranslate"><span class="pre">dof</span></code>   specify the harmonic and degree of freedom for which the phase is anchored.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMPhaseAnchor.residual_function">
+<span class="sig-name descname"><span class="pre">residual_function</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMPhaseAnchor.residual_function" title="Link to this definition">#</a></dt>
+<dd><p>Always returns zero.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.cycles.hbm.HBMPhaseAnchor.closed_form_derivative">
+<span class="sig-name descname"><span class="pre">closed_form_derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.cycles.hbm.HBMPhaseAnchor.closed_form_derivative" title="Link to this definition">#</a></dt>
+<dd><p>Return the anchor as derivative w.r.t <code class="docutils literal notranslate"><span class="pre">X</span></code> and zero otherwise.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-skhippr.Fourier">
+<span id="fourier-fast-fourier-transform-methods"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code>: Fast Fourier transform methods</a><a class="headerlink" href="#module-skhippr.Fourier" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">skhippr.Fourier.</span></span><span class="sig-name descname"><span class="pre">Fourier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N_HBM</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L_DFT</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_dof</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">real_formulation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.Fourier.Fourier" title="Link to this definition">#</a></dt>
+<dd><p>Methods for (Fast) Fourier Transform (FFT) and related operations in real or complex formulation.</p>
+<p>Attributes:</p>
+<ul class="simple">
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>: Number of states (degrees of freedom) of the considered signals.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code>: Largest harmonic to be considered in the Fourier series.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>: Number of samples for the fast Fourier transform (FFT). Must be <code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">(N_HBM</span> <span class="pre">+</span> <span class="pre">1)</span></code> to avoid aliasing.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">real_formulation</span></code>: Whether Fourier coefficients are returned in real or complex formulation.</p></li>
+</ul>
+<p>Useful methods:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.time_samples" title="skhippr.Fourier.Fourier.time_samples"><code class="xref py py-func docutils literal notranslate"><span class="pre">time_samples()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.DFT" title="skhippr.Fourier.Fourier.DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">DFT()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.inv_DFT" title="skhippr.Fourier.Fourier.inv_DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">inv_DFT()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.matrix_DFT" title="skhippr.Fourier.Fourier.matrix_DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">matrix_DFT()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.matrix_inv_DFT" title="skhippr.Fourier.Fourier.matrix_inv_DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">matrix_inv_DFT()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.derivative_coeffs" title="skhippr.Fourier.Fourier.derivative_coeffs"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivative_coeffs()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.differentiate" title="skhippr.Fourier.Fourier.differentiate"><code class="xref py py-func docutils literal notranslate"><span class="pre">differentiate()</span></code></a></p></li>
+<li><p><a class="reference internal" href="#skhippr.Fourier.Fourier.__replace__" title="skhippr.Fourier.Fourier.__replace__"><code class="xref py py-func docutils literal notranslate"><span class="pre">__replace__()</span></code></a></p></li>
+</ul>
+<p class="rubric">Notes</p>
+<p>This class supports both real-valued and complex-valued formulations.</p>
+<ul class="simple">
+<li><p>For the complex-valued formulation, Fourier coefficients are represented in increasing frequency order (from <code class="docutils literal notranslate"><span class="pre">-N_HBM</span></code> to <code class="docutils literal notranslate"><span class="pre">N_HBM</span></code>).</p></li>
+<li><p>For the real-valued formulation, the 0-th Fourier coefficient is stored first, then all cosine coefficients in increasing frequency order, then all sine coefficients in increasing frequency order.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.time_samples">
+<span class="sig-name descname"><span class="pre">time_samples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.time_samples" title="Link to this definition">#</a></dt>
+<dd><p>Generate a uniformly spaced vector of time samples starting at <code class="docutils literal notranslate"><span class="pre">0</span></code> with <code class="docutils literal notranslate"><span class="pre">L_DFT</span></code> samples per period.</p>
+<ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">periods</span></code> is integer, the last sample is <code class="docutils literal notranslate"><span class="pre">T*periods-dt</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">periods</span></code> is non-integer, it is rounded down to obtain an integer number of samples that are equally spaced at the DFT sampling frequency. The last sample lies in <code class="docutils literal notranslate"><span class="pre">[T*periods-dt,</span> <span class="pre">T*periods)</span></code>.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>omega</strong> (<em>float</em>) – The angular frequency (in radians per unit time).</p></li>
+<li><p><strong>periods</strong> (<em>float</em><em>, </em><em>optional</em>) – Number of periods to sample. Defaults to 1. Can be non-integer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1-D array of time samples.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.DFT">
+<span class="sig-name descname"><span class="pre">DFT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_samp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.DFT" title="Link to this definition">#</a></dt>
+<dd><p>Compute the Fourier coefficient vector of the input signal using <code class="docutils literal notranslate"><span class="pre">scipy.fft.fft</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x_samp</strong> (<em>np.ndarray</em>) – Input signal array of shape (<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, …, <code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array containing the stacked Fourier coefficients with shape (<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code> * (2* <code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code> + 1 , …).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>If <code class="xref py py-attr docutils literal notranslate"><span class="pre">real_formulation</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the real-valued Fourier coefficients are returned; otherwise, the complex-valued Fourier coefficients.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.inv_DFT">
+<span class="sig-name descname"><span class="pre">inv_DFT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.inv_DFT" title="Link to this definition">#</a></dt>
+<dd><p>Compute the inverse Discrete Fourier Transform (DFT) of the given Fourier coefficient vector.</p>
+<p>This method reconstructs the time-domain samples from the provided Fourier coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>X</strong> (<em>np.ndarray</em>) – Fourier coefficient vector (as generated by <a class="reference internal" href="#skhippr.Fourier.Fourier.DFT" title="skhippr.Fourier.Fourier.DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">DFT()</span></code></a> ). First dimension must have
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code> * (2 * <code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code> + 1) entries. May have more dimensions.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Time-domain samples reconstructed from the Fourier coefficients, returned as an
+array of shape [<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, …, <code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>].</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.matrix_DFT">
+<span class="sig-name descname"><span class="pre">matrix_DFT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.matrix_DFT" title="Link to this definition">#</a></dt>
+<dd><p>Compute the <cite>matrix discrete Fourier transform</cite> of samples of a square matrix, as required for the HBM Jacobian,  using efficient scaling and FFT.</p>
+<p>The result of this function is equivalent to <code class="xref py py-attr docutils literal notranslate"><span class="pre">DFT_matrix</span></code> &#64; <code class="docutils literal notranslate"><span class="pre">A_block</span></code> &#64; <code class="xref py py-attr docutils literal notranslate"><span class="pre">iDFT_matrix</span></code>, where <code class="docutils literal notranslate"><span class="pre">A_block</span></code> is a block-diagonal matrix formed from the samples of <code class="docutils literal notranslate"><span class="pre">A</span></code>, but the computation is carried out efficiently using <code class="docutils literal notranslate"><span class="pre">scipy.fft.fft</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>A</strong> (<em>np.ndarray</em>) – Input array of shape (<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>), collecting samples of the time-periodic matrix.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The result of the matrix DFT operation, a square array of length <code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code> * (2 * <code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code> + 1).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">k</span></code>-th column of the result is computed as the FFT of the <code class="docutils literal notranslate"><span class="pre">k</span></code>-th column of <code class="docutils literal notranslate"><span class="pre">A_block</span> <span class="pre">&#64;</span></code> <code class="xref py py-attr docutils literal notranslate"><span class="pre">iDFT_matrix</span></code>.</p></li>
+<li><p>Due to the block-diagonal structure, this is achieved by scaling <code class="docutils literal notranslate"><span class="pre">A[:,</span> <span class="pre">:,</span> <span class="pre">l]</span></code> by <code class="xref py py-attr docutils literal notranslate"><span class="pre">iDFT_small</span></code> <code class="docutils literal notranslate"><span class="pre">[k,</span> <span class="pre">l]</span></code> for each <code class="docutils literal notranslate"><span class="pre">l</span></code>.</p></li>
+<li><p>The resulting matrix has block-Toeplitz structure.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.matrix_inv_DFT">
+<span class="sig-name descname"><span class="pre">matrix_inv_DFT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.matrix_inv_DFT" title="Link to this definition">#</a></dt>
+<dd><p>Pseudo-inverse operation of <a class="reference internal" href="#skhippr.Fourier.Fourier.matrix_DFT" title="skhippr.Fourier.Fourier.matrix_DFT"><code class="xref py py-func docutils literal notranslate"><span class="pre">matrix_DFT()</span></code></a> (up to aliasing).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>A</strong> (<em>np.ndarray</em>) – The result of a matrix DFT operation, a square array of length <code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code> * (2 * <code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code> + 1) with block-Toeplitz structure.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array of shape (<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>), collecting samples of the corresponding time-periodic matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.derivative_coeffs">
+<span class="sig-name descname"><span class="pre">derivative_coeffs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.derivative_coeffs" title="Link to this definition">#</a></dt>
+<dd><p>Compute the Fourier coefficients of the derivative of a signal which is represented by Fourier coefficients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>np.ndarray</em>) – A 1-D array of shape <code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code> * (2 * <code class="xref py py-attr docutils literal notranslate"><span class="pre">N_HBM</span></code> + 1), containing the Fourier coefficients of the original signal.</p></li>
+<li><p><strong>omega</strong> (<em>float</em><em>, </em><em>optional</em>) – The angular frequency to scale the derivative coefficients. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D array of the same shape as <code class="docutils literal notranslate"><span class="pre">X</span></code>, containing the Fourier coefficients of the derivative
+of the signal.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.differentiate">
+<span class="sig-name descname"><span class="pre">differentiate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_samp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">omega</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#skhippr.Fourier.Fourier.differentiate" title="Link to this definition">#</a></dt>
+<dd><p>Compute the the derivative of a periodic signal in the frequency domain.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_samp</strong> (<em>np.ndarray</em>) – A 2-D array of shape (<code class="xref py py-attr docutils literal notranslate"><span class="pre">n_dof</span></code>,  <code class="xref py py-attr docutils literal notranslate"><span class="pre">L_DFT</span></code>), containing the samples of the original signal.</p></li>
+<li><p><strong>omega</strong> (<em>float</em><em>, </em><em>optional</em>) – The angular frequency of the signal. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D array of the same shape as <code class="docutils literal notranslate"><span class="pre">x_samp</span></code>, containing the dfferentiated signal.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="skhippr.Fourier.Fourier.__replace__">
+<span class="sig-name descname"><span class="pre">__replace__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">changes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#skhippr.Fourier.Fourier.__replace__" title="Link to this definition">#</a></dt>
+<dd><p>Return a new instance of the Fourier class with updated attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**changes</strong> (<em>dict</em>) – Keyword arguments (arguments of <a class="reference internal" href="#skhippr.Fourier.Fourier" title="skhippr.Fourier.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code></a>)
+specifying attribute values to replace in the new instance.
+If an attribute is not provided in <code class="docutils literal notranslate"><span class="pre">changes</span></code>, its value from the current instance is used.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new instance of the Fourier class with the specified changes applied.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#skhippr.Fourier.Fourier" title="skhippr.Fourier.Fourier">Fourier</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="odes.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">ODEs</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="stability.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Stability methods</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hbmequation-harmonic-balance-for-nonautonomous-odes"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMEquation</span></code>: Harmonic balance for nonautonomous ODEs</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation"><code class="docutils literal notranslate"><span class="pre">HBMEquation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.x_time"><code class="docutils literal notranslate"><span class="pre">HBMEquation.x_time()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.aft"><code class="docutils literal notranslate"><span class="pre">HBMEquation.aft()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.residual_function"><code class="docutils literal notranslate"><span class="pre">HBMEquation.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">HBMEquation.closed_form_derivative()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.hill_matrix"><code class="docutils literal notranslate"><span class="pre">HBMEquation.hill_matrix()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.ode_coeffs"><code class="docutils literal notranslate"><span class="pre">HBMEquation.ode_coeffs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.ode_samples"><code class="docutils literal notranslate"><span class="pre">HBMEquation.ode_samples()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.stability_criterion"><code class="docutils literal notranslate"><span class="pre">HBMEquation.stability_criterion()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.exponential_decay_parameters"><code class="docutils literal notranslate"><span class="pre">HBMEquation.exponential_decay_parameters()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMEquation.error_bound_fundamental_matrix"><code class="docutils literal notranslate"><span class="pre">HBMEquation.error_bound_fundamental_matrix()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hbmsystem-treating-autonomous-and-nonautonomous-odes"><code class="xref py py-class docutils literal notranslate"><span class="pre">HBMSystem</span></code>: Treating autonomous and nonautonomous ODEs</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMSystem"><code class="docutils literal notranslate"><span class="pre">HBMSystem</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor.residual_function"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor.residual_function()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.cycles.hbm.HBMPhaseAnchor.closed_form_derivative"><code class="docutils literal notranslate"><span class="pre">HBMPhaseAnchor.closed_form_derivative()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-skhippr.Fourier"><code class="xref py py-class docutils literal notranslate"><span class="pre">Fourier</span></code>: Fast Fourier transform methods</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier"><code class="docutils literal notranslate"><span class="pre">Fourier</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.time_samples"><code class="docutils literal notranslate"><span class="pre">Fourier.time_samples()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.inv_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.inv_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.matrix_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.matrix_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.matrix_inv_DFT"><code class="docutils literal notranslate"><span class="pre">Fourier.matrix_inv_DFT()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.derivative_coeffs"><code class="docutils literal notranslate"><span class="pre">Fourier.derivative_coeffs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.differentiate"><code class="docutils literal notranslate"><span class="pre">Fourier.differentiate()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#skhippr.Fourier.Fourier.__replace__"><code class="docutils literal notranslate"><span class="pre">Fourier.__replace__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Fabia Bayer
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Fabia Bayer.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

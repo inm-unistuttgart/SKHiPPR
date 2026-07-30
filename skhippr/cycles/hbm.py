@@ -180,7 +180,7 @@ class HBMEquation(AbstractCycleEquation):
 
         return self.fourier.DFT(derivatives_time)
 
-    def hill_matrix(self, real_formulation: bool = None) -> np.ndarray:
+    def hill_matrix(self, real_formulation: bool = None, update=False) -> np.ndarray:
         """Return the Hill matrix, which is the derivative of the HBM equations w.r.t. ``X``.
 
         Parameters
@@ -191,18 +191,26 @@ class HBMEquation(AbstractCycleEquation):
 
         """
 
-        H = self.derivative("X", update=False)
+        H = self.derivative("X", update=update)
 
         # Transform between real and complex formulation
         if real_formulation is not None:
 
-            if self.real_formulation and not real_formulation:
+            if self.fourier.real_formulation and not real_formulation:
                 # return complex-valued Hill matrix
-                H = self.T_to_cplx_from_real @ H @ self.T_to_real_from_cplx
+                H = (
+                    self.fourier.T_to_cplx_from_real
+                    @ H
+                    @ self.fourier.T_to_real_from_cplx
+                )
 
-            elif real_formulation and not self.real_formulation:
+            elif real_formulation and not self.fourier.real_formulation:
                 # return real-valued Hill matrix
-                H = self.T_to_real_from_cplx @ H @ self.T_to_cplx_from_real
+                H = (
+                    self.fourier.T_to_real_from_cplx
+                    @ H
+                    @ self.fourier.T_to_cplx_from_real
+                )
 
         return H
 
@@ -290,6 +298,13 @@ class HBMEquation(AbstractCycleEquation):
                 floquet_multipliers = np.delete(
                     floquet_multipliers, idx_freedom_of_phase
                 )
+                if (
+                    abs(eigenvalues[idx_freedom_of_phase] - 1)
+                    > self.stability_method.tol
+                ):
+                    warnings.warn(
+                        f"Floquet multiplier {eigenvalues[idx_freedom_of_phase]} does not satisfy freedom of phase! "
+                    )
 
         return np.all(np.abs(floquet_multipliers) < 1 + self.stability_method.tol)
 
