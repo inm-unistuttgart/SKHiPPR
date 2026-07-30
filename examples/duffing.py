@@ -122,12 +122,9 @@ def main():
         frc, plot_fun=lambda point: np.max(point.equations[0].x_time()[0, :])
     )
     plot_floquet_multiplier_continuation(branch=frc)
-    animation1 = animate_floquet_multipliers(hbm_set=frc, scaling="static")
+    _, animation1 = animate_floquet_multipliers(hbm_set=frc, scaling="static")
     _, animation2 = animate_floquet_exponents(hbm_set=frc, scaling="static")
-    return (
-        animation1,
-        # animation2,
-    )
+    return animation1, animation2
 
 
 if __name__ == "__main__":
