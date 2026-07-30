@@ -130,4 +130,4 @@ def _get_equation_helper(ode: AbstractODE | EquationSystem):
         for equation in ode.equations:
             if isinstance(equation, AbstractODE):
                 return equation
-    raise ValueError("hbm does not contain any usable AbstractODE instance")
+    raise ValueError("ode does not contain any usable AbstractODE instance")
