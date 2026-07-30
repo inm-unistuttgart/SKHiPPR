@@ -184,11 +184,10 @@ def save_animation(
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
 
     if ext == ".gif":
-        writer_class = PillowWriter
+        writer_instance = PillowWriter(fps=fps)
     else:
-        writer_class = FFMpegWriter
+        writer_instance = FFMpegWriter(fps=fps, bitrate=5000)
 
-    writer_instance = writer_class(fps, bitrate=5000)
     animation.save(filepath, writer=writer_instance)
 
     return str(Path(filepath).resolve())
