@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 name = "skhippr"
-version = "2.0"
+version = "2.1"
 author = "Fabia Bayer"
 author_email = "skhippr@inm.uni-stuttgart.de"
 url = "SKHiPPR <https://github.com/f-bayer/SKHiPPR>"
@@ -18,5 +18,5 @@ setup(
     long_description=long_description,
     install_requires=["numpy>=1.26.4", "scipy>=1.13.0", "matplotlib >=3.10.1"],
     packages=find_packages(),
-    python_requires=">=3.10",
+    python_requires=">=3.12",
 )
