@@ -32,8 +32,8 @@ from skhippr.visualization.cycles import (
 from skhippr.visualization.data_export import (
     save_png,
     save_pdf,
-    save_tikz
 )
+
 
 def main():
     """
@@ -69,7 +69,7 @@ def main():
 
     # --- Instantiation of the ODE at initial point ---
     ode = Duffing(t=0, x=[1.0, 0.0], alpha=1, beta=2, delta=0.16, F=F, omega=omega)
-    
+
     # --- Initial guess in time and frequency domain ---
     ts = fourier.time_samples(omega)
     x0_samples = np.array([np.cos(ts * omega), -omega * np.sin(ts * omega)])
@@ -122,10 +122,10 @@ def main():
 
     # --- Save the hill matrix visualization plot ---
     # The relative path for saving a file can be given if the filepath string starts without a "/".
-    # Forward slashes "/" can be used regardless of operating system. 
+    # Forward slashes "/" can be used regardless of operating system.
     save_pdf(axes=ax, filepath="plots/duffing_plots/hill_matrix.pdf")
     save_png(axes=ax, filepath="plots/duffing_plots/hill_matrix.png")
-    
+
     # --- Saving using save_tikz requires tikzplotlib to be installed which is imported locally ---
     # save_tikz(axes=ax, filepath="duffing_plots/hill_matrix.tex")
 

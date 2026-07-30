@@ -38,12 +38,12 @@ def plot_continuation(
 
     This function visualizes one-parameter continuation by applying ``plot_fun`` to each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
     The dimensionality of the data returned by ``plot_fun`` determines how the results are plotted:
-    
+
     #. If ``plot_fun`` returns one element per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the values are plotted against the continuation parameter.
     #. If ``plot_fun`` returns two or three elements per :py:class:`~skhippr.solvers.continuation.BranchPoint`, the returned values are interpreted directly as plotting coordinates.
-    
+
     For each :py:class:`~skhippr.solvers.continuation.BranchPoint`, ``plot_fun`` must return either a scalar or a :py:class:`~collections.abc.Sequence` of scalar-like values (e.g. ``return a``, ``return a, b`` or ``return a, b, c``) where each value is reducible to a single numerical value via ``np.squeeze``.
-    
+
     If stability information is available for all :py:class:`~skhippr.solvers.continuation.BranchPoint` objects contained in ``branch``, stable segments will be drawn in red, unstable ones in blue. Otherwise, the entire branch is colored black.
 
     The plot automatically adapts to one-, two-, or three-dimensional measures returned by ``plot_fun``.
@@ -86,15 +86,6 @@ def plot_continuation(
         ):
             stability_defined = False
             break
-    stability_defined = True
-    for bp in branch_list:
-        if (
-            getattr(bp, "equation_determining_stability", None) is None
-            or bp.equation_determining_stability.stability_method is None
-            or bp.stable is None
-        ):
-            stability_defined = False
-            break
 
     values, dim = _get_values_and_dimension(branch_list, plot_fun)
     if dim not in (1, 2, 3):
@@ -124,13 +115,16 @@ def plot_continuation(
     else:
         stable_flags = np.full(len(branch_list), True)
 
-    
     stable_col = plot_kwargs.pop("stable_color", "r" if stability_defined else "k")
     stable_col = plot_kwargs.pop("color", stable_col)
     unstable_col = plot_kwargs.pop("unstable_color", "b" if stability_defined else "k")
-    stable_label = plot_kwargs.pop("stable_label", "stable" if stability_defined else None)
-    unstable_label = plot_kwargs.pop("unstable_label", "unstable" if stability_defined else None)
-    
+    stable_label = plot_kwargs.pop(
+        "stable_label", "stable" if stability_defined else None
+    )
+    unstable_label = plot_kwargs.pop(
+        "unstable_label", "unstable" if stability_defined else None
+    )
+
     title = plot_kwargs.pop("title", "Continuation Plot")
     xlabel = plot_kwargs.pop("xlabel", parameter if dim == 1 else "measure[0]")
     ylabel = plot_kwargs.pop("ylabel", "measure[1]")
@@ -146,13 +140,17 @@ def plot_continuation(
     xs_unstable = np.where(~stable_flags, xs, np.nan)
 
     if dim == 3:
-        ax.plot3D(xs_stable, ys, zs, color=stable_col, label=stable_label, **plot_kwargs)
+        ax.plot3D(
+            xs_stable, ys, zs, color=stable_col, label=stable_label, **plot_kwargs
+        )
         ax.plot3D(
             xs_unstable, ys, zs, color=unstable_col, label=unstable_label, **plot_kwargs
         )
     else:
         ax.plot(xs_stable, ys, color=stable_col, label=stable_label, **plot_kwargs)
-        ax.plot(xs_unstable, ys, color=unstable_col, label=unstable_label, **plot_kwargs)
+        ax.plot(
+            xs_unstable, ys, color=unstable_col, label=unstable_label, **plot_kwargs
+        )
 
     if generated_ax:
         ax.set_title(title)
@@ -160,7 +158,7 @@ def plot_continuation(
         ax.set_ylabel(ylabel)
         if dim == 3:
             ax.set_zlabel(zlabel)
-            
+
     if stability_defined:
         ax.legend()
     if clean_legend:
@@ -168,22 +166,19 @@ def plot_continuation(
     return ax
 
 
-
 def plot_floquet_multiplier_continuation(
-    branch: Iterable[BranchPoint],
-    ax=None,
-    **plot_kwargs
+    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
 ):
     """
     Plot the magnitude of all Floquet multipliers over the continuation parameter.
-    
+
     This function specifically handles Floquet stability analysis by:
-    
+
     #. Extracting all Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
     #. Plotting the absolute value of each multiplier against the continuation parameter
     #. Adding a reference line at ``magnitude = 1`` (stability boundary)
     #. Coloring stable/unstable segments based on individual multiplier magnitudes
-    
+
     Parameters
     ----------
     branch : Iterable[BranchPoint]
@@ -192,38 +187,40 @@ def plot_floquet_multiplier_continuation(
         Axes object to plot on. If ``None``, creates new subplot.
     **plot_kwargs
         Additional arguments passed to ax.plot()
-        
+
     Returns
     -------
     ax : matplotlib.axes.Axes
         The axes containing the Floquet multiplier continuation plot
     """
     branch_list = list(branch)
-    
+
     if not branch_list:
         raise ValueError("Branch cannot be empty")
-    
+
     parameter = branch_list[0].equations[-1].continuation_parameter
     if parameter is not None:
-        parameter_values = np.array([np.squeeze(getattr(bp, parameter)) for bp in branch_list])
+        parameter_values = np.array(
+            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
+        )
     else:
         parameter_values = np.arange(len(branch_list))
-    
+
     all_magnitudes = []
-    
+
     for bp in branch_list:
         multipliers = bp.equations[0].eigenvalues
         mag = np.abs(multipliers)
         all_magnitudes.append(mag)
-    
+
     all_magnitudes = np.array(all_magnitudes)
     num_multipliers = len(all_magnitudes[-1])
-    
+
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    
+
     stable_col = plot_kwargs.pop("stable_color", "r")
     unstable_col = plot_kwargs.pop("unstable_color", "b")
     title = plot_kwargs.pop("title", "Floquet Multiplier Continuation")
@@ -231,21 +228,44 @@ def plot_floquet_multiplier_continuation(
     ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
     alpha = plot_kwargs.pop("alpha", 0.9)
     linestyle = plot_kwargs.pop("linestyle", "dotted")
-    
+
     for i in range(num_multipliers):
         magnitudes_i = all_magnitudes[:, i]
         stability_i = magnitudes_i < 1.0
-        
+
         xs_stable = np.where(stability_i, parameter_values, np.nan)
         xs_unstable = np.where(~stability_i, parameter_values, np.nan)
         ys_stable = np.where(stability_i, magnitudes_i, np.nan)
         ys_unstable = np.where(~stability_i, magnitudes_i, np.nan)
-        
-        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linestyle = linestyle, linewidth=1.5, **plot_kwargs)
-        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
-    
-    ax.axhline(y=1.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, label="Stability boundary (|λ| = 1)")
-    
+
+        ax.plot(
+            xs_stable,
+            ys_stable,
+            color=stable_col,
+            alpha=alpha,
+            linestyle=linestyle,
+            linewidth=1.5,
+            **plot_kwargs
+        )
+        ax.plot(
+            xs_unstable,
+            ys_unstable,
+            color=unstable_col,
+            alpha=alpha,
+            linestyle=linestyle,
+            linewidth=1.5,
+            **plot_kwargs
+        )
+
+    ax.axhline(
+        y=1.0,
+        color="k",
+        linestyle="--",
+        linewidth=1.5,
+        alpha=0.8,
+        label="Stability boundary (|λ| = 1)",
+    )
+
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -256,25 +276,24 @@ def plot_floquet_multiplier_continuation(
         y_min = max(0, all_magnitudes.min() * 0.9)
         y_max = all_magnitudes.max() * 1.1 if all_magnitudes.max() > 1.0 else 1.2
         ax.set_ylim(y_min, y_max)
-    
+
     return ax
 
+
 def plot_floquet_exponent_continuation(
-    branch: Iterable[BranchPoint],
-    ax=None,
-    **plot_kwargs
+    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
 ):
     """
     Plot the real part of Floquet exponents over the continuation parameter.
-    
+
     This function handles Floquet stability analysis by:
-    
+
     #. Extracting Floquet multipliers from each :py:class:`~skhippr.solvers.continuation.BranchPoint`
     #. Computing Floquet exponents
     #. Plotting the real part of the exponents against the continuation parameter
     #. Adding a reference line at ``Re(alpha) = 0`` (stability boundary)
     #. Coloring stable/unstable segments based on individual exponent magnitudes
-    
+
     Parameters
     ----------
     branch : Iterable[BranchPoint]
@@ -283,27 +302,29 @@ def plot_floquet_exponent_continuation(
         Axes object to plot on. If ``None``, creates new subplot.
     **plot_kwargs
         Additional arguments passed to ax.plot()
-    
+
     Returns
     -------
     ax : matplotlib.axes.Axes
         The axes containing the Floquet exponent continuation plot
     """
     branch_list = list(branch)
-    
+
     if not branch_list:
         raise ValueError("Branch cannot be empty")
-    
+
     parameter = branch_list[0].equations[-1].continuation_parameter
     if parameter is not None:
-        parameter_values = np.array([np.squeeze(getattr(bp, parameter)) for bp in branch_list])
+        parameter_values = np.array(
+            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
+        )
     else:
         parameter_values = np.arange(len(branch_list))
-    
+
     all_exponents = []
-    
+
     for bp in branch_list:
-        
+
         multipliers = bp.equations[0].eigenvalues
         T = bp.equations[0].T_solution
 
@@ -312,12 +333,12 @@ def plot_floquet_exponent_continuation(
 
     num_exponents = len(all_exponents[-1])
     all_exponents = np.array(all_exponents)
-    
+
     generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    
+
     stable_col = plot_kwargs.pop("stable_color", "r")
     unstable_col = plot_kwargs.pop("unstable_color", "b")
     title = plot_kwargs.pop("title", "Floquet Exponent Continuation")
@@ -325,23 +346,44 @@ def plot_floquet_exponent_continuation(
     ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
     alpha = plot_kwargs.pop("alpha", 0.9)
     linestyle = plot_kwargs.pop("linestyle", "dotted")
-    
+
     for i in range(num_exponents):
         exponents_i = all_exponents[:, i]
         real_part = np.real(exponents_i)
         stability_i = real_part < 0.0
-        
+
         xs_stable = np.where(stability_i, parameter_values, np.nan)
         xs_unstable = np.where(~stability_i, parameter_values, np.nan)
         ys_stable = np.where(stability_i, real_part, np.nan)
         ys_unstable = np.where(~stability_i, real_part, np.nan)
-        
-        ax.plot(xs_stable, ys_stable, color=stable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
-        ax.plot(xs_unstable, ys_unstable, color=unstable_col, alpha=alpha, linestyle=linestyle, linewidth=1.5, **plot_kwargs)
-    
 
-    ax.axhline(y=0.0, color='k', linestyle='--', linewidth=1.5, alpha=0.8, 
-               label="Stability boundary (Re($\\alpha$) = 0)")
+        ax.plot(
+            xs_stable,
+            ys_stable,
+            color=stable_col,
+            alpha=alpha,
+            linestyle=linestyle,
+            linewidth=1.5,
+            **plot_kwargs
+        )
+        ax.plot(
+            xs_unstable,
+            ys_unstable,
+            color=unstable_col,
+            alpha=alpha,
+            linestyle=linestyle,
+            linewidth=1.5,
+            **plot_kwargs
+        )
+
+    ax.axhline(
+        y=0.0,
+        color="k",
+        linestyle="--",
+        linewidth=1.5,
+        alpha=0.8,
+        label="Stability boundary (Re($\\alpha$) = 0)",
+    )
 
     if generated_ax:
         ax.set_title(title)
@@ -349,14 +391,18 @@ def plot_floquet_exponent_continuation(
         ax.set_ylabel(ylabel)
         ax.legend(loc="best")
         ax.grid(True, alpha=0.3)
-        
+
         real_parts = np.real(all_exponents)
-        y_min = real_parts.min() * 1.1 if real_parts.min() < 0 else real_parts.min() * 0.9
-        y_max = real_parts.max() * 1.1 if real_parts.max() > 0 else real_parts.max() * 0.9
+        y_min = (
+            real_parts.min() * 1.1 if real_parts.min() < 0 else real_parts.min() * 0.9
+        )
+        y_max = (
+            real_parts.max() * 1.1 if real_parts.max() > 0 else real_parts.max() * 0.9
+        )
         y_min = min(y_min, -0.1)
         y_max = max(y_max, 0.1)
         ax.set_ylim(y_min, y_max)
-    
+
     return ax
 
 
@@ -429,13 +475,13 @@ def _get_handle_signature(handle):
     Parameters
     ----------
     handle : :py:class:`~matplotlib.lines.Line2D` | :py:class:`~matplotlib.artist.Artist`
-        A matplotlib artist handle. Must support the methods ``get_color()``, 
+        A matplotlib artist handle. Must support the methods ``get_color()``,
         ``get_linestyle()``, ``get_marker()``, and ``get_linewidth()``.
 
     Returns
     -------
     signature : :py:class:`tuple` of :py:class:`str`
-        A 4-tuple containing string representations of the handle's visual properties in the order:      
+        A 4-tuple containing string representations of the handle's visual properties in the order:
     """
     color = handle.get_color()
     linestyle = handle.get_linestyle()
@@ -457,24 +503,24 @@ def _deduplicate_legend(ax):
     """
     legend = ax.get_legend()
     if legend is None:
-        return 
+        return
     handles = legend.get_lines()
     texts = legend.get_texts()
-    
+
     if not handles:
         return
     seen = set()
     unique_handles = []
     unique_labels = []
-    
+
     for handle, text in zip(handles, texts):
         sig = _get_handle_signature(handle)
         label = text.get_text()
         key = (sig, label)
-        
+
         if key not in seen:
             seen.add(key)
             unique_handles.append(handle)
             unique_labels.append(label)
-    
+
     ax.legend(unique_handles, unique_labels, loc="best")

@@ -298,6 +298,13 @@ class HBMEquation(AbstractCycleEquation):
                 floquet_multipliers = np.delete(
                     floquet_multipliers, idx_freedom_of_phase
                 )
+                if (
+                    abs(eigenvalues[idx_freedom_of_phase] - 1)
+                    > self.stability_method.tol
+                ):
+                    warnings.warn(
+                        f"Floquet multiplier {eigenvalues[idx_freedom_of_phase]} does not satisfy freedom of phase! "
+                    )
 
         return np.all(np.abs(floquet_multipliers) < 1 + self.stability_method.tol)
 
@@ -375,7 +382,7 @@ class HBMEquation(AbstractCycleEquation):
 
         Notes
         -----
-        
+
         * If both ``_as`` and ``bs`` are provided, exponential decay parameters are not computed from the Hill matrix and the given parameters are used directly.
         * If only one of them is provided, all applicable exponential
         decay parameter combinations are computed and the ones closest to the provided values are
