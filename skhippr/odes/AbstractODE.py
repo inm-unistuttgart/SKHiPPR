@@ -139,8 +139,14 @@ class AbstractODE(AbstractEquation):
             t_old = self.t
             x_old = self.x
 
-            self.t = t
-            self.x = x
+            if t is not None:
+                self.t = t
+            else:
+                t = self.t
+            if x is not None:
+                self.x = x
+            else:
+                x = self.x
 
             derivative = super().derivative(variable, update, h_fd)
             self.t = t_old
