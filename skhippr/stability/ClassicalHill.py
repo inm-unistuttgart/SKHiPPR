@@ -103,7 +103,7 @@ class ClassicalHill(AbstractStabilityHBM):
             )
             plt.xlabel("Real part")
             plt.ylabel("Imaginary part")
-            plt.show()
+            # plt.show()
         return floquet_exponents, eigenvectors
 
     @override

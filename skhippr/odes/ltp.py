@@ -33,7 +33,7 @@ class HillODE(AbstractODE):
         if t is None:
             t = self.t
 
-        J = self.closed_form_derivative("x", x=x)
+        J = self.closed_form_derivative("x", x=x, t=t)
 
         if len(x.shape) > 1:
             f = np.zeros_like(x)
@@ -52,6 +52,7 @@ class HillODE(AbstractODE):
             x = self.x
         self.check_dimensions(t, x)
 
+        tau = self.omega * t
         match variable:
             case "x":
                 J = np.zeros((x.shape[0], *x.shape))
@@ -59,9 +60,20 @@ class HillODE(AbstractODE):
                 J[1, 1, ...] = -self.damping
                 J[1, 0, ...] = -self.a
 
-                tau = self.omega * t
                 J[1, 0, ...] -= self.b * self.g_fcn(tau)
                 return J
+
+            case "b":
+                df_db = np.zeros_like(x)
+                df_db[1, ...] = -self.g_fcn(tau) * x[0, ...]
+
+                return df_db[:, np.newaxis, ...]
+
+            case "a":
+                df_da = np.zeros_like(x)
+                df_da[1, ...] = -x[0, ...]
+
+                return df_da[:, np.newaxis, ...]
 
             case _:
                 raise NotImplementedError(
