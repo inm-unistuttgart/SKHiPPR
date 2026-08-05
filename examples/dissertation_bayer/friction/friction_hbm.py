@@ -109,8 +109,8 @@ def main(
                     path=f"examples/dissertation_bayer/friction/plots/FMs_{description}.tikz",
                 )
 
-                _, ax = plt.subplots(1, 1)
-
+                # _, ax = plt.subplots(1, 1)
+                #
                 # plot_drazin_and_ratio(
                 #     hbms=hbms,
                 #     tol_drazin=1e-7,
@@ -392,9 +392,9 @@ if __name__ == "__main__":
     main(
         cases=["A", "B"],
         smoothings=[np.inf],
-        Ns_HBM=np.arange(1, 401),
-        Ns_plot=(400,),
-        L_DFT=2**12,
+        Ns_HBM=np.arange(1, 241),
+        Ns_plot=(240,),
+        L_DFT=2**11,
         max_residual=1e-9,
     )
     plt.show()
