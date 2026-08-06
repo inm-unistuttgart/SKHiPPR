@@ -4,7 +4,7 @@ import numpy as np
 
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.cycles.AbstractCycleEquation import AbstractCycleEquation
-from skhippr.odes.AbstractODE import AbstractODE
+from skhippr.odes.AbstractODE import AbstractODE, AbstractDAE
 from skhippr.Fourier import Fourier
 from skhippr.equations.EquationSystem import EquationSystem
 
@@ -124,17 +124,19 @@ class HBMEquation(AbstractCycleEquation):
 
         try:
             Js = self.ode.closed_form_derivative(variable="x", t=ts, x=x_samp)
-        except NotImplementedError:
-            # use finite differences
-            self.ode.t = ts
-            self.ode.x = x_samp
-            Js = self.ode.derivative(variable="x")
+        # except NotImplementedError:
+        #     # use finite differences
+        #     self.ode.t = ts
+        #     self.ode.x = x_samp
+        #     Js = self.ode.derivative(variable="x")
         except:
             # Vectorization not working, determine sample by sample
             Js = np.zeros((x_samp.shape[0], *x_samp.shape))
             for k, t in enumerate(ts):
-                Js[:, :, k, ...] = self.ode.closed_form_derivative(
-                    "x", t, np.squeeze(x_samp[:, k])
+                self.ode.t = t
+                self.ode.x = np.squeeze(x_samp[:, k])
+                Js[:, :, k, ...] = self.ode.derivative(
+                    "x", t=t, x=np.squeeze(x_samp[:, k])
                 )
 
         derivative = self.fourier.matrix_DFT(Js)
@@ -180,7 +182,9 @@ class HBMEquation(AbstractCycleEquation):
 
         return self.fourier.DFT(derivatives_time)
 
-    def hill_matrix(self, real_formulation: bool = None, update=False) -> np.ndarray:
+    def hill_matrix(
+        self, real_formulation: bool = None, update: bool = True
+    ) -> np.ndarray:
         """Return the Hill matrix, which is the derivative of the HBM equations w.r.t. ``X``.
 
         Parameters
@@ -188,6 +192,9 @@ class HBMEquation(AbstractCycleEquation):
         real_formulation : bool, optional
             If True, returns the Hill matrix in real formulation, otherwise in complex formulation.
             If None, uses the value of ``self.fourier.real_formulation``.
+
+        update : bool, optional
+            If True, updates the derivative before returning it. Defaults to True.
 
         """
 
@@ -438,6 +445,76 @@ class HBMEquation(AbstractCycleEquation):
             E_bound = np.minimum(E_bound, E_bound_next)
 
         return E_bound
+
+
+class HBMEquationDAE(HBMEquation):
+    """This subclass of :py:class:`~skhippr.cycles.hbm.HBMEquation` is specifically designed to handle DAEs.
+
+    It extends the differential part of the harmonic balance equations to account for the possibly non-invertible matrix M.
+    Reference: Legrand2024 (TODO proper reference)
+    """
+
+    def __init__(
+        self,
+        dae: AbstractDAE,
+        omega: float,
+        fourier: Fourier,
+        initial_guess: np.ndarray = None,
+        period_k: float = 1,
+        stability_method=None,
+    ):
+        """
+        Initialize the HBM equations for DAEs.
+        """
+        super().__init__(
+            ode=dae,
+            omega=omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            period_k=period_k,
+            stability_method=stability_method,
+        )
+
+    def M(self):
+        if self.ode.M_is_constant:
+            return np.kron(np.eye(2 * self.fourier.N_HBM + 1), self.ode.M_small())
+        else:
+            M_samples = np.zeros((self.ode.n_dof, self.ode.n_dof, self.fourier.L_DFT))
+            for k, (t, x) in enumerate(
+                zip(self.fourier.time_samples(self.omega_solution), self.x_time().T)
+            ):
+                M_samples[:, :, k] = self.ode.M_small(t, x)
+            return self.fourier.matrix_DFT(M_samples)
+
+    def aft(self, X=None) -> np.ndarray:
+        """
+        Overwrite the HBM residual computation to account for the weight matrix M in DAEs.
+        """
+
+        R = super().aft(X)
+        deriv = self.fourier.derivative_coeffs(X, self.omega_solution)
+        # Remove the effect of direct differentiation and add the effect of M
+        R += deriv - self.M() @ deriv
+
+        return R
+
+    def dR_domega(self, X=None):
+        return self.M() @ super().dR_domega(X)
+
+    def dR_dX(self, X=None):
+        """
+        Overwrite the HBM Jacobian to account for the weight matrix M in DAEs.
+        """
+        derivative = super().dR_dX(X)
+        derivative += self.omega_solution * (
+            self.fourier.derivative_matrix - self.M() @ self.fourier.derivative_matrix
+        )
+        return derivative
+
+    def error_bound_fundamental_matrix(self, t=None, _as=None, bs=None):
+        raise NotImplementedError(
+            "Error bounds for the fundamental matrix not applicable to DAEs."
+        )
 
 
 class HBMSystem(EquationSystem):

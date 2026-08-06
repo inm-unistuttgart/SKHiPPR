@@ -1,0 +1,536 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors
+from copy import copy
+import tikzplotlib
+
+from skhippr.odes.ltp import HillODE, HillWithMass, HillWithMassInverted
+from skhippr.cycles.hbm import HBMEquation, HBMEquationDAE
+from skhippr.Fourier import Fourier
+from skhippr.solvers.newton import NewtonSolver
+
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillProjection,
+    KoopmanHillDAE,
+    KoopmanHillSubharmonic,
+    KoopmanHillDAESubharmonic,
+)
+
+from skhippr.visualization.cycles import (
+    plot_phase,
+    plot_period,
+    plot_floquet_multipliers,
+)
+
+import warnings
+from numpy.exceptions import ComplexWarning  # Corrected import
+
+# Raise an error on ComplexWarning
+warnings.filterwarnings("error", category=ComplexWarning)
+
+
+def plot_for_diss():
+
+    # System
+    fourier_ref = Fourier(N_HBM=300, L_DFT=1024, n_dof=2, real_formulation=True)
+
+    params = dict(omega=1.0, damping=0.05, forcing=1)
+    g_fun = lambda t: np.exp(5 * np.cos(t))
+    x0 = np.zeros((2, fourier_ref.L_DFT))
+
+    ode = HillODE(t=0, x=x0, g_fcn=g_fun, **params)
+    ode_mass = HillWithMass(t=0, x=x0, g_fun=g_fun, **params)
+
+    hbm_ref = solve_hbm(ode_mass, fourier_ref, dae=True, subh=False)
+    FMs_ref = np.sort(hbm_ref.eigenvalues)
+    print(FMs_ref)
+    ax_phase = plot_phase(hbm_ref, label="ref N = {fourier_ref.N_HBM}")
+
+    # Phase plots
+    N_phase = 17
+    hbm = solve_hbm(ode, fourier_ref.__replace__(N_HBM=N_phase), subh=True)
+    plot_phase(hbm, ax=ax_phase, label=f"no mass N = {N_phase}")
+
+    hbm_mass = solve_hbm(
+        ode_mass, fourier_ref.__replace__(N_HBM=N_phase), dae=True, subh=True
+    )
+    plot_phase(hbm_mass, ax=ax_phase, label="with mass N = {N_phase}")
+    ax_phase.set_title("Periodic solution")
+    ax_phase.legend()
+
+    tikzplotlib.save("plots/mathieu_mass_phase.tex")
+
+    # Excitation function
+    # ---- g functions + spectra ----
+    g, g_inv = plot_g_functions(ode, ode_mass, fourier_ref)
+    plot_fourier_coeffs(40, g, g_inv)
+    tikzplotlib.save("plots/mathieu_mass_FC.tex")
+
+    # Iterate through N_HBM values and plot error
+    ax_FMs = [None, None, None, None]
+    N_max = 90
+    Ns = np.arange(1, N_max + 1)
+    errors = np.zeros((6, len(Ns)))
+
+    N_visualize = (17, 55)
+    for k, N_HBM in enumerate(Ns):
+        print(N_HBM)
+        fourier = fourier_ref.__replace__(N_HBM=N_HBM)
+        hbm_dir = solve_hbm(copy(ode), fourier, subh=False, verbose=False)
+        hbm_subh = solve_hbm(copy(ode), fourier, subh=True, verbose=False)
+        hbm_mass = solve_hbm(
+            copy(ode_mass), fourier, dae=True, subh=False, verbose=False
+        )
+        hbm_mass_subh = solve_hbm(
+            copy(ode_mass), fourier, dae=True, subh=True, verbose=False
+        )
+
+        # Plot errors in Floquet multipliers
+        for idx, hbm in enumerate((hbm_dir, hbm_subh, hbm_mass, hbm_mass_subh)):
+            FMs = np.sort(hbm.stability_method.determine_eigenvalues(hbm))
+            e1 = np.max(np.abs(FMs - FMs_ref))
+            e2 = np.max(np.abs(FMs - np.flip(FMs_ref)))
+            errors[idx, k] = min(e1, e2)
+
+        # Plot errors in HBM
+        for idx, hbm in enumerate((hbm_dir, hbm_mass)):
+            x_time = hbm.x_time()
+            x_time_ref = hbm_ref.x_time()
+            error_hbm = np.max(np.abs(x_time - x_time_ref))
+            errors[idx + 4, k] = np.max(error_hbm)
+
+        # visualize Toeplitz structure
+        if N_HBM in N_visualize:
+            hill_mat = hbm_dir.hill_matrix(real_formulation=False, update=False)
+            hill_mat_mass = hbm_mass.hill_matrix(real_formulation=False, update=False)
+            M = hbm_mass.M()
+            if hbm.fourier.real_formulation:
+                M = (
+                    hbm_mass.fourier.T_to_cplx_from_real
+                    @ M
+                    @ hbm_mass.fourier.T_to_real_from_cplx
+                )
+            hill_mat_mass = np.linalg.solve(M, hill_mat_mass)
+            plot_matrix_block_norm(
+                hill_mat - hill_mat_mass,
+                hbm.fourier.n_dof,
+                index=np.arange(-N_HBM, N_HBM + 1),
+                ax=f"Hill matrix difference N={N_HBM}",
+                logscale=True,
+                s=0.5,
+                cmap="Greys",
+            )
+            tikzplotlib.save(f"plots/mathieu_mass_hill_N_{N_HBM}.tex")
+
+    _, ax_error = plt.subplots()
+    ax_error.plot(Ns, errors[0, :], "-", label="no mass")
+    ax_error.plot(Ns, errors[1, :], "--", label="no mass subh")
+    ax_error.plot(Ns, errors[2, :], "-.", label="with mass")
+    ax_error.plot(Ns, errors[3, :], ":", label="with mass subh")
+    ax_error.plot(Ns, errors[4, :], "-o", label="HBM no mass")
+    ax_error.plot(Ns, errors[5, :], "--s", label="HBM with mass")
+
+    ax_error.set_yscale("log")
+    ax_error.set_xlabel("N_HBM")
+    ax_error.set_ylabel("Max Floquet Multiplier Error")
+    ax_error.legend()
+    tikzplotlib.save("plots/mathieu_mass_error.tex")
+
+
+def main():
+    # ---- Parameters ----
+    params = dict(omega=1.0, damping=0.05, forcing=1)
+    g_fun = lambda t: np.exp(5 * np.cos(t))
+    # g_fun = lambda t: 1 / (1 + 0.9 * np.cos(t))
+    # g_fun = lambda t: 1 + 0.9 * np.cos(t)
+    fourier_ref = Fourier(N_HBM=150, L_DFT=1024, n_dof=2, real_formulation=True)
+    fourier = fourier_ref.__replace__(N_HBM=17)
+    x0 = np.zeros((2, fourier.L_DFT))
+
+    # ---- ODEs ----
+    ode = HillODE(t=0, x=x0, g_fcn=g_fun, **params)
+    ode_inv = HillWithMassInverted(t=0, x=x0, g_fun=g_fun, **params)
+    ode_mass = HillWithMass(t=0, x=x0, g_fun=g_fun, **params)
+
+    # ---- Solutions ----
+    hbm_ref = solve_hbm(equ=ode, fourier=fourier_ref, subh=False)
+    axes = plot_everything(hbm=hbm_ref, label="ref")
+
+    hbm_dir = solve_hbm(equ=ode, fourier=fourier)
+    axes = plot_everything(hbm_dir, hbm_ref, axes, label="no mass", linestyle="--")
+
+    hbm_subh = solve_hbm(equ=ode, fourier=fourier, subh=True)
+    axes = plot_everything(hbm_subh, hbm_ref, axes, label="subh", linestyle=":")
+
+    hbm_inv = solve_hbm(equ=ode_inv, fourier=fourier)
+    plot_everything(hbm=hbm_inv, hbm_ref=hbm_ref, axes=axes, label="inv", linestyle=":")
+
+    hbm_mass = solve_hbm(equ=ode_mass, fourier=fourier, dae=True)
+    plot_everything(hbm_mass, hbm_ref, axes, label="with mass", linestyle="-.")
+
+    hbm_mass_subh = solve_hbm(equ=ode_mass, fourier=fourier, dae=True, subh=True)
+    plot_everything(
+        hbm_mass_subh, hbm_ref, axes, label="subh with mass", linestyle="-."
+    )
+
+    for ax in axes:
+        ax.legend()
+
+    # ---- g functions + spectra ----
+    g, g_inv = plot_g_functions(ode, ode_mass, fourier)
+    fs = hbm_mass.ode.dynamics(t=fourier.time_samples(ode.omega), x=hbm_mass.x_time())
+    # plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv, hbm_ref.x_time(), fs)
+    plot_fourier_coeffs(fourier_ref.N_HBM, g, g_inv)
+
+    # ---- Hill matrices ----
+    hill_matrix_ref = hbm_dir.hill_matrix(real_formulation=False, update=True)
+    hill_matrix_inv = hbm_inv.hill_matrix(real_formulation=False, update=True)
+
+    plot_matrix_block_norm(
+        matrix=hill_matrix_ref - hill_matrix_inv,
+        block_size=hbm_dir.fourier.n_dof,
+        ax="error inv before",
+        logscale=True,
+        s=0.5,
+        cmap="Greys",
+    )
+
+    M = hbm_mass.M()
+    M = hbm_mass.fourier.T_to_cplx_from_real @ M @ hbm_mass.fourier.T_to_real_from_cplx
+    hill_matrix_mass = np.linalg.solve(
+        M, hbm_mass.hill_matrix(real_formulation=False, update=True)
+    )
+
+    plot_matrix_block_norm(
+        matrix=hill_matrix_ref - hill_matrix_mass,
+        block_size=hbm_dir.fourier.n_dof,
+        index=range(-hbm_dir.fourier.N_HBM, hbm_dir.fourier.N_HBM + 1),
+        ax="error inv after",
+        logscale=True,
+        cmap="Greys",
+        s=0.5,
+    )
+
+    # ---- Prints ----
+
+    if fourier.N_HBM <= 10:
+        print("Reference Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_ref), hbm_dir.fourier.n_dof)
+
+        print("Inverted Mass Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_inv), hbm_dir.fourier.n_dof)
+
+        print("With Mass Hill matrix blocks:")
+        print_Toeplitz_blocks(clean_matrix(hill_matrix_mass), hbm_dir.fourier.n_dof)
+
+
+def clean_matrix(matrix, tol=1e-10):
+    """Set real and imaginary parts of a matrix to zero if smaller than tolerance.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        Complex or real matrix to clean.
+    tol : float, optional
+        Tolerance threshold. Default is 1e-10.
+
+    Returns
+    -------
+    np.ndarray
+        Matrix with small real/imaginary parts zeroed out.
+    """
+    matrix = matrix.copy()
+
+    # Zero out small real parts
+    matrix[np.abs(np.real(matrix)) < tol] = 1j * np.imag(
+        matrix[np.abs(np.real(matrix)) < tol]
+    )
+
+    # Zero out small imaginary parts
+    matrix[np.abs(np.imag(matrix)) < tol] = np.real(
+        matrix[np.abs(np.imag(matrix)) < tol]
+    )
+
+    return matrix
+
+
+def print_Toeplitz_blocks(matrix, block_size):
+    """Print the blocks of a given square matrix, traversing diagonally."""
+    n_blocks = matrix.shape[0] // block_size
+    row_start = n_blocks - 1
+    col_start = 0
+    diag_number = n_blocks - 1
+    while col_start < n_blocks and row_start >= 0:
+        row = row_start
+        col = col_start
+        print(f"Diagonal {diag_number}")
+        while row < n_blocks and col < n_blocks:
+            block = matrix[
+                row * block_size : (row + 1) * block_size,
+                col * block_size : (col + 1) * block_size,
+            ]
+            print(block)
+            row += 1
+            col += 1
+        if row_start > 0:
+            row_start -= 1
+        else:
+            col_start += 1
+
+        diag_number -= 1
+        print("\n")
+
+
+def plot_g_functions(ode: HillODE, ode_mass: HillWithMass, fourier: Fourier):
+    """Plot g and 1/g functions in time and frequency domain."""
+    t_samples = fourier.time_samples(ode.omega)
+
+    # Time domain plot
+    _, ax_cos = plt.subplots()
+    g = ode.g_fcn(t_samples)
+    ax_cos.plot(t_samples, g, "-", label="g")
+
+    g_inv = ode_mass.g_inv(t_samples)
+    ax_cos.plot(t_samples, g_inv, "--", label="1/g")
+    ax_cos.plot(t_samples, g * g_inv, "-.", label="g*1/g")
+    ax_cos.set_xlabel("t")
+    ax_cos.legend()
+
+    return g, g_inv
+
+
+def plot_fourier_coeffs(N_HBM=30, *funs):
+    """Frequency domain plot"""
+    _, ax = plt.subplots()
+
+    bar_width = (1 - 0.1) / len(funs)
+    indices = np.arange(-N_HBM, N_HBM + 1)
+
+    for i, fun in enumerate(funs):
+        if len(fun.shape) == 1:
+            fun = fun[np.newaxis, :]
+        fourier = Fourier(
+            N_HBM=N_HBM, L_DFT=fun.shape[1], n_dof=fun.shape[0], real_formulation=False
+        )
+        coeffs = fourier.DFT(fun)
+        coeffs = np.reshape(coeffs, (fun.shape[0], -1), order="F")
+        x = indices + (i - (len(funs) - 1) / 2) * bar_width
+        ax.bar(
+            x,
+            np.linalg.norm(coeffs, axis=0),
+            width=bar_width,
+        )
+
+    ax.set_xlabel("Harmonic index")
+    ax.set_yscale("log")
+    return ax
+
+
+def solve_hbm(
+    equ,
+    fourier,
+    dae=False,
+    subh=False,
+    verbose=True,
+):
+    if dae:
+        if subh:
+            stability_method = KoopmanHillDAESubharmonic(fourier)
+        else:
+            stability_method = KoopmanHillDAE(fourier)
+
+        hbm = HBMEquationDAE(
+            dae=equ,
+            omega=equ.omega,
+            fourier=fourier,
+            stability_method=stability_method,
+        )
+    else:
+        if subh:
+            stability_method = KoopmanHillSubharmonic(fourier)
+        else:
+            stability_method = KoopmanHillProjection(fourier)
+
+        hbm = HBMEquation(
+            ode=equ,
+            omega=equ.omega,
+            fourier=fourier,
+            stability_method=stability_method,
+        )
+
+    solver = NewtonSolver(verbose=verbose)
+    solver.solve_equation(hbm, "X")
+    return hbm
+
+
+def plot_everything(hbm, hbm_ref=None, axes=(None, None, None, None), **kwargs_plot):
+    axes = list(axes)
+    axes[0] = plot_phase(hbm, ax=axes[0], **kwargs_plot)
+    axes[1] = plot_period(hbm, ax=axes[1], **kwargs_plot)
+    axes[2] = plot_floquet_multipliers(hbm, ax=axes[2], **kwargs_plot)
+
+    if hbm_ref is not None:
+        if axes[-1] is None:
+            _, axes[-1] = plt.subplots()
+            axes[-1].set_yscale("log")
+            axes[-1].set_xlabel("t")
+            axes[-1].set_ylabel("Error norm")
+
+        t_samples = hbm.fourier.time_samples(hbm.omega)
+        error_dir = np.linalg.norm(hbm.x_time() - hbm_ref.x_time(), axis=0)
+        axes[-1].plot(t_samples, error_dir, **kwargs_plot)
+
+    return axes
+
+
+def plot_matrix_block_norm(
+    matrix,
+    block_size,
+    ax=None,
+    index=None,
+    logscale=False,
+    vmax=None,
+    vmin=None,
+    **scatter_kwargs,
+):
+    """
+    Plot a given square matrix as a grid of blocks, colored by their 2-norm.
+
+    Parameters
+    ----------
+    matrix : np.ndarray
+        The matrix to be plotted.
+    block_size : int
+        The size of each block (assumed square).
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    cmap : str, optional
+        The colormap to use for coloring the dots by block norm. Default is 'viridis'.
+    **scatter_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted matrix blocks.
+    sc : matplotlib.collections.PathCollection
+        The scatter plot collection object (for accessing colorbar, etc.).
+    """
+
+    if len(matrix.shape) != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(
+            f"Input matrix must be 2-D and square but has shape {matrix.shape}"
+        )
+
+    if index is None:
+        index = range(matrix.shape[0] // block_size)
+
+    num_blocks = len(index)
+
+    if num_blocks * block_size != matrix.shape[0]:
+        raise ValueError(
+            f"Matrix size ({matrix.shape[0]}) not given by block size ({block_size}) times number of blocks ({num_blocks})"
+        )
+
+    x_positions = []
+    y_positions = []
+    norm_values = []
+
+    for i in range(num_blocks):
+        for j in range(num_blocks):
+            block = matrix[
+                i * block_size : (i + 1) * block_size,
+                j * block_size : (j + 1) * block_size,
+            ]
+            norm = np.linalg.norm(block, ord=2)
+            x_positions.append(index[j])
+            y_positions.append(index[i])
+            norm_values.append(norm)
+
+    if isinstance(ax, str):
+        title = ax
+    else:
+        title = ""
+
+    if ax is None or isinstance(ax, str):
+        _, ax = plt.subplots()
+        ax.set_xlabel("Column index")
+        ax.set_ylabel("Row index")
+        ax.set_title(title)
+        ax.invert_yaxis()
+
+    x_positions = np.array(x_positions)
+    y_positions = np.array(y_positions)
+    norm_values = np.array(norm_values)
+
+    scatter_defaults = {"cmap": "viridis", "s": 100, "alpha": 0.8}
+    if logscale:
+        scatter_defaults["norm"] = matplotlib.colors.LogNorm(
+            vmax=vmax, vmin=vmin, clip=False
+        )
+    scatter_defaults.update(scatter_kwargs)
+
+    sc = ax.scatter(
+        x_positions,
+        y_positions,
+        c=norm_values,
+        **scatter_defaults,
+    )
+
+    cbar = plt.colorbar(sc, ax=ax)
+    if logscale:
+        cbar.formatter = plt.matplotlib.ticker.LogFormatterMathtext(base=10)
+        cbar.update_ticks()
+    cbar.set_label("2-norm of block")
+
+    return ax
+
+
+def plot_hill_matrix_blocks(
+    hbm: HBMEquation, real_formulation=False, ax=None, **scatter_kwargs
+):
+    """
+    Plot the Hill matrix as a grid of blocks, colored by their 2-norm.
+
+    This function computes the Hill matrix of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`,
+    segments it into n_dof x n_dof blocks, and creates a scatter plot where each block is represented
+    as a dot. The color of each dot is determined by the 2-norm (spectral norm) of the corresponding block.
+
+    Parameters
+    ----------
+    hbm : HBMEquation or HBMSystem
+        The equation or equation system containing the solution. If it is of type :py:class:`~skhippr.cycles.hbm.HBMSystem`, the first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` instance contained is used.
+    ax : matplotlib.axes.Axes, optional
+        The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
+    cmap : str, optional
+        The colormap to use for coloring the dots by block norm. Default is 'viridis'.
+    **scatter_kwargs
+        Additional keyword arguments passed to ``ax.scatter()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
+
+    Notes
+    -----
+    The Hill matrix is partitioned into blocks of size n_dof x n_dof, arranged in a 2D grid.
+    Each block's position in the plot corresponds to its position in the Hill matrix, and its
+    color represents the spectral norm (2-norm) of that block.
+    """
+
+    # Compute Hill matrix
+    H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
+    n_dof = hbm.fourier.n_dof
+
+    if real_formulation:
+        index = range(2 * hbm.fourier.N_HBM + 1)
+    else:
+        index = range(-hbm.fourier.N_HBM, hbm.fourier.N_HBM + 1)
+    ax = plot_matrix_block_norm(H, n_dof, ax=ax, index=index, **scatter_kwargs)
+    return ax
+
+
+if __name__ == "__main__":
+    plot_for_diss()
+    plt.show()

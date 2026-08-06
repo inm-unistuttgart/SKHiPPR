@@ -4,6 +4,7 @@ This example uses an oscillator with quadratic and cubic nonlinearity, but ``ode
 
 import numpy as np
 import matplotlib.pyplot as plt
+import tikzplotlib
 
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["font.size"] = 12
@@ -58,7 +59,8 @@ def main():
     stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4, autonomous=False)
     solver = NewtonSolver(verbose=True)
 
-    gammas = np.linspace(0, 0.07, 15)
+    # gammas = np.linspace(0, 0.07, 15)
+    gammas = [0.04]
 
     all_freqs_stable = []
     all_freqs_unstbl = []
@@ -153,15 +155,17 @@ def main():
         all_freqs_unstbl.append(freqs_unstable)
         all_amps.append(amps)
 
-        # plt.plot(freqs_stable, amps, "r", label="stable")
-        # plt.plot(freqs_unstable, amps, "b--", label="unstable")
+        plt.plot(freqs_stable, amps, "r", label="stable")
+        plt.plot(freqs_unstable, amps, "b--", label="unstable")
 
-        # plt.xlabel("$\\omega$")
-        # plt.ylabel("$|x_1|$")
-        # plt.legend()
-        # plt.title(
-        #     f"FRC of nonlinear oscillator with stiffness ${ode.alpha}x + {ode.beta}x^2 + {ode.gamma}x^3$"
-        # )
+        plt.xlabel("$\\omega$")
+        plt.ylabel("$|x_1|$")
+        plt.legend()
+        plt.title(
+            f"FRC of nonlinear oscillator with stiffness ${ode.alpha}x + {ode.beta}x^2 + {ode.gamma}x^3$"
+        )
+
+        tikzplotlib.save("plots/cubic_quadratic_frc.tikz")
 
     fig_FM = plt.figure()
     phis = np.linspace(0, 2 * np.pi, 250)
@@ -170,11 +174,12 @@ def main():
 
     for point in frc:
         if point.stable:
-            col = "b."
-        else:
             col = "r."
+        else:
+            col = "b."
 
         plt.plot(np.real(point.eigenvalues), np.imag(point.eigenvalues), col)
+    tikzplotlib.save("plots/cubic_quadratic_FMs.tikz")
 
     plt.title("Floquet multipliers")
 

@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 from typing import override
+from collections.abc import Callable
 import numpy as np
 from copy import copy
 import warnings
@@ -13,7 +14,7 @@ from skhippr.equations.AbstractEquation import AbstractEquation
 
 # still an abstract class
 class AbstractODE(AbstractEquation):
-    """Abstract base class for first-order differential equations. The equilibrium problem can immediately solved bypassing the ODE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`. If no stability method is provided during instantiation, the default :py:class:`~skhippr.stability.StabilityEquilibrium` is used for the equilibrium problem.
+    """Abstract base class for first-order differential equations. The equilibrium problem can immediately solved by passing the ODE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`. If no stability method is provided during instantiation, the default :py:class:`~skhippr.stability.StabilityEquilibrium` is used for the equilibrium problem.
 
     Attributes:
     -----------
@@ -159,3 +160,139 @@ class AbstractODE(AbstractEquation):
         """Requires subclasses to implement a closed-form derivative with optional arguments ``t`` and ``x``."""
 
         return super().closed_form_derivative(variable)
+
+
+class AbstractDAE(AbstractODE):
+    """Abstract base class for differential-algebraic equations (DAEs). DAEs consist of differential equations coupled with algebraic constraint equations. The DAE is formulated in the form
+
+        M*x_dot = f(t, x)
+
+    with a non-invertible matrix M.
+    The equilibrium problem can immediately solved by passing the DAE into the :py:class:`~skhippr.solvers.newton.NewtonSolver`.
+
+    Attributes:
+    -----------
+
+    autonomous : bool
+        Whether the DAE is autonomous (does not depend on time).
+    n_dof : int
+        Number of degrees of freedom of the DAE.
+    n_constraints : int
+        Number of algebraic constraints in the DAE.
+    x : np.ndarray
+        State vector.
+    t : float
+        Time variable.
+    """
+
+    def __init__(
+        self,
+        n_dof,
+        autonomous: bool,
+        stability_method=None,
+        M_is_constant=False,
+        invertible: bool = False,
+    ):
+
+        super().__init__(autonomous, n_dof, stability_method)
+        self.M_is_constant = M_is_constant
+        self.invertible = invertible
+
+    @abstractmethod
+    def M_small(self, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+
+        return np.eye(self.n_dof)
+
+
+class SecondOrderODE(AbstractODE):
+    """A second-order ODE is represented as a first-order ODE with twice the number of degrees of freedom."""
+
+    def __init__(
+        self,
+        t: float,
+        q: np.ndarray,
+        dq: np.ndarray,
+        M: np.ndarray,
+        D: np.ndarray,
+        K: np.ndarray,
+        autonomous=False,
+        stability_method=None,
+    ):
+        n_dof = 2 * M.shape[0]
+        super().__init__(autonomous, n_dof, stability_method)
+
+        self.t = t
+        self.x = np.concatenate((np.atleast_1d(q), np.atleast_1d(dq)), axis=0)
+        self.M = M
+        self.D = D
+        self.K = K
+
+    @abstractmethod
+    def f_nonlin(self, t=None, q=None, dq=None) -> np.ndarray:
+        """Everything that is not represented in M, D, K. CAUTION: Includes forcing!"""
+
+    def derivative_f_nonlin(self, variable, t, q=None, dq=None) -> np.ndarray:
+        """Derivative of the non-linear part with respect to q and dq."""
+        raise NotImplementedError(
+            "Derivative of the non-linear part not implemented to default to FD evaluation. To be overridden in subclass."
+        )
+
+        match variable:
+            case "q":
+                ...
+            case "dq":
+                ...
+            case _:
+                raise NotImplementedError
+
+    @override
+    def dynamics(self, t=None, x=None) -> np.ndarray:
+        """Returns the first-order dynamics for a second-order ODE."""
+        if x is None:
+            x = self.x
+        if t is None:
+            t = self.t
+        self.check_dimensions(t, x)
+
+        q, dq = np.split(x, 2, axis=0)
+        f = np.zeros_like(x)
+        f[: q.shape[0], ...] = dq
+
+        rhs = self.D @ dq + self.K @ q + self.f_nonlin(t, q, dq)
+        f[q.shape[0] :, ...] = np.linalg.solve(self.M, -rhs)
+
+        return f
+
+    @override
+    def closed_form_derivative(self, variable, t=None, x=None) -> np.ndarray:
+        """Closed-form derivative for the second-order ODE."""
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        q, dq = np.split(x, 2, axis=0)
+
+        match variable:
+            case "x":
+                n_dof = q.shape[0]
+                df_dx = np.zeros((x.shape[0], *x.shape))
+                for k in range(n_dof):
+                    df_dx[k, k + n_dof, ...] = 1
+                    df_dx[n_dof:, :n_dof, ...] = -np.linalg.solve(
+                        self.M,
+                        self.K + self.derivative_f_nonlin("q", t, q, dq),
+                    )
+                    df_dx[n_dof:, n_dof:, ...] = -np.linalg.solve(
+                        self.M,
+                        self.D + self.derivative_f_nonlin("dq", t, q, dq),
+                    )
+                return df_dx
+            case _:
+                dfnl_dvar = self.derivative_f_nonlin(variable, t, q, dq)
+                return np.vstack([np.zeros_like(dfnl_dvar), dfnl_dvar])
