@@ -31,8 +31,16 @@ from skhippr.visualization.continuation import (
     plot_floquet_exponent_continuation,
 )
 from skhippr.visualization.cycles import (
+    animate_phase,
+    animate_period,
     animate_floquet_multipliers,
     animate_floquet_exponents,
+)
+from skhippr.visualization.data_export import (
+    save_animation,
+    save_pdf,
+    save_png,
+    save_tikz,
 )
 
 
@@ -121,12 +129,18 @@ def main():
     ax = plot_continuation(
         frc, plot_fun=lambda point: np.max(point.equations[0].x_time()[0, :])
     )
-    plot_floquet_multiplier_continuation(branch=frc)
-    _, animation1 = animate_floquet_multipliers(hbm_set=frc, scaling="static")
-    _, animation2 = animate_floquet_exponents(hbm_set=frc, scaling="static")
-    return animation1, animation2
+    plot_floquet_multiplier_continuation(frc)
+    plot_floquet_exponent_continuation(frc)
+    _, animation = animate_floquet_multipliers(frc, scaling="static")
+    _, animation2 = animate_floquet_exponents(frc, scaling="static")
+    # save_pdf(ax, "testSaves/continuationPlot")
+    # save_tikz(ax, "testSaves\\continuationPlot")
+    # save_png(ax,"continuationplot")
+    # save_animation(animation, "animationGifTest.gif")
+    # save_animation(animation, "animation_mp4_test.mp4")
+    return animation, animation2
 
 
 if __name__ == "__main__":
-    animation1, animation2 = main()
+    animations = main()
     plt.show()

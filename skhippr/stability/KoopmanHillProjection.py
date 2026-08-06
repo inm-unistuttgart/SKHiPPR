@@ -74,7 +74,9 @@ class KoopmanHillProjection(AbstractStabilityHBM):
             self.W = self.fourier.T_to_real_from_cplx @ self.W
             self.C = self.C @ self.fourier.T_to_cplx_from_real
 
-    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation) -> np.ndarray:
+    def fundamental_matrix(
+        self, t_over_period: float, hbm: HBMEquation | np.ndarray, omega=None
+    ) -> np.ndarray:
         """
         Compute the fundamental solution matrix for the given periodic solution and normalized time using direct Koopman-Hill projection.
 
@@ -105,8 +107,12 @@ class KoopmanHillProjection(AbstractStabilityHBM):
         """
 
         C = self.C_time(t_over_period)
-        hill_matrix = hbm.hill_matrix()
-        t = t_over_period * 2 * np.pi / hbm.omega
+        if isinstance(hbm, np.ndarray):
+            hill_matrix = hbm
+        else:
+            hill_matrix = hbm.hill_matrix()
+            omega = hbm.omega
+        t = t_over_period * 2 * np.pi / omega
 
         funda_mat = C @ expm(hill_matrix * t) @ self.W
 
@@ -280,7 +286,9 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
         self.W_subh = np.kron(W0[1:, :], eye)
         self.C_subh = -np.kron(C0[:, 1:], eye)
 
-    def fundamental_matrix(self, t_over_period: float, hbm: HBMEquation) -> np.ndarray:
+    def fundamental_matrix(
+        self, t_over_period: float, hbm: HBMEquation | np.ndarray, omega=None
+    ) -> np.ndarray:
         """
         Compute the fundamental solution matrix for the given periodic solution and normalized time using subharmonic Koopman-Hill projection.
 
@@ -310,14 +318,18 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
             The computed fundamental matrix as a NumPy array.
 
         """
+        if omega is None:
+            omega = hbm.omega
         # print(f"omega={omega}]")
         C = self.C_time(t_over_period)
         C_subh = self.C_subh_time(t_over_period=t_over_period)
 
-        Phi_t = super().fundamental_matrix(t_over_period=t_over_period, hbm=hbm)
+        Phi_t = super().fundamental_matrix(
+            t_over_period=t_over_period, hbm=hbm, omega=omega
+        )
 
-        hill_mat_subh = self.hill_subh(equ=hbm)
-        t = 2 * np.pi / hbm.omega * t_over_period
+        hill_mat_subh = self.hill_subh(equ=hbm, omega=omega)
+        t = 2 * np.pi / omega * t_over_period
         Phi_t += C_subh @ expm(hill_mat_subh * t) @ self.W_subh
 
         return Phi_t
@@ -363,7 +375,7 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
         if C is None:
             C = self.C_time(t_over_period)
 
-    def hill_subh(self, equ: HBMEquation) -> np.ndarray:
+    def hill_subh(self, equ: HBMEquation | np.ndarray, omega=None) -> np.ndarray:
         """
         Constructs the subharmonic Hill matrix for the given HBM problem.
 
@@ -389,13 +401,17 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
         * Bayer et al., 2024, Appendix: Details on the block structure real-valued formulation.
         """
 
-        hill_mat = equ.hill_matrix()
+        if isinstance(equ, np.ndarray):
+            hill_mat = equ
+        else:
+            hill_mat = equ.hill_matrix()
+            omega = equ.omega
         if self.fourier.real_formulation:
             # Split the Hill matrix into blocks
             Jc, Js, Tc, Ts, Kc, Ks = self.determine_toeplitz_hankel_blocks(hill_mat)
             # Construct their subharmonic pendants
             # Tc = Tc
-            Ts += 0.5 * equ.omega * np.eye(self.fourier.n_dof * self.fourier.N_HBM)
+            Ts += 0.5 * omega * np.eye(self.fourier.n_dof * self.fourier.N_HBM)
 
             Kc = np.vstack((Jc, Kc[: -self.fourier.n_dof, :]))
             Ks = np.vstack((Js, Ks[: -self.fourier.n_dof, :]))
@@ -405,7 +421,7 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
 
         else:
             Hill_subh = hill_mat[self.fourier.n_dof :, self.fourier.n_dof :]
-            Hill_subh = Hill_subh + 0.5j * equ.omega * np.eye(
+            Hill_subh = Hill_subh + 0.5j * omega * np.eye(
                 self.fourier.n_dof * 2 * self.fourier.N_HBM
             )
         return Hill_subh
@@ -580,7 +596,11 @@ def drazin(A, tol=0, ax_plot=None):
             eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
 
         _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
-        ax_plot.semilogy(n*np.ones_like(eigenvalues[idx_unique]), np.abs(eigenvalues[idx_unique]), "x")
+        ax_plot.semilogy(
+            n * np.ones_like(eigenvalues[idx_unique]),
+            np.abs(eigenvalues[idx_unique]),
+            "x",
+        )
 
     R = T[:n_cutoff, :n_cutoff]
     N = T[n_cutoff:, n_cutoff:]

@@ -316,8 +316,14 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
         # Drazin inverse analysis
         drazin_ratios[k] = analyze_drazin(hbm, ax_drazin, tol_drazin=tol_drazin)
 
+    # np.savetxt(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\X_{description}.csv",
+    #     results_to_csv,
+    #     delimiter=";",
+    #     header=header_csv,
+    # )
     np.savetxt(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\X_{description}.csv",
+        f"X_{description}.csv",
         results_to_csv,
         delimiter=";",
         header=header_csv,
@@ -327,8 +333,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax_drazin.set_xlabel("n*(2*N+1)")
     ax_drazin.set_ylabel("magnitude of eigenvalue")
     ax_drazin.set_title(f"Drazin eigenvalues {description}")
+    # tikzplotlib.save(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz"
+    # )
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_{description}.tikz"
+        f"drazin_{description}.tikz"
     )
 
     fig, ax_drazin_ratio = plt.subplots(1, 1)
@@ -336,8 +345,9 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax_drazin_ratio.axhline(4 / 5, linestyle="--")
     ax_drazin_ratio.axhline(3 / 5, linestyle="--")
     ax_drazin_ratio.set_title(f"Drazin ratio {description}")
+    # 
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\drazin_ratio_{description}.tikz"
+        f"drazin_ratio_{description}.tikz"
     )
     figs.append(fig)
 
@@ -351,8 +361,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax.set_aspect("equal")
     ax.set_title(description)
     ax.legend(loc="upper left")
+    # tikzplotlib.save(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz"
+    # )
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_conv_{description}.tikz"
+        f"FMs_conv_{description}.tikz"
     )
     figs.append(fig)
 
@@ -364,8 +377,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax.set_xlabel("N")
     ax.set_ylabel("error HBM")
     ax.set_title(f"HBM convergence {description}")
+    # tikzplotlib.save(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz"
+    # )
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_error_{description}.tikz"
+        f"HBM_error_{description}.tikz"
     )
     figs.append(fig)
 
@@ -377,8 +393,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax.set_xlabel("N")
     ax.set_ylabel("error HBM FCs")
     ax.set_title(f"HBM FC convergence {description}")
+    # tikzplotlib.save(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz"
+    # )
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\HBM_FC_error_{description}.tikz"
+        f"HBM_FC_error_{description}.tikz"
     )
     figs.append(fig)
 
@@ -390,8 +409,11 @@ def plot_and_save(hbms, Ns_HBM, description, tol_drazin=1e-7):
     ax.set_xlabel("N")
     ax.set_ylabel("error FMs")
     ax.set_title(f"FM convergence {description}")
+    # tikzplotlib.save(
+    #     f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz"
+    # )
     tikzplotlib.save(
-        f"\\\\inm-cifs.tik.uni-stuttgart.de\\users\\ac127316\\Research\\data\\2026_diss_friction\\FMs_error_{description}.tikz"
+        f"FMs_error_{description}.tikz"
     )
     figs.append(fig)
 
@@ -898,19 +920,24 @@ class FrictionDirect(AbstractEquation):
 
 if __name__ == "__main__":
     N_min = 10
-    N_max = 400
+    N_max = 1200
     Ns = [
         int(N)
-        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max),40)))
+        for N in np.unique(np.round(np.logspace(np.log10(N_min), np.log10(N_max),60)))
     ]
+    # Ns = [80]
     # Ns = np.arange(1, N_max + 1)
     print(Ns)
     # Ns = Ns + [N_max + k for k in range(1, 11)]
-    for name_case in ['D']:
-        for smoothing in [np.inf, 10, 50, 400]:
-            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=40, L_DFT=1024)
-            convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=2**14, smoothing=smoothing, max_residual=1e-5)
-            plt.close("all")
+    for name_case in ['B']:
+        for smoothing in [np.inf]: # np.inf case B fehlt noch
+            # plot_and_export_hbm(name_case, smoothing=smoothing, N_HBM=80, L_DFT=4096)
+            try:
+                convergence_study_N(name_case, Ns_HBM=Ns, L_DFT=2**13, smoothing=smoothing, max_residual=1e-5)
+                plt.close("all")
+            except MemoryError:
+                plt.close("all")
+                continue
     # plot_everything()
     # plot_frc()
     # plt.show()

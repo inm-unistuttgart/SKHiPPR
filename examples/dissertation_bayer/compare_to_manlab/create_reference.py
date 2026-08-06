@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+import os
 
 from skhippr.solvers.newton import NewtonSolver, EquationSystem
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -64,7 +65,8 @@ def iterate_reference_solution(
     FM_error_measure=None,
     **kwargs_odesolver,
 ):
-
+    if os.path.exists(filename):
+        raise RuntimeError(f"File {filename} already exists")
     with open(filename, "w", newline="") as file:
         writer = csv.writer(file, delimiter=";")
 
@@ -152,7 +154,7 @@ def to_csv(
         dtype=complex,
     )
 
-    writer.writerow([str(val)[1:-1] for val in row])
+    writer.writerow([str(complex(val)).strip("()") for val in row])
 
 
 def determine_ode_accuracy(
