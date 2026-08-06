@@ -21,6 +21,7 @@ class Duffing(AbstractODE):
         beta: float,
         F: float,
         delta: float,
+        exponent=3,
     ):
         super().__init__(autonomous=False, n_dof=2)
         self.t = t
@@ -30,6 +31,7 @@ class Duffing(AbstractODE):
         self.F = F
         self.omega = omega
         self.delta = delta
+        self.exponent = exponent
 
     @override
     def dynamics(self, t=None, x=None) -> np.ndarray:
@@ -45,7 +47,7 @@ class Duffing(AbstractODE):
         f[1, ...] = (
             -self.alpha * x[0, ...]
             - self.delta * x[1, ...]
-            - self.beta * x[0, ...] ** 3
+            - self.beta * x[0, ...] ** self.exponent
             + self.F * np.cos(self.omega * t)
         )
 
@@ -88,7 +90,9 @@ class Duffing(AbstractODE):
 
         df_dx = np.zeros((2, *x.shape), dtype=x.dtype)
         df_dx[0, 1, ...] = 1
-        df_dx[1, 0, ...] = -self.alpha - 3 * self.beta * x[0, ...] ** 2
+        df_dx[1, 0, ...] = -self.alpha - self.exponent * self.beta * x[0, ...] ** (
+            self.exponent - 1
+        )
         df_dx[1, 1, ...] = -self.delta
 
         return df_dx
@@ -109,7 +113,7 @@ class Duffing(AbstractODE):
             x = self.x
 
         df_dbe = np.zeros_like(x)
-        df_dbe[1, ...] = -x[0, ...] ** 3
+        df_dbe[1, ...] = -x[0, ...] ** self.exponent
         return df_dbe[:, np.newaxis, ...]
 
     def df_ddelta(self, t=None, x=None):

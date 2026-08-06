@@ -587,3 +587,12 @@ class Fourier:
             changes["real_formulation"] = self.real_formulation
 
         return Fourier(**changes)
+    
+
+def round_to_significant_digits(value, significant_digits):
+    # reference: https://gist.github.com/ttamg/3f65227fd580b3d8dc8ba91e01507280
+    if abs(value) == 0:
+        return value
+    
+    round_digits = -int(np.floor(np.log10(np.abs(value)))) + significant_digits - 1
+    return np.round(value, round_digits)
