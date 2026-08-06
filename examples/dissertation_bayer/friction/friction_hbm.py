@@ -68,6 +68,12 @@ def main(
                             description_plot,
                             path=f"examples/dissertation_bayer/friction/plots/",
                         )
+                        save_result_with_hill_matrix(
+                            hbms[-1],
+                            description_plot,
+                            "examples/dissertation_bayer/friction/data/",
+                        )
+
                     print(
                         "---------------------------------------------------------------------"
                     )
@@ -75,11 +81,6 @@ def main(
                     print(hbm.eigenvalues)
                     print(
                         "---------------------------------------------------------------------"
-                    )
-                    save_result_with_hill_matrix(
-                        hbms[-1],
-                        description_plot,
-                        "examples/dissertation_bayer/friction/data/",
                     )
 
                     # KH_other_N(hbm, N_other=10, description=description)
@@ -89,7 +90,7 @@ def main(
                 print(f"Memory overflow: {ME}")
                 continue
 
-            if len(Ns_HBM) > 1:
+            if False:  # len(Ns_HBM) > 1:
                 plot_and_save(
                     hbms,
                     description_plot,
@@ -97,10 +98,10 @@ def main(
                     path="examples/dissertation_bayer/friction/plots/",
                 )
             else:
-                to_csv(
-                    hbms,
-                    f"examples/dissertation_bayer/friction/data/HBM_results_{description}.csv",
-                )
+                # to_csv(
+                #     hbms,
+                #     f"examples/dissertation_bayer/friction/data/HBM_results_{description}.csv",
+                # )
 
                 plot_FM_convergence(
                     hbms,
@@ -108,18 +109,18 @@ def main(
                     path=f"examples/dissertation_bayer/friction/plots/FMs_{description}.tikz",
                 )
 
-                _, ax = plt.subplots(1, 1)
-
-                plot_drazin_and_ratio(
-                    hbms=hbms,
-                    tol_drazin=1e-7,
-                    description=description,
-                    ratio_limits=[3 / 5, 4 / 5],
-                    ax_drazin=ax,
-                    ax_ratio=None,
-                    path_drazin=f"examples/dissertation_bayer/friction/plots/",
-                    path_ratio=None,
-                )
+                # _, ax = plt.subplots(1, 1)
+                #
+                # plot_drazin_and_ratio(
+                #     hbms=hbms,
+                #     tol_drazin=1e-7,
+                #     description=description,
+                #     ratio_limits=[3 / 5, 4 / 5],
+                #     ax_drazin=ax,
+                #     ax_ratio=None,
+                #     path_drazin=f"examples/dissertation_bayer/friction/plots/",
+                #     path_ratio=None,
+                # )
 
 
 def fundamat_over_time(
@@ -371,29 +372,29 @@ def plot_and_save(hbms, description, tol_drazin=1e-7, path=""):
 
 if __name__ == "__main__":
 
-    fourier = Fourier(N_HBM=30, L_DFT=2**13, n_dof=5, real_formulation=True)
-    name_case = "Schuetz2"
+    # fourier = Fourier(N_HBM=30, L_DFT=2**13, n_dof=5, real_formulation=True)
+    # name_case = "Schuetz2"
 
-    for smoothing in [np.inf, 200]:
-        hbm = solve_hbm(name_case, smoothing=smoothing, fourier=fourier)
-        plot_J_over_time(
-            hbm,
-            description=f"J_over_time_{name_case}_inf_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
-            path="examples/dissertation_bayer/friction/plots/",
-        )
-        Phis = fundamat_over_time(
-            hbm,
-            L=200,
-            description=f"Funda_mat_{name_case}_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
-            path="examples/dissertation_bayer/friction/plots/",
-            path_ref=f"examples/dissertation_bayer/friction/data/Phi_t_ref_{name_case}.mat",
-        )
-    # main(
-    #     cases=["B"],
-    #     smoothings=[np.inf],
-    #     Ns_HBM=(2,),
-    #     Ns_plot=(2,),
-    #     L_DFT=2**12,
-    #     max_residual=1e-9,
-    # )
+    # for smoothing in [np.inf, 200]:
+    #     hbm = solve_hbm(name_case, smoothing=smoothing, fourier=fourier)
+    #     plot_J_over_time(
+    #         hbm,
+    #         description=f"J_over_time_{name_case}_inf_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
+    #         path="examples/dissertation_bayer/friction/plots/",
+    #     )
+    #     Phis = fundamat_over_time(
+    #         hbm,
+    #         L=200,
+    #         description=f"Funda_mat_{name_case}_N{fourier.N_HBM}_L{fourier.L_DFT}_smoothing{smoothing}",
+    #         path="examples/dissertation_bayer/friction/plots/",
+    #         path_ref=f"examples/dissertation_bayer/friction/data/Phi_t_ref_{name_case}.mat",
+    #     )
+    main(
+        cases=["A", "B"],
+        smoothings=[np.inf],
+        Ns_HBM=np.arange(1, 241),
+        Ns_plot=(240,),
+        L_DFT=2**11,
+        max_residual=1e-9,
+    )
     plt.show()

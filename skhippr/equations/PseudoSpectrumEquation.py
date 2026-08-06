@@ -24,6 +24,65 @@ from skhippr.solvers.newton import NewtonSolver
 from skhippr.solvers.continuation import pseudo_arclength_continuator
 
 
+def finite_support_error_bound(J_0, J_1, N, t, subharmonic, k=1):
+    """
+    Computes the optimal error bound for a HBM solution with only one nonzero Fourier coefficient (besides J_0) at the k-th frequency.
+    The formulas for the error are derived in Bayer & Leine (2025).
+
+    Parameters
+    ----------
+
+    J_0 : np.ndarray
+        The Fourier coefficient matrix at the zero frequency.
+    J_1 : np.ndarray
+        The Fourier coefficient matrix at the other nonzero frequency.
+    N : int
+        The number of harmonics considered in the HBM solution.
+    t : float
+        The time at which the error bound is evaluated.
+    subharmonic : bool
+        If True, the error bound is computed for a subharmonic solution, which effectively doubles
+        the number of harmonics considered in the error bound computation.
+    k : int, optional
+        The frequency index of the nonzero Fourier coefficient (default is 1).
+
+
+    Returns
+    -------
+
+    E : float
+        The computed optimal error bound for the given system and time.
+    """
+
+    # Determine norms of Fourier coeff matrices J_0, J_{\pm 1}
+
+    beta = np.linalg.norm(J_0, 2)
+    gamma = np.linalg.norm(J_1)
+
+    if subharmonic:
+        N = 2 * N
+
+    epsi_opt = 2 * (4 * gamma * t / N) ** (1 / k)
+    a_opt = gamma * (2 / epsi_opt) ** k
+
+    if a_opt >= beta:
+        E = epsi_opt**N * (np.exp(4 * a_opt * t) - 1)
+
+    else:
+        # optimal bound touches both constraints
+        a_opt = beta
+        b_opt = (np.log(beta) - np.log(gamma)) / k
+
+        E = (2 * np.exp(-b_opt)) ** N * (np.exp(4 * a_opt * t) - 1)
+
+    # if beta < N / (4 * t):
+    #     E = (8 * gamma * t / N) ** N * (np.exp(N) - 1)
+    # else:
+    #     E = (2 * gamma / beta) ** N * (np.exp(4 * beta * t) - 1)
+
+    return E
+
+
 class PseudoSpectrumEquation(AbstractEquation):
     def __init__(self, A, epsilon, z=None):
         super().__init__(stability_method=None)
@@ -108,7 +167,7 @@ def compute_pseudospectrum(
         initial_system=sys,
         solver=solver,
         verbose=verbose,
-        num_steps=50000,
+        num_steps=200000,
         stepsize_range=(0.01 * max_step, max_step),
     ):
         pseudo_spectrum.append(bp.re_z + +1j * bp.im_z)
