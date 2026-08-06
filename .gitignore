@@ -40,3 +40,5 @@ docs_source/build/*
 *.png
 *.tex
 *.tikz
+*.svg
+*.mat

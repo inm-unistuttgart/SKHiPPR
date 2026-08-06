@@ -141,6 +141,6 @@ if __name__ == "__main__":
     analyze_N_meissner_aliasing(
         N_max=20,
         csv_path="data_meissner.csv",
-        Ls_DFT=(1024, 1025, 1026, 1027, 1028, 1029, 1030),
+        Ls_DFT=(512,),
     )
     plt.show()
