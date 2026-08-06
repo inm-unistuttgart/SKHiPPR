@@ -243,7 +243,6 @@ def plot_floquet_multiplier_continuation(
             ys_stable,
             color=stable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -252,7 +251,6 @@ def plot_floquet_multiplier_continuation(
             ys_unstable,
             color=unstable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -362,7 +360,6 @@ def plot_floquet_exponent_continuation(
             ys_stable,
             color=stable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )
@@ -371,7 +368,6 @@ def plot_floquet_exponent_continuation(
             ys_unstable,
             color=unstable_col,
             alpha=alpha,
-            linestyle=linestyle,
             linewidth=1.5,
             **plot_kwargs
         )

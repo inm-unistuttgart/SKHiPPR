@@ -55,7 +55,7 @@ def init_oscillator(name_case="A", smoothing=np.inf):
             omega = 2 * np.pi
             forcings = [20, 10]
             phases = [0.4398, 2.0106]  # TODO passt das?? sin vs cos
-            prox_parameter = 10
+            prox_parameter = 1
 
         case _:
             raise ValueError(f"Case {name_case} not defined!")

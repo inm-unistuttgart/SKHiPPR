@@ -124,7 +124,8 @@ class HBMEquation(AbstractCycleEquation):
 
         try:
             Js = self.ode.closed_form_derivative(variable="x", t=ts, x=x_samp)
-        # except NotImplementedError:
+        except NotImplementedError as ni:
+            raise ni  # enforce finite difference for the whole derivative of Hill mat
         #     # use finite differences
         #     self.ode.t = ts
         #     self.ode.x = x_samp
@@ -152,6 +153,23 @@ class HBMEquation(AbstractCycleEquation):
             / self.period_k
             * X[self.fourier.idx_derivative]
         )
+
+        if getattr(self.ode, "has_nontrivial_omega_derivative", False):
+            ts = self.fourier.time_samples(self.omega_solution)
+            x_samp = self.fourier.inv_DFT(X)
+
+            try:
+                derivatives_time = self.ode.nontrivial_omega_derivative(t=ts, x=x_samp)
+            except NotImplementedError as ni:
+                raise ni  # enforce finite difference for the whole derivative of Hill mat
+            except:
+                # Vectorization not working, determine sample by sample
+                derivatives_time = np.zeros_like(x_samp)
+                for k, t in enumerate(ts):
+                    derivatives_time[:, k, ...] = self.ode.nontrivial_omega_derivative(
+                        t=t, x=np.squeeze(x_samp[:, k])
+                    )
+            dR_dom += self.fourier.DFT(derivatives_time)
         return dR_dom[:, np.newaxis]
 
     def dR_dvar(self, variable, X=None):
