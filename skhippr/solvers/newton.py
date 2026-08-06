@@ -235,7 +235,7 @@ class ScipyRootSolver(NewtonSolver):
             method=self.method,
             jac=self.use_fprime,
             tol=self.tolerance,
-            options={"nit": self.max_iterations},
+            options={"nit": self.max_iterations, "maxfev": self.max_iterations},
             callback=self.callback if self.verbose else None,
         )
 
@@ -250,7 +250,7 @@ class ScipyRootSolver(NewtonSolver):
         if self.verbose:
             if equation_system.solved:
                 print(
-                    f"fsolve converged successfully with {sol.nfev} function calls and {sol.njev} jacobian calls. Residual {np.linalg.norm(sol.fun)}"
+                    f"fsolve converged successfully with {sol.nfev} function calls. Residual {np.linalg.norm(sol.fun)}"
                 )
                 if equation_system.solved:
                     equation_system.determine_stability(update=True)
