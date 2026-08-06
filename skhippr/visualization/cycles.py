@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib.animation import FuncAnimation
 
-from skhippr.cycles.hbm import HBMEquation
+from skhippr.cycles.hbm import HBMEquation, HBMSystem
 from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence, Iterable
 

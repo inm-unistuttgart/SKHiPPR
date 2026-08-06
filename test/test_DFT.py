@@ -207,5 +207,57 @@ def test_matrix_DFT_and_iDFT(fourier):
     assert np.allclose(A_samples_fft, A_samples, atol=1e-14, rtol=1e-14)
 
 
+@pytest.mark.parametrize("n_dof", [1, 2, 3])
+@pytest.mark.parametrize("real_formulation", [True, False])
+@pytest.mark.parametrize("input_shape", ["vector", "matrix"])
+@pytest.mark.parametrize("N_new", [2, 5, 8])
+def test_resize_coefficients(n_dof, real_formulation, input_shape, N_new):
+    """Test resizing Fourier coefficients across different N_HBM values.
+
+    The test compares ``resize_coefficients`` against the reference procedure
+    of iDFT with the old Fourier object and then DFT with the new Fourier object.
+    """
+    N_old = 5
+    L_DFT = 128
+
+    fourier_old = Fourier(
+        N_HBM=N_old,
+        L_DFT=L_DFT,
+        n_dof=n_dof,
+        real_formulation=real_formulation,
+    )
+    fourier_new = Fourier(
+        N_HBM=N_new,
+        L_DFT=L_DFT,
+        n_dof=n_dof,
+        real_formulation=real_formulation,
+    )
+
+    coeff_count_old = 2 * N_old + 1
+    if real_formulation:
+        X_old = np.random.randn(n_dof * coeff_count_old)
+    else:
+        X_old = np.random.randn(n_dof * coeff_count_old) + 1j * np.random.randn(
+            n_dof * coeff_count_old
+        )
+
+    if input_shape == "matrix":
+        X_old = np.reshape(X_old, (n_dof, coeff_count_old), order="F")
+
+    X_resized = fourier_new.resize_coefficients(X_old)
+    X_old_vector = (
+        X_old if input_shape == "vector" else np.reshape(X_old, -1, order="F")
+    )
+    x_time = fourier_old.inv_DFT(X_old_vector)
+
+    X_expected = fourier_new.DFT(x_time)
+
+    if input_shape == "matrix":
+        X_expected = np.reshape(X_expected, (n_dof, -1), order="F")
+
+    assert X_resized.shape == X_expected.shape
+    assert np.allclose(X_resized, X_expected, atol=1e-14, rtol=1e-14)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
