@@ -163,9 +163,13 @@ class HingedHinged(AbstractODE):
             q = q[:, np.newaxis]
         omega_q = (self.omegas[:, np.newaxis] * q)[:, np.newaxis, :]
         dN_dq_3d = dN_dq[np.newaxis, :, :]
+        N_3d = self.N(q)[np.newaxis, np.newaxis, :]
 
-        ddq_dq = -self.K - self.epsilon * np.diag(self.N(q) * self.omegas)
-        ddq_dq = ddq_dq[:, :, np.newaxis] - self.epsilon * (omega_q * dN_dq_3d)
+        ###  differentiate ddq w.r.t q:
+        # ddq_dq =  -K - epsilon*N(q)*diag(omegas) - epsilon*omegas*dN_dq, but evaluated in vectorized form.
+        ddq_dq = -self.epsilon * np.diag(self.omegas)[:, :, np.newaxis] * N_3d
+        ddq_dq -= self.K[:, :, np.newaxis]
+        ddq_dq -= self.epsilon * (omega_q * dN_dq_3d)
         df_dx = np.vstack(
             [
                 np.hstack(

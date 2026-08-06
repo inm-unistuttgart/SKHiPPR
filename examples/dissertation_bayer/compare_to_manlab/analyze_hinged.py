@@ -1,4 +1,6 @@
 import numpy as np
+import datetime
+import tikzplotlib
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,7 +12,12 @@ from skhippr.odes.manlab import HingedHinged
 from skhippr.Fourier import Fourier
 
 # --- Stability method ---
-from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
+from skhippr.stability.KoopmanHillProjection import (
+    KoopmanHillSubharmonic,
+    KoopmanHillProjection,
+)
+from skhippr.stability.ClassicalHill import ClassicalHill
+from skhippr.stability.SinglePass import SinglePassRK4
 
 # --- Continuation + solver ---
 from skhippr.solvers.continuation import pseudo_arclength_continuator
@@ -27,8 +34,12 @@ from skhippr.visualization.data_export import save_tikz
 # --- Reference solution creation ---
 from create_reference import iterate_reference_solution
 
+# --- Analyze the system ---
+from analyze_and_plot import *
+
 
 def main():
+    ### TESTING ######
     # ode = init_hinged(2, 0.005, 0.1)
     # frc = compute_frc(
     #     ode,
@@ -38,12 +49,38 @@ def main():
     #     omega_max_normalized=1.8,
     #     max_stepsize=0.4,
     # )
-    frc = create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024)
-    ax = plot_continuation(frc, plot_fun=plot_fun)
 
-    save_tikz(
-        axes=ax,
-        filepath=f"hinged_hinged_ref_N_{frc[0].equations[0].fourier.N_HBM}.tikz",
+    #### CREATE REFERENCE SOLUTION ######
+    # frc = create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024)
+    # ax = plot_continuation(frc, plot_fun=plot_fun)
+
+    # save_tikz(
+    #     axes=ax,
+    #     filepath=f"hinged_hinged_ref_N_{frc[0].equations[0].fourier.N_HBM}.tikz",
+    # )
+
+    # ### STEP 1: Analyze FM errors for different stability methods and HBM orders ###
+    # ax, error_stats = iterate_step_1(
+    #     n_modes=10,
+    #     xi=0.005,
+    #     Nmax=40,
+    #     Ns_HBM=range(1, 39),
+    #     shooting_tol=1e-14,
+    #     labels_stabmethod=("dir", "subh", "imag", "RK4"),
+    #     early_break=np.inf,
+    # )
+
+    # ### STEP 2: whole branch measurement
+    step_2(
+        n_modes=10,
+        xi=0.005,
+        Nmax=40,
+        L_DFT=1024,
+        atol=1e-14,
+        rtol=1e-14,
+        continuation_verbose=True,
+        stepsize_range=(0.001, 0.1),
+        k_init=0,
     )
 
     plt.show()
@@ -59,7 +96,7 @@ def init_hinged(n_modes=10, xi_0=0.005, omega_0_normalized=0.6):
     phase_forcing = np.array([0.0, 0.0])
     x_forcing = np.array([0.25, 0.75])
 
-    return HingedHinged(
+    ode = HingedHinged(
         t=0,
         x=np.zeros(2 * n_modes),
         xi=xis,
@@ -69,6 +106,10 @@ def init_hinged(n_modes=10, xi_0=0.005, omega_0_normalized=0.6):
         phase_forcing=phase_forcing,
         x_forcing=x_forcing,
     )
+    del ode.eigenvalues
+    del ode.stability_method
+    del ode.residual_value
+    return ode
 
 
 def init_hbm_sys(ode, fourier, stability_method=None):
@@ -134,21 +175,29 @@ def plot_fun(bp, x_eval=0.75):
     return (omega_normalized, np.max(np.abs(w)))
 
 
+def FM_error_measure(FMs, FMs_ref):
+    FMs_ref = FMs_ref[np.imag(FMs_ref) >= 0]
+    idx_ref = np.argmax(np.abs(FMs_ref))
+    return np.min(np.abs(FMs_ref[idx_ref] - FMs))
+
+
+def get_filename(ode, N_HBM, shooting_tol):
+    return f"examples/dissertation_bayer/compare_to_manlab/hinged_nmodes_{ode.n_modes}_N_{N_HBM}_tol_{shooting_tol}.csv"
+
+
 def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
-    solver = NewtonSolver(tolerance=1e-13, verbose=True)
-    ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.1)
-    del ode.eigenvalues
-    del ode.stability_method
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
+    ode = init_hinged(n_modes=n_modes, xi_0=0.005, omega_0_normalized=0.05)
     fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=ode.n_dof)
 
     hbm = init_hbm_sys(ode, fourier, stability_method=KoopmanHillSubharmonic(fourier))
 
-    shooting_tol = 1e-6
+    shooting_tol = 1e-14
 
     frc_ref = []
 
     for bp in iterate_reference_solution(
-        filename=f"examples/dissertation_bayer/compare_to_manlab/hinged_nmodes_{ode.n_modes}_N_{fourier.N_HBM}_tol_{shooting_tol}.csv",
+        filename=get_filename(ode, N_HBM, shooting_tol),
         initial_system=hbm,
         solver=solver,
         stepsize=0.1,
@@ -156,7 +205,7 @@ def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
         initial_direction=1,
         continuation_parameter="omega",
         verbose=True,
-        num_steps=5,
+        num_steps=np.inf,
         atol=shooting_tol,
         rtol=shooting_tol,
     ):
@@ -165,6 +214,119 @@ def create_hinged_reference(n_modes=3, N_HBM=10, L_DFT=1024):
 
         frc_ref.append(bp)
     return frc_ref
+
+
+def step_1(
+    n_modes,
+    xi,
+    Nmax=40,
+    Ns_HBM=None,
+    shooting_tol=1e-14,
+    stability_method_generator=KoopmanHillSubharmonic,
+    early_break=np.inf,
+):
+    if Ns_HBM is None:
+        Ns_HBM = range(1, Nmax)
+    ode = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.1)
+    filename = get_filename(ode=ode, N_HBM=Nmax, shooting_tol=shooting_tol)
+
+    error_stats = compute_step_1(
+        ode=ode,
+        filename=filename,
+        Ns_HBM=Ns_HBM,
+        L_DFT=1024,
+        stability_method_generator=stability_method_generator,
+        solver=NewtonSolver(tolerance=shooting_tol, verbose=False),
+        early_break=early_break,
+    )
+
+    ax = plot_step_1(error_stats)
+    return ax, error_stats, filename
+
+
+def iterate_step_1(
+    n_modes,
+    xi,
+    Nmax=120,
+    Ns_HBM=None,
+    shooting_tol=1e-14,
+    labels_stabmethod=("subh",),
+    early_break=np.inf,
+):
+    for label_stab in labels_stabmethod:
+        match label_stab:
+            case "subh":
+                stability_method_generator = KoopmanHillSubharmonic
+            case "dir":
+                stability_method_generator = KoopmanHillProjection
+            case "imag":
+                stability_method_generator = lambda fourier: ClassicalHill(
+                    fourier, "imaginary"
+                )
+            case "RK4":
+                stability_method_generator = SinglePassRK4
+            case _:
+                raise ValueError(f"Unknown stability method {label_stab}")
+
+        ax, error_stats, filename = step_1(
+            n_modes=n_modes,
+            xi=xi,
+            Nmax=Nmax,
+            Ns_HBM=Ns_HBM,
+            shooting_tol=shooting_tol,
+            stability_method_generator=stability_method_generator,
+            early_break=early_break,
+        )
+        ax.set_title(f"step 1 FM errors for {label_stab}")
+        tikzplotlib.save(f"{filename.split('.')[0]}_stab_{label_stab}.tikz")
+    return ax, error_stats
+
+
+def step_2(
+    n_modes,
+    xi,
+    Nmax=120,
+    L_DFT=1024,
+    atol=1e-14,
+    rtol=1e-14,
+    continuation_verbose=False,
+    stepsize_range=(0.001, 0.1),
+    k_init=0,
+):
+
+    ode = init_hinged(n_modes=n_modes, xi_0=xi, omega_0_normalized=0.05)
+    filename = get_filename(ode, N_HBM=Nmax, shooting_tol=atol)
+
+    dict_Ns = {
+        # "subh": (KoopmanHillSubharmonic, 10),
+        "dir": (KoopmanHillProjection, 5),
+        # "imag": (lambda fourier: ClassicalHill(fourier, "imaginary"), 10),
+        # "RK4": (SinglePassRK4, 11),
+    }
+
+    solver = NewtonSolver(tolerance=1e-13, verbose=False)
+
+    axs = iterate_and_plot_step_2(
+        ode=ode,
+        filename=filename,
+        dict_Ns=dict_Ns,
+        L_DFT=L_DFT,
+        solver=solver,
+        early_break=np.inf,
+        axs=None,
+        continuation_verbose=continuation_verbose,
+        stepsize_range=stepsize_range,
+        k_init=k_init,
+    )
+
+    now = datetime.datetime.now()
+    for k, ax in enumerate(axs):
+        ax.set_title(f"step 2 FM errors for {filename}")
+        plt.sca(ax)
+        tikzplotlib.save(
+            f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz"
+        )
+        plt.close()
 
 
 if __name__ == "__main__":

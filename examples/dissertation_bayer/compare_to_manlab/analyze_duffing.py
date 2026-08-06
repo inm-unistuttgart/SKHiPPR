@@ -355,7 +355,9 @@ def step_2(
     for k, ax in enumerate(axs):
         ax.set_title(f"step 2 FM errors for {label}")
         plt.sca(ax)
-        tikzplotlib.save(f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz")
+        tikzplotlib.save(
+            f"{filename}_{now.strftime('%d_%H_%M')}_step_2_stab_case_{k}.tikz"
+        )
         plt.close()
 
 

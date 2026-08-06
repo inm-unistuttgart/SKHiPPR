@@ -65,7 +65,11 @@ class AbstractStabilityHBM(AbstractStabilityMethod):
         """
 
         monodromy = self.fundamental_matrix(t_over_period=1, hbm=hbm, omega=omega)
-        floquet_multipliers = np.linalg.eigvals(monodromy)
+        try:
+            floquet_multipliers = np.linalg.eigvals(monodromy)
+        except np.linalg.LinAlgError as e:
+            # array contains nan
+            floquet_multipliers = np.inf * np.ones(monodromy.shape[0])
         return floquet_multipliers
 
     def determine_stability(self, eigenvalues) -> bool:

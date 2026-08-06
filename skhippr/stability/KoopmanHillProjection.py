@@ -404,7 +404,7 @@ class KoopmanHillSubharmonic(KoopmanHillProjection):
         if isinstance(equ, np.ndarray):
             hill_mat = equ
         else:
-            hill_mat = equ.hill_matrix()
+            hill_mat = equ.hill_matrix(update=False)
             omega = equ.omega
         if self.fourier.real_formulation:
             # Split the Hill matrix into blocks
