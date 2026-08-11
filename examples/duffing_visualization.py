@@ -1,6 +1,5 @@
 """
-Find and visualize a periodic solution of the Duffing oscillator using SKHiPPR.
-
+Demonstrates the visualization capabilities of SKHiPPR for periodic solutions using a Duffing oscillator.
 """
 
 import numpy as np
@@ -24,9 +23,9 @@ from skhippr.solvers.newton import NewtonSolver
 # --- Visualization ---
 from skhippr.visualization.cycles import (
     plot_period,
+    plot_phase,
     plot_floquet_multipliers,
     plot_floquet_exponents,
-    plot_phase,
     plot_hill_matrix_blocks,
 )
 from skhippr.visualization.data_export import (
@@ -35,7 +34,7 @@ from skhippr.visualization.data_export import (
 )
 
 
-def main():
+def visualize_single_solution(hbm_sys: HBMSystem, save=False):
     """
     Demonstrates solving an ordinary differential equation for a periodic solution using HBM and visualizes properties of the solved :py:class:`~skhippr.cycles.hbm.HBMSystem` using SKHiPPR.
 
@@ -57,6 +56,68 @@ def main():
 
     Then demonstrates saving one of the plots using SKHiPPR visualization export functions.
     """
+
+    omega = hbm_sys.equations[0].omega
+
+    # --- Plotting a HBMSystem directly will use the first valid HBMEquation contained in the system ---
+    plot_phase(
+        hbm=hbm_sys,
+        title=f"Phase plot (Duffing, omega = {omega}), HBMSystem passed",
+        xlabel="x_0",
+        ylabel="x_1",
+    )
+
+    # --- Alternatively, a specific HBMEquation can be extracted from the system and passed to the plotting function(s) ---
+    hbm_equation = hbm_sys.equations[0]
+    plot_phase(
+        hbm=hbm_equation,
+        title=f"Phase plot (Duffing, omega = {omega}), HBMEquation passed",
+        xlabel="x_0",
+        ylabel="x_1",
+        linestyle="--",
+        color="r",
+    )
+
+    # --- Same for the period in time
+    plot_period(
+        hbm=hbm_sys,
+        n_periods=1.22,
+        title=f"Time series (Duffing, omega = {omega})",
+    )
+
+    # --- Stability measures ---
+    plot_floquet_multipliers(
+        hbm=hbm_sys,
+        title=f"Floquet multipliers (Duffing, omega = {omega}), HBMSystem passed",
+    )
+    plot_floquet_exponents(
+        hbm=hbm_sys,
+        title=f"Floquet multipliers (Duffing, omega = {omega}), HBMSystem passed",
+    )
+
+    # --- Visualize the Hill matrix ---
+    plot_hill_matrix_blocks(
+        hbm=hbm_sys, real_formulation=None, logscale=True, cmap="plasma"
+    )
+
+    # All the visualization functions return the axis object in which the plot lives,
+    # and they can also be passed an axis object to plot into. This allows for the use of subplots.
+
+    # --- Realisation with subplots ---
+    _, axs = plt.subplots(nrows=2, ncols=2)
+    axs[0] = plot_phase(hbm=hbm_sys, ax=axs[0])
+    axs[1] = plot_floquet_multipliers(hbm=hbm_sys, ax=axs[1])
+    axs[1].axis("equal")
+    axs[2] = plot_floquet_exponents(hbm=hbm_sys, ax=axs[2])
+
+    # --- Save the hill matrix visualization plot ---
+    # The relative path for saving a file can be given if the filepath string starts without a "/".
+    # Forward slashes "/" can be used regardless of operating system.
+    # save_pdf(axes=ax, filepath="plots/duffing_plots/hill_matrix.pdf")
+    # save_png(axes=ax, filepath="plots/duffing_plots/hill_matrix.png")
+
+
+def main():
 
     # --- FFT, stability method and Newton solver configuration ---
     fourier = Fourier(N_HBM=30, L_DFT=300, n_dof=2, real_formulation=True)
@@ -88,43 +149,7 @@ def main():
     solver.solve(hbm_sys)
     assert hbm_sys.solved
 
-    # --- Plotting a HBMSystem directly will use the first valid HBMEquation contained in the system ---
-    plot_phase(hbm=hbm_sys)
-
-    # --- Optional: keyword arguments can be given for plotting and exctracting a specific HBMEquation from a system---
-    kwargs = {"linestyle": "--"}
-    hbm_equation = hbm_sys.equations[0]
-    plot_phase(hbm=hbm_equation, **kwargs)
-
-    # --- New figure for each plot using standard visualization method calls ---
-    plot_floquet_multipliers(hbm=hbm_sys)
-    plot_floquet_exponents(hbm=hbm_sys)
-    plot_period(hbm=hbm_sys, n_periods=1.22)
-    ax = plot_hill_matrix_blocks(hbm=hbm_sys, real_formulation=None, logscale=True)
-
-    # --- Realisation with subplots ---
-    _, axs = plt.subplots(nrows=1, ncols=3)
-    axs[0] = plot_phase(hbm=hbm_sys, ax=axs[0])
-    axs[0].set_title("Phase plot of solution")
-    axs[0].set_ylabel("x_1")
-    axs[0].set_xlabel("x_0")
-    fourier = hbm_sys.equations[0].fourier
-    axs[1] = plot_floquet_multipliers(hbm=hbm_sys, ax=axs[1])
-    axs[1].set_title("Floquet multipliers")
-    axs[1].plot(
-        np.cos(fourier.time_samples_normalized),
-        np.sin(fourier.time_samples_normalized),
-        "k",
-    )
-    axs[1].axis("equal")
-    axs[2] = plot_floquet_exponents(hbm=hbm_sys, ax=axs[2])
-    axs[2].set_title("Floquet exponents")
-
-    # --- Save the hill matrix visualization plot ---
-    # The relative path for saving a file can be given if the filepath string starts without a "/".
-    # Forward slashes "/" can be used regardless of operating system.
-    save_pdf(axes=ax, filepath="plots/duffing_plots/hill_matrix.pdf")
-    save_png(axes=ax, filepath="plots/duffing_plots/hill_matrix.png")
+    visualize_single_solution(hbm_sys, save=False)
 
     # --- Saving using save_tikz requires tikzplotlib to be installed which is imported locally ---
     # save_tikz(axes=ax, filepath="duffing_plots/hill_matrix.tex")

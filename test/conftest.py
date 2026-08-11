@@ -1,3 +1,10 @@
+import matplotlib
+
+# Use the non-interactive Agg backend for the whole test session: tests that create
+# figures must not depend on a working GUI toolkit (e.g. Tk) being installed, and must
+# not pop up windows or block waiting for a display.
+matplotlib.use("Agg")
+
 import pytest
 import numpy as np
 

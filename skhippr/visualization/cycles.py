@@ -26,6 +26,8 @@ This module also offers functions for visualizing matrices by their spectral nor
 
 """
 
+import warnings
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -34,6 +36,38 @@ from matplotlib.animation import FuncAnimation
 from skhippr.cycles.hbm import HBMEquation, HBMSystem
 from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence, Iterable
+
+
+def _robust_plot_call(plot_method, *args, **kwargs):
+    """
+    Call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
+    ``ax.plot`` or ``ax.scatter``.
+
+    Keyword arguments that are valid properties of the resulting artist are
+    passed through and take effect normally. A keyword argument that is not
+    a valid property makes Matplotlib's ``Artist.set()`` raise an
+    ``AttributeError`` whose ``name`` attribute identifies the offending
+    keyword (see :py:meth:`matplotlib.artist.Artist._update_props`). Such
+    keyword arguments are dropped one at a time, each triggering a
+    :py:class:`UserWarning`, and the call is retried with the remaining
+    keyword arguments until it succeeds.
+    """
+    kwargs = dict(kwargs)
+    while True:
+        try:
+            return plot_method(*args, **kwargs)
+        except AttributeError as error:
+            bad_kwarg = getattr(error, "name", None)
+            if bad_kwarg is None or bad_kwarg not in kwargs:
+                # Not a case of an unrecognized keyword argument: re-raise.
+                raise
+            warnings.warn(
+                f"Ignoring keyword argument '{bad_kwarg}={kwargs[bad_kwarg]!r}': "
+                "not a valid property of the plotted artist.",
+                UserWarning,
+                stacklevel=3,
+            )
+            del kwargs[bad_kwarg]
 
 
 def plot_period(
@@ -57,7 +91,7 @@ def plot_period(
     n_periods : float, optional
         The number of periods for which the time series is plotted. May be non-integer.
     **plot_kwargs
-        Additional keyword arguments passed to ``ax.plot()``.
+        Additional keyword arguments passed through to ``ax.plot()``.
 
     Returns
     -------
@@ -65,10 +99,12 @@ def plot_period(
         The :py:class:`~matplotlib.axes.Axes` object with the plotted period response.
 
     """
-    generated_ax = False
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
+    else:
+        generated_ax = False
+
     equation = _get_equation_helper(hbm)
     fourier = equation.fourier
     omega = equation.omega_solution
@@ -89,7 +125,7 @@ def plot_period(
     xlabel = plot_kwargs.pop("xlabel", "t")
     ylabel = plot_kwargs.pop("ylabel", "x")
 
-    ax.plot(t, x, **plot_kwargs)
+    _robust_plot_call(ax.plot, t, x, **plot_kwargs)
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -176,7 +212,7 @@ def animate_period(
     xlabel = plot_kwargs.pop("xlabel", "t")
     ylabel = plot_kwargs.pop("ylabel", "x")
 
-    (line,) = ax.plot([], [], **plot_kwargs)
+    (line,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
 
     ax.set_xlim(all_times.min(), all_times.max())
     ax.set_ylim(all_signals.min(), all_signals.max())
@@ -238,7 +274,7 @@ def plot_phase(
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
 
-    ax.plot(x_time[idx[0], :], x_time[idx[1], :], **plot_kwargs)
+    _robust_plot_call(ax.plot, x_time[idx[0], :], x_time[idx[1], :], **plot_kwargs)
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -309,13 +345,14 @@ def animate_phase(
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
 
-    (line,) = ax.plot([], [], **plot_kwargs)
+    (line,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
 
-    if scaling == "static":
-        x_range = _get_padded_limits(all_x)
-        y_range = _get_padded_limits(all_y)
-        ax.set_xlim(x_range[0], x_range[1])
-        ax.set_ylim(y_range[0], y_range[1])
+    # Fix the axes limits to the full range spanned by all trajectories so that
+    # every frame of the animation stays within view.
+    x_range = _get_padded_limits(all_x)
+    y_range = _get_padded_limits(all_y)
+    ax.set_xlim(x_range[0], x_range[1])
+    ax.set_ylim(y_range[0], y_range[1])
 
     if generated_ax:
         ax.set_title(title)
@@ -326,11 +363,6 @@ def animate_phase(
         x_vals, y_vals = trajectories[frame_idx]
         line.set_data(x_vals, y_vals)
         ax.set_title(f"Phase plot - frame {frame_idx + 1}/{len(trajectories)}")
-        if scaling == "dynamic":
-            x_range = _get_padded_limits(x_vals)
-            y_range = _get_padded_limits(y_vals)
-            ax.set_xlim(x_range[0], x_range[1])
-            ax.set_ylim(y_range[0], y_range[1])
         return (line,)
 
     animation = FuncAnimation(
@@ -362,6 +394,10 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
         _, ax = plt.subplots(1, 1)
         generated_ax = True
 
+    title = plot_kwargs.pop("title", "Floquet multipliers")
+    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
+    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
+
     kwargs = {"marker": "x"}
     kwargs.update(plot_kwargs)
 
@@ -369,11 +405,8 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
     floquet_multipliers = equation.eigenvalues
     fourier = equation.fourier
 
-    title = plot_kwargs.pop("title", "Floquet multipliers")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
-
-    ax.scatter(
+    _robust_plot_call(
+        ax.scatter,
         np.real(floquet_multipliers),
         np.imag(floquet_multipliers),
         **kwargs,
@@ -412,11 +445,10 @@ def animate_floquet_multipliers(
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``,
         a new :py:class:`~matplotlib.axes.Axes` instance will be created.
-    scaling: str, optional
-        Adjust how the animation axes are scaled. Passing ``"static"`` sets the axes scaling to display the maximum range required for the data set from the beginning.
-        Passing ``"dynamic"`` adjusts the scaling to show the full data range of each frame individually.
-        The minimum scaling for both ``"static"`` and ``"dynamic"`` ensure the unit circle is visible for all frames and all borders are padded to ensure all data is displayed clearly.
-        Passing ``"unit_circle"`` makes sets the axes limits around the complex plane unit circle.
+    show_full_range : bool, optional
+        If ``True``, the axes limits are fixed from the start to the range spanning all Floquet
+        multipliers across every frame (padded so the unit circle stays visible). If ``False``
+        (default), the axes limits are fixed to ``[-1.2, 1.2]`` on both axes.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
@@ -451,7 +483,7 @@ def animate_floquet_multipliers(
     xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
 
-    (sc,) = ax.plot([], [], **plot_kwargs)
+    (sc,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_multipliers).min()
@@ -477,7 +509,8 @@ def animate_floquet_multipliers(
     scatter_kwargs = {"marker": "x"}
     scatter_kwargs.update(plot_kwargs)
 
-    sc = ax.scatter(
+    sc = _robust_plot_call(
+        ax.scatter,
         np.real(all_multipliers[0]),
         np.imag(all_multipliers[0]),
         **scatter_kwargs,
@@ -500,18 +533,6 @@ def animate_floquet_multipliers(
         ax.set_title(
             f"Floquet multipliers - frame {frame_idx + 1}/{len(all_multipliers)}"
         )
-        if scaling == "dynamic":
-            real_range = _get_padded_limits(np.real(current_multipliers))
-            imag_range = _get_padded_limits(np.imag(current_multipliers))
-            radius = max(
-                abs(real_range[0]),
-                abs(real_range[1]),
-                abs(imag_range[0]),
-                abs(imag_range[1]),
-                1.2,
-            )
-            ax.set_xlim(-radius, radius)
-            ax.set_ylim(-radius, radius)
         return (sc,)
 
     animation = FuncAnimation(
@@ -560,7 +581,8 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
     xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
 
-    ax.scatter(
+    _robust_plot_call(
+        ax.scatter,
         np.real(floquet_exponents),
         np.imag(floquet_exponents),
         **plot_kwargs,
@@ -628,13 +650,14 @@ def animate_floquet_exponents(
         lambdas = np.asarray(floquet_multipliers)
         floquet_exponents = np.log(lambdas) / equation.T_solution
         all_exponents.append(floquet_exponents)
-    scatter_kwargs = {"marker": "x"}
-    scatter_kwargs.update(plot_kwargs)
-
     title = plot_kwargs.pop("title", "Floquet exponents")
     xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
-    (sc,) = ax.plot([], [], **plot_kwargs)
+
+    scatter_kwargs = {"marker": "x"}
+    scatter_kwargs.update(plot_kwargs)
+
+    (sc,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_exponents).min()
@@ -649,7 +672,8 @@ def animate_floquet_exponents(
             min_imag_value if min_imag_value < -1.2 else -1.2,
             max_imag_value if max_imag_value > 1.2 else 1.2,
         )
-    sc = ax.scatter(
+    sc = _robust_plot_call(
+        ax.scatter,
         np.real(all_exponents[0]),
         np.imag(all_exponents[0]),
         **scatter_kwargs,
@@ -666,17 +690,6 @@ def animate_floquet_exponents(
             np.column_stack((np.real(current_exponents), np.imag(current_exponents)))
         )
         ax.set_title(f"Floquet exponents - frame {frame_idx + 1}/{len(all_exponents)}")
-        if scaling == "dynamic":
-            real_range = _get_padded_limits(np.real(current_exponents))
-            imag_range = _get_padded_limits(np.imag(current_exponents))
-            radius = max(
-                abs(real_range[0]),
-                abs(real_range[1]),
-                abs(imag_range[0]),
-                abs(imag_range[1]),
-            )
-            ax.set_xlim(-radius, radius)
-            ax.set_ylim(-radius, radius)
         return (sc,)
 
     animation = FuncAnimation(
@@ -875,7 +888,8 @@ def plot_matrix_block_norm(
         scatter_defaults["norm"] = LogNorm(vmax=vmax, vmin=vmin, clip=False)
     scatter_defaults.update(plot_kwargs)
 
-    sc = ax.scatter(
+    sc = _robust_plot_call(
+        ax.scatter,
         x_positions,
         y_positions,
         c=norm_values,
