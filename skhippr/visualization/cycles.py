@@ -38,9 +38,9 @@ from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence, Iterable
 
 
-def _robust_plot_call(plot_method, *args, **kwargs):
+def _robust_plot(plot_method, *args, **kwargs):
     """
-    Call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
+    Plotting wrapper: call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
     ``ax.plot`` or ``ax.scatter``.
 
     Keyword arguments that are valid properties of the resulting artist are
@@ -65,7 +65,6 @@ def _robust_plot_call(plot_method, *args, **kwargs):
                 f"Ignoring keyword argument '{bad_kwarg}={kwargs[bad_kwarg]!r}': "
                 "not a valid property of the plotted artist.",
                 UserWarning,
-                stacklevel=3,
             )
             del kwargs[bad_kwarg]
 
@@ -125,7 +124,7 @@ def plot_period(
     xlabel = plot_kwargs.pop("xlabel", "t")
     ylabel = plot_kwargs.pop("ylabel", "x")
 
-    _robust_plot_call(ax.plot, t, x, **plot_kwargs)
+    _robust_plot(ax.plot, t, x, **plot_kwargs)
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -212,7 +211,7 @@ def animate_period(
     xlabel = plot_kwargs.pop("xlabel", "t")
     ylabel = plot_kwargs.pop("ylabel", "x")
 
-    (line,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
+    (line,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
 
     ax.set_xlim(all_times.min(), all_times.max())
     ax.set_ylim(all_signals.min(), all_signals.max())
@@ -269,7 +268,7 @@ def plot_phase(
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
 
-    _robust_plot_call(ax.plot, x_time[idx[0], :], x_time[idx[1], :], **plot_kwargs)
+    _robust_plot(ax.plot, x_time[idx[0], :], x_time[idx[1], :], **plot_kwargs)
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -340,7 +339,7 @@ def animate_phase(
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
 
-    (line,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
+    (line,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
 
     # Fix the axes limits to the full range spanned by all trajectories so that
     # every frame of the animation stays within view.
@@ -400,7 +399,7 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
     floquet_multipliers = equation.eigenvalues
     fourier = equation.fourier
 
-    _robust_plot_call(
+    _robust_plot(
         ax.scatter,
         np.real(floquet_multipliers),
         np.imag(floquet_multipliers),
@@ -478,7 +477,7 @@ def animate_floquet_multipliers(
     xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
 
-    (sc,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
+    (sc,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_multipliers).min()
@@ -504,7 +503,7 @@ def animate_floquet_multipliers(
     scatter_kwargs = {"marker": "x"}
     scatter_kwargs.update(plot_kwargs)
 
-    sc = _robust_plot_call(
+    sc = _robust_plot(
         ax.scatter,
         np.real(all_multipliers[0]),
         np.imag(all_multipliers[0]),
@@ -576,7 +575,7 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
     xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
 
-    _robust_plot_call(
+    _robust_plot(
         ax.scatter,
         np.real(floquet_exponents),
         np.imag(floquet_exponents),
@@ -652,7 +651,7 @@ def animate_floquet_exponents(
     scatter_kwargs = {"marker": "x"}
     scatter_kwargs.update(plot_kwargs)
 
-    (sc,) = _robust_plot_call(ax.plot, [], [], **plot_kwargs)
+    (sc,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_exponents).min()
@@ -667,7 +666,7 @@ def animate_floquet_exponents(
             min_imag_value if min_imag_value < -1.2 else -1.2,
             max_imag_value if max_imag_value > 1.2 else 1.2,
         )
-    sc = _robust_plot_call(
+    sc = _robust_plot(
         ax.scatter,
         np.real(all_exponents[0]),
         np.imag(all_exponents[0]),
@@ -883,7 +882,7 @@ def plot_matrix_block_norm(
         scatter_defaults["norm"] = LogNorm(vmax=vmax, vmin=vmin, clip=False)
     scatter_defaults.update(plot_kwargs)
 
-    sc = _robust_plot_call(
+    sc = _robust_plot(
         ax.scatter,
         x_positions,
         y_positions,
