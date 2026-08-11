@@ -63,7 +63,9 @@ def _make_fourier():
 
 
 def _make_ode(omega):
-    return Duffing(t=0, x=np.array([1.0, 0.0]), alpha=1, beta=3, F=1, delta=1, omega=omega)
+    return Duffing(
+        t=0, x=np.array([1.0, 0.0]), alpha=1, beta=3, F=1, delta=1, omega=omega
+    )
 
 
 def _initial_guess(fourier, omega):
@@ -203,18 +205,17 @@ def test_plot_rejects_unrelated_object(plot_func):
 
 
 @pytest.mark.parametrize(
-    "animate_func", [animate_phase, animate_floquet_multipliers, animate_floquet_exponents]
+    "animate_func",
+    [
+        animate_phase,
+        animate_period,
+        animate_floquet_multipliers,
+        animate_floquet_exponents,
+    ],
 )
 def test_animate_accepts_hbm_equation_or_hbm_system_set(animate_func, hbm_set):
     """The animate_* functions (besides animate_period) accept either item type too."""
     ax, animation = animate_func(hbm_set)
-    assert isinstance(ax, plt.Axes)
-
-
-def test_animate_period_accepts_hbm_system_set(hbm_system_set_for_animate_period):
-    # animate_period specifically requires EquationSystem-like items (see the
-    # `hbm_system_set_for_animate_period` fixture docstring for why).
-    ax, animation = animate_period(hbm_system_set_for_animate_period)
     assert isinstance(ax, plt.Axes)
 
 
@@ -242,6 +243,7 @@ def test_existing_ax_is_reused_and_left_untouched(plot_func, hbm_arg):
     fig, ax = plt.subplots()
     ax.set_title("pre-existing title")
     ax.set_xlabel("pre-existing xlabel")
+    ax.set_ylabel("pre-existing ylabel")
     n_figures_before = len(plt.get_fignums())
 
     returned_ax = plot_func(hbm_arg, ax=ax)
@@ -251,10 +253,17 @@ def test_existing_ax_is_reused_and_left_untouched(plot_func, hbm_arg):
     # The function must not override an axis that was handed to it.
     assert ax.get_title() == "pre-existing title"
     assert ax.get_xlabel() == "pre-existing xlabel"
+    assert ax.get_ylabel() == "pre-existing ylabel"
 
 
 @pytest.mark.parametrize(
-    "animate_func", [animate_phase, animate_floquet_multipliers, animate_floquet_exponents]
+    "animate_func",
+    [
+        animate_phase,
+        animate_period,
+        animate_floquet_multipliers,
+        animate_floquet_exponents,
+    ],
 )
 def test_animate_ax_none_creates_new_axis(animate_func, hbm_set):
     ax, animation = animate_func(hbm_set)
@@ -263,7 +272,8 @@ def test_animate_ax_none_creates_new_axis(animate_func, hbm_set):
 
 
 @pytest.mark.parametrize(
-    "animate_func", [animate_phase, animate_floquet_multipliers, animate_floquet_exponents]
+    "animate_func",
+    [animate_phase, animate_floquet_multipliers, animate_floquet_exponents],
 )
 def test_animate_existing_ax_is_reused(animate_func, hbm_set):
     fig, ax = plt.subplots()
@@ -308,7 +318,9 @@ def test_invalid_kwarg_warns_and_is_ignored(plot_func, hbm_arg):
 
 
 @pytest.mark.parametrize("plot_func", LINE_PLOT_FUNCS, ids=_ids(LINE_PLOT_FUNCS))
-def test_invalid_kwarg_does_not_suppress_valid_sibling_kwargs_line_plot(plot_func, hbm_arg):
+def test_invalid_kwarg_does_not_suppress_valid_sibling_kwargs_line_plot(
+    plot_func, hbm_arg
+):
     """A single bad keyword argument must not prevent the *other* valid ones from applying."""
     with pytest.warns(UserWarning, match="not_a_real_kwarg"):
         ax = plot_func(hbm_arg, label="keep me", not_a_real_kwarg="nonsense")
@@ -455,7 +467,9 @@ def test_plot_matrix_block_norm_valid_kwarg_is_applied(random_square_matrix):
     assert sc.get_label() == "my label"
 
 
-def test_plot_matrix_block_norm_invalid_kwarg_warns_and_is_ignored(random_square_matrix):
+def test_plot_matrix_block_norm_invalid_kwarg_warns_and_is_ignored(
+    random_square_matrix,
+):
     matrix, block_size = random_square_matrix
     with pytest.warns(UserWarning, match="not_a_real_kwarg"):
         ax, sc = plot_matrix_block_norm(matrix, block_size, not_a_real_kwarg="nonsense")

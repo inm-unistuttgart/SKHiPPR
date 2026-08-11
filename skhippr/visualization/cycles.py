@@ -222,14 +222,9 @@ def animate_period(
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
-    parameter = hbm_set[0].equations[-1].continuation_parameter
-
     def _update(frame_idx: int):
         line.set_data(times[frame_idx], signals[frame_idx])
-        ax.set_title(
-            f"Time series animation - frame {frame_idx+1}/{len(times)} "
-            f"(v={getattr(_get_equation_helper(hbm_set[frame_idx]), parameter, 'N/A')})"
-        )
+        ax.set_title(f"Time series animation - frame {frame_idx+1}/{len(times)} ")
         return (line,)
 
     animation = FuncAnimation(
