@@ -33,37 +33,15 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib.animation import FuncAnimation
 
-from skhippr.cycles.hbm import HBMEquation, HBMSystem
+from skhippr.cycles.hbm import HBMEquation
 from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence, Iterable
 
-
-def _robust_plot(plot_method, *args, **kwargs):
-    """
-    Plotting wrapper:
-    Call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
-    ``ax.plot`` or ``ax.scatter`` while handling keyword arguments robustly.
-
-    * Keyword arguments that are valid properties of the resulting artist are
-    passed through and take effect normally.
-    * A keyword argument that is not a valid property triggers a :py:class:`UserWarning` and is subsequently ignored.
-    """
-
-    kwargs = dict(kwargs)
-    while True:
-        try:
-            return plot_method(*args, **kwargs)
-        except AttributeError as error:
-            bad_kwarg = getattr(error, "name", None)
-            if bad_kwarg is None or bad_kwarg not in kwargs:
-                # Not a case of an unrecognized keyword argument: re-raise.
-                raise error
-            warnings.warn(
-                f"Ignoring keyword argument '{bad_kwarg}={kwargs[bad_kwarg]}': "
-                "not a valid property of the plotted artist.",
-                UserWarning,
-            )
-            del kwargs[bad_kwarg]
+from skhippr.visualization._helpers import (
+    robust_plot,
+    parse_and_generate_axis,
+    extract_equation,
+)
 
 
 def plot_period(
@@ -95,37 +73,28 @@ def plot_period(
         The :py:class:`~matplotlib.axes.Axes` object with the plotted period response.
 
     """
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-    else:
-        generated_ax = False
 
-    equation = _get_equation_helper(hbm)
-    fourier = equation.fourier
+    default_args = {
+        "title": f"Time series - {n_periods} periods",
+        "xlabel": "t",
+        "ylabel": f"x_{idx}",
+    }
+
+    kwargs = {**default_args, **plot_kwargs}
+
+    # determine quantities to plot
+    equation = extract_equation(hbm, HBMEquation)
     omega = equation.omega_solution
-    x_time = equation.x_time()
-    x_single_period = x_time[idx, :]
-    t = fourier.time_samples(omega, n_periods)
-    n = int(np.ceil(n_periods))
-    x = np.tile(x_single_period, n)[: t.size]
+    t = equation.fourier.time_samples(omega, n_periods)
+    x = equation.x_time()[idx, :]
 
-    title = plot_kwargs.pop(
-        "title",
-        (
-            "Time series over one period"
-            if n_periods == 1
-            else f"Time series over {n_periods} periods"
-        ),
-    )
-    xlabel = plot_kwargs.pop("xlabel", "t")
-    ylabel = plot_kwargs.pop("ylabel", "x")
+    # repeat the time series to cover the requested number of periods
+    x = np.tile(x, int(np.ceil(n_periods)))[: t.size]
 
-    _robust_plot(ax.plot, t, x, **plot_kwargs)
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    # plot
+    ax = parse_and_generate_axis(ax, **kwargs)
+    robust_plot(ax.plot, t, x, **kwargs)
+
     return ax
 
 
@@ -208,7 +177,7 @@ def animate_period(
     xlabel = plot_kwargs.pop("xlabel", "t")
     ylabel = plot_kwargs.pop("ylabel", "x")
 
-    (line,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
+    (line,) = robust_plot(ax.plot, [], [], **plot_kwargs)
 
     ax.set_xlim(all_times.min(), all_times.max())
     ax.set_ylim(all_signals.min(), all_signals.max())
@@ -254,22 +223,25 @@ def plot_phase(
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the phase plot.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-    equation = _get_equation_helper(hbm)
-    x_time = equation.x_time()
 
-    title = plot_kwargs.pop("title", "Phase plot of solution")
-    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
-    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
+    default_args = {
+        "title": f"Phase plot - x_{idx[0]} vs x_{idx[1]}",
+        "xlabel": f"x_{idx[0]}",
+        "ylabel": f"x_{idx[1]}",
+    }
 
-    _robust_plot(ax.plot, x_time[idx[0], :], x_time[idx[1], :], **plot_kwargs)
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    kwargs = {**default_args, **plot_kwargs}
+
+    # determine quantities to plot
+    equation = extract_equation(hbm, HBMEquation)
+    x = equation.x_time()
+
+    # plot
+    ax = parse_and_generate_axis(ax, **kwargs)
+    robust_plot(
+        ax.plot, x[idx[0], :], x[idx[1], :], default_args=default_args, **kwargs
+    )
+
     return ax
 
 
@@ -336,7 +308,7 @@ def animate_phase(
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
 
-    (line,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
+    (line,) = robust_plot(ax.plot, [], [], **plot_kwargs)
 
     # Fix the axes limits to the full range spanned by all trajectories so that
     # every frame of the animation stays within view.
@@ -380,38 +352,37 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with a scatter plot of the Floquet multipliers on the complex plane. A unit circle is also plotted, if no axes is given in the call.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
 
-    title = plot_kwargs.pop("title", "Floquet multipliers")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
+    default_args = {
+        "title": "Floquet multipliers",
+        "xlabel": "Re($\\lambda$)",
+        "ylabel": "Im($\\lambda$)",
+        "marker": "x",
+    }
 
-    kwargs = {"marker": "x"}
-    kwargs.update(plot_kwargs)
+    kwargs = {**default_args, **plot_kwargs}
 
-    equation = _get_equation_helper(hbm)
+    equation = extract_equation(hbm, HBMEquation)
     floquet_multipliers = equation.eigenvalues
-    fourier = equation.fourier
 
-    _robust_plot(
+    new_axis = ax is None
+    ax = parse_and_generate_axis(ax, **kwargs)
+
+    # plot unit circle
+    if new_axis:
+        ax.plot(
+            np.cos(equation.fourier.time_samples_normalized),
+            np.sin(equation.fourier.time_samples_normalized),
+            "k",
+        )
+        ax.set_aspect("equal", adjustable="datalim")
+
+    robust_plot(
         ax.scatter,
         np.real(floquet_multipliers),
         np.imag(floquet_multipliers),
         **kwargs,
     )
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_aspect("equal")
-        ax.plot(
-            np.cos(fourier.time_samples_normalized),
-            np.sin(fourier.time_samples_normalized),
-            "k",
-        )
     return ax
 
 
@@ -474,7 +445,7 @@ def animate_floquet_multipliers(
     xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
 
-    (sc,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
+    (sc,) = robust_plot(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_multipliers).min()
@@ -500,7 +471,7 @@ def animate_floquet_multipliers(
     scatter_kwargs = {"marker": "x"}
     scatter_kwargs.update(plot_kwargs)
 
-    sc = _robust_plot(
+    sc = robust_plot(
         ax.scatter,
         np.real(all_multipliers[0]),
         np.imag(all_multipliers[0]),
@@ -555,34 +526,33 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with a scatter plot of the Floquet exponents on the imaginary plane.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
 
-    kwargs = {"marker": "x"}
-    kwargs.update(plot_kwargs)
+    default_args = {
+        "title": "Floquet exponents",
+        "xlabel": "Re($\\alpha$)",
+        "ylabel": "Im($\\alpha$)",
+        "marker": "x",
+    }
 
-    equation = _get_equation_helper(hbm)
+    kwargs = {**default_args, **plot_kwargs}
+
+    equation = extract_equation(hbm, HBMEquation)
     floquet_multipliers = equation.eigenvalues
-    lambdas = np.asarray(floquet_multipliers)
-    floquet_exponents = np.log(lambdas) / equation.T_solution
+    floquet_exponents = np.log(floquet_multipliers) / equation.T_solution
 
-    title = plot_kwargs.pop("title", "Floquet exponents")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
+    new_axis = ax is None
+    ax = parse_and_generate_axis(ax, **kwargs)
 
-    _robust_plot(
+    # plot stability boundary
+    if new_axis:
+        ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
+
+    robust_plot(
         ax.scatter,
         np.real(floquet_exponents),
         np.imag(floquet_exponents),
-        **plot_kwargs,
+        **kwargs,
     )
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
     return ax
 
 
@@ -648,7 +618,7 @@ def animate_floquet_exponents(
     scatter_kwargs = {"marker": "x"}
     scatter_kwargs.update(plot_kwargs)
 
-    (sc,) = _robust_plot(ax.plot, [], [], **plot_kwargs)
+    (sc,) = robust_plot(ax.plot, [], [], **plot_kwargs)
 
     if show_full_range:
         min_real_value = np.real(all_exponents).min()
@@ -663,7 +633,7 @@ def animate_floquet_exponents(
             min_imag_value if min_imag_value < -1.2 else -1.2,
             max_imag_value if max_imag_value > 1.2 else 1.2,
         )
-    sc = _robust_plot(
+    sc = robust_plot(
         ax.scatter,
         np.real(all_exponents[0]),
         np.imag(all_exponents[0]),
@@ -879,7 +849,7 @@ def plot_matrix_block_norm(
         scatter_defaults["norm"] = LogNorm(vmax=vmax, vmin=vmin, clip=False)
     scatter_defaults.update(plot_kwargs)
 
-    sc = _robust_plot(
+    sc = robust_plot(
         ax.scatter,
         x_positions,
         y_positions,
