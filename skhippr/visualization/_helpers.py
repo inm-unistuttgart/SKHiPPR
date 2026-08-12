@@ -72,7 +72,7 @@ def extract_equation(eq, usable_class=AbstractEquation):
         return eq
     elif isinstance(eq, EquationSystem):
         for equation in eq.equations:
-            if isinstance(equation, HBMEquation):
+            if isinstance(equation, usable_class):
                 return equation
         raise ValueError(
             f"EquationSystem does not contain any usable {usable_class} instance"

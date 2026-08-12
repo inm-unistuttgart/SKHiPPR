@@ -17,6 +17,12 @@ from skhippr.odes.AbstractODE import AbstractODE
 from skhippr.equations.EquationSystem import EquationSystem
 from collections.abc import Sequence
 
+from skhippr.visualization._helpers import (
+    robust_plot,
+    parse_and_generate_axis,
+    extract_equation,
+)
+
 
 def plot_equilibrium(
     ode: AbstractODE | EquationSystem,
@@ -43,23 +49,22 @@ def plot_equilibrium(
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the equilibrium.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-    title = plot_kwargs.pop("title", "Equilibrium")
-    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
-    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
-    kwargs = {"marker": "x"}
-    kwargs.update(plot_kwargs)
+    default_args = {
+        "title": f"Equilibrium",
+        "xlabel": f"x_{idx[0]}",
+        "ylabel": f"x_{idx[1]}",
+        "marker": "x",
+    }
 
-    equation = _get_equation_helper(ode=ode)
-    x = np.asarray(equation.x)
-    ax.plot(x[idx[0]], x[idx[1]], **kwargs)
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    kwargs = {**default_args, **plot_kwargs}
+
+    # determine quantities to plot
+    equation = extract_equation(ode, AbstractODE)
+
+    # plot
+    ax = parse_and_generate_axis(ax, **kwargs)
+    robust_plot(ax.plot, equation.x[idx[0]], equation.x[idx[1]], **kwargs)
+
     return ax
 
 
@@ -81,50 +86,29 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the the plotted eigenvalues.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    default_args = {
+        "title": "Floquet exponents",
+        "xlabel": "Re($\\alpha$)",
+        "ylabel": "Im($\\alpha$)",
+        "marker": "x",
+    }
 
-    title = plot_kwargs.pop("title", "Equilibrium eigenvalues")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
-    kwargs = {"marker": "x"}
-    kwargs.update(plot_kwargs)
+    kwargs = {**default_args, **plot_kwargs}
 
-    equation = _get_equation_helper(ode=ode)
-    eigenvalues = np.asarray(equation.eigenvalues)
-    ax.scatter(np.real(eigenvalues), np.imag(eigenvalues), **kwargs)
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    equation = extract_equation(ode, AbstractODE)
+    eigenvalues = equation.eigenvalues
+
+    new_axis = ax is None
+    ax = parse_and_generate_axis(ax, **kwargs)
+
+    # plot stability boundary
+    if new_axis:
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
+
+    robust_plot(
+        ax.scatter,
+        np.real(eigenvalues),
+        np.imag(eigenvalues),
+        **kwargs,
+    )
     return ax
-
-
-def _get_equation_helper(ode: AbstractODE | EquationSystem):
-    """
-    A helper function that returns an :py:class:`~skhippr.odes.AbstractODE.AbstractODE`.
-    Parameters
-    ----------
-    ode : AbstractODE or EquationSystem
-        An equation or system of equations.
-
-    Returns
-    -------
-    equation : AbstractODE
-        The first valid :py:class:`~skhippr.odes.AbstractODE.AbstractODE` found.
-
-    Raises
-    ------
-    ValueError
-        If ``ode`` does not contain any usable :py:class:`~skhippr.odes.AbstractODE.AbstractODE` instance.
-    """
-    if isinstance(ode, AbstractODE):
-        return ode
-    if isinstance(ode, EquationSystem):
-        for equation in ode.equations:
-            if isinstance(equation, AbstractODE):
-                return equation
-    raise ValueError("ode does not contain any usable AbstractODE instance")
