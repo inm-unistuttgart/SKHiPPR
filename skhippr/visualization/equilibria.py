@@ -22,7 +22,7 @@ def plot_equilibrium(
     ode: AbstractODE | EquationSystem,
     ax=None,
     idx: Sequence[int] = [0, 1],
-    **plot_kwargs
+    **plot_kwargs,
 ):
     """
     Plot the equilibrium of an ordinary differential equation.
@@ -47,10 +47,10 @@ def plot_equilibrium(
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    title = plot_kwargs.pop("title", "Equilibria")
+    title = plot_kwargs.pop("title", "Equilibrium")
     xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
     ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
-    kwargs = {"marker" : "x"}
+    kwargs = {"marker": "x"}
     kwargs.update(plot_kwargs)
 
     equation = _get_equation_helper(ode=ode)
@@ -85,23 +85,20 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     if ax is None:
         _, ax = plt.subplots(1, 1)
         generated_ax = True
-    
-    title = plot_kwargs.pop("title", "Equilibria eigenvalues")
+
+    title = plot_kwargs.pop("title", "Equilibrium eigenvalues")
     xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
     ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
-    kwargs = {"marker" : "x"}
+    kwargs = {"marker": "x"}
     kwargs.update(plot_kwargs)
-    
+
     equation = _get_equation_helper(ode=ode)
     eigenvalues = np.asarray(equation.eigenvalues)
-    ax.scatter(
-        np.real(eigenvalues), np.imag(eigenvalues), **kwargs
-    )
+    ax.scatter(np.real(eigenvalues), np.imag(eigenvalues), **kwargs)
     if generated_ax:
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        ax.legend(loc="best")
         ax.axvline(0.0, color="k", linestyle="--", linewidth=1.0)
     return ax
 
