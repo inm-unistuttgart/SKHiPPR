@@ -38,7 +38,9 @@ def robust_plot(plot_method, *args, **kwargs):
             del kwargs[bad_kwarg]
 
 
-def parse_and_generate_axis(ax: plt.Axes | None, **kwargs) -> tuple[bool, plt.Axes]:
+def parse_and_generate_axis(
+    ax: plt.Axes | None, ndim=2, **kwargs
+) -> tuple[bool, plt.Axes]:
     """
     Parse the input axis and generate a new one if necessary.
 
@@ -55,7 +57,12 @@ def parse_and_generate_axis(ax: plt.Axes | None, **kwargs) -> tuple[bool, plt.Ax
         The parsed or newly generated axis.
     """
     if ax is None:
-        _, ax = plt.subplots()
+
+        if ndim <= 2:
+            _, ax = plt.subplots()
+        elif ndim == 3:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection="3d")
 
         # Try to set arguments passed as keyword arguments to the axis.
         # If a keyword argument is not a valid property of the axis, it will be ignored.
@@ -64,6 +71,7 @@ def parse_and_generate_axis(ax: plt.Axes | None, **kwargs) -> tuple[bool, plt.Ax
                 ax.set(**{key: value})
             except AttributeError as error:
                 pass
+
     return ax
 
 

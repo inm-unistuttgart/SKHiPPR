@@ -23,6 +23,12 @@ import numpy as np
 
 from skhippr.solvers.continuation import BranchPoint
 
+from skhippr.visualization._helpers import (
+    parse_and_generate_axis,
+    robust_plot,
+    extract_equation,
+)
+
 
 def plot_continuation(
     branch: Iterable[BranchPoint],
@@ -31,7 +37,7 @@ def plot_continuation(
     ] = lambda bp: bp.vector_of_unknowns[0],
     ax=None,
     clean_legend=True,
-    **plot_kwargs
+    **plot_kwargs,
 ):
     """
     Plot the numerical continuation results stored in an :py:class:`~collections.abc.Iterable` of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects.
@@ -75,89 +81,68 @@ def plot_continuation(
     - When making plots without a continuation parameter, ``plot_fun`` must return the plotting coordinates explicitly.
     - An example for a ``plot_fun`` with outputs of different shapes that all squeeze to the same length can be found in :py:func:`examples.duffing_3d.plot_all_responses`.
     """
-    branch_list = list(branch)
 
-    stability_defined = True
-    for bp in branch_list:
-        if (
-            getattr(bp, "equation_determining_stability", None) is None
-            or bp.equation_determining_stability.stability_method is None
-            or bp.stable is None
-        ):
-            stability_defined = False
-            break
+    default_kwargs = {
+        "title": "Continuation Plot",
+        "xlabel": "measure[0]",
+        "ylabel": "measure[1]",
+        "zlabel": "measure[2]",
+        "stable_color": "r",
+        "unstable_color": "b",
+        "color": "k",
+        "stable_label": "stable",
+        "unstable_label": "unstable",
+    }
 
-    values, dim = _get_values_and_dimension(branch_list, plot_fun)
-    if dim not in (1, 2, 3):
+    values, branch_list = eval_plot_fun(branch, plot_fun)
+
+    # analyze dimension
+    ndim = values.shape[1]
+    if ndim not in (1, 2, 3):
         raise ValueError(
             "plot_fun must return a scalar or a numpy array of size 2 or 3."
         )
 
-    generated_ax = False
-    if ax is None:
-        if dim == 3:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection="3d")
-        else:
-            _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    if ndim == 1:
+        # add parameter values as x axis
+        parameter_values = np.array([bp.vector_of_unknowns[-1] for bp in branch_list])
+        values = np.concatenate([parameter_values[:, np.newaxis], values], axis=1)
+        default_kwargs["xlabel"] = branch_list[0].unknowns[-1]
 
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
+    plot_kwargs = {**default_kwargs, **plot_kwargs}
+
+    # handle stability
+
+    bp = branch_list[0]
+    stability_defined = not (
+        getattr(bp, "equation_determining_stability", None) is None
+        or bp.equation_determining_stability.stability_method is None
+        or bp.stable is None
+    )
 
     if stability_defined:
         stable_flags = np.array([bp.stable for bp in branch_list])
     else:
         stable_flags = np.full(len(branch_list), True)
+        plot_kwargs["stable_color"] = plot_kwargs["color"]
+        plot_kwargs["stable_label"] = ""
 
-    stable_col = plot_kwargs.pop("stable_color", "r" if stability_defined else "k")
-    stable_col = plot_kwargs.pop("color", stable_col)
-    unstable_col = plot_kwargs.pop("unstable_color", "b" if stability_defined else "k")
-    stable_label = plot_kwargs.pop(
-        "stable_label", "stable" if stability_defined else None
-    )
-    unstable_label = plot_kwargs.pop(
-        "unstable_label", "unstable" if stability_defined else None
-    )
+    vals_stable = np.where(stable_flags[:, np.newaxis], values, np.nan)
+    vals_unstable = np.where(~stable_flags[:, np.newaxis], values, np.nan)
 
-    title = plot_kwargs.pop("title", "Continuation Plot")
-    xlabel = plot_kwargs.pop("xlabel", parameter if dim == 1 else "measure[0]")
-    ylabel = plot_kwargs.pop("ylabel", "measure[1]")
-    zlabel = plot_kwargs.pop("zlabel", "measure[2]")
-
-    if dim == 1:
-        xs, ys = parameter_values, values[:, 0]
-    elif dim == 2:
-        xs, ys = values[:, 0], values[:, 1]
-    elif dim == 3:
-        xs, ys, zs = values[:, 0], values[:, 1], values[:, 2]
-    xs_stable = np.where(stable_flags, xs, np.nan)
-    xs_unstable = np.where(~stable_flags, xs, np.nan)
-
-    if dim == 3:
-        ax.plot3D(
-            xs_stable, ys, zs, color=stable_col, label=stable_label, **plot_kwargs
-        )
-        ax.plot3D(
-            xs_unstable, ys, zs, color=unstable_col, label=unstable_label, **plot_kwargs
-        )
+    ax = parse_and_generate_axis(ax, ndim=ndim, **plot_kwargs)
+    if ndim == 3:
+        plot_method = ax.plot3D
     else:
-        ax.plot(xs_stable, ys, color=stable_col, label=stable_label, **plot_kwargs)
-        ax.plot(
-            xs_unstable, ys, color=unstable_col, label=unstable_label, **plot_kwargs
-        )
+        plot_method = ax.plot
 
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        if dim == 3:
-            ax.set_zlabel(zlabel)
+    plot_kwargs["color"] = plot_kwargs.pop("stable_color")
+    plot_kwargs["label"] = plot_kwargs.pop("stable_label")
+    robust_plot(plot_method, *vals_stable.T, **plot_kwargs)
+
+    plot_kwargs["color"] = plot_kwargs.pop("unstable_color")
+    plot_kwargs["label"] = plot_kwargs.pop("unstable_label")
+    robust_plot(plot_method, *vals_unstable.T, **plot_kwargs)
 
     if stability_defined:
         ax.legend()
@@ -244,7 +229,7 @@ def plot_floquet_multiplier_continuation(
             color=stable_col,
             alpha=alpha,
             linewidth=1.5,
-            **plot_kwargs
+            **plot_kwargs,
         )
         ax.plot(
             xs_unstable,
@@ -252,7 +237,7 @@ def plot_floquet_multiplier_continuation(
             color=unstable_col,
             alpha=alpha,
             linewidth=1.5,
-            **plot_kwargs
+            **plot_kwargs,
         )
 
     ax.axhline(
@@ -361,7 +346,7 @@ def plot_floquet_exponent_continuation(
             color=stable_col,
             alpha=alpha,
             linewidth=1.5,
-            **plot_kwargs
+            **plot_kwargs,
         )
         ax.plot(
             xs_unstable,
@@ -369,7 +354,7 @@ def plot_floquet_exponent_continuation(
             color=unstable_col,
             alpha=alpha,
             linewidth=1.5,
-            **plot_kwargs
+            **plot_kwargs,
         )
 
     ax.axhline(
@@ -436,12 +421,12 @@ def _to_array(value: float | np.ndarray | Iterable):
     return np.array([np.squeeze(v) for v in value])
 
 
-def _get_values_and_dimension(
+def eval_plot_fun(
     branch: Iterable[BranchPoint],
     plot_fun: Callable[[BranchPoint], object],
 ):
     """
-    Evaluate ``plot_fun`` across branch points and validate consistent dimensionality
+    Evaluate ``plot_fun`` across branch points
 
     Parameters
     ----------
@@ -457,10 +442,18 @@ def _get_values_and_dimension(
     dim : int {1,2,3}
         Dimensionality of measures returned by ``plot_fun``.
     """
-    branch = list(branch)
-    value_list = [_to_array(plot_fun(bp)) for bp in branch]
-    dim = value_list[0].size
-    return np.array(value_list), dim
+
+    value_list = []
+    list_branch = []
+    for bp in branch:
+        value = plot_fun(bp)
+        if np.isscalar(value):
+            value_list.append(np.atleast_1d(value))
+        else:
+            value_list.append([np.squeeze(value[k]) for k in range(len(value))])
+
+        list_branch.append(bp)
+    return np.array(value_list), list_branch
 
 
 def _get_handle_signature(handle):
