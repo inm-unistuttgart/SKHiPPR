@@ -40,18 +40,15 @@ from collections.abc import Sequence, Iterable
 
 def _robust_plot(plot_method, *args, **kwargs):
     """
-    Plotting wrapper: call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
-    ``ax.plot`` or ``ax.scatter``.
+    Plotting wrapper:
+    Call ``plot_method(*args, **kwargs)``, where ``plot_method`` is typically
+    ``ax.plot`` or ``ax.scatter`` while handling keyword arguments robustly.
 
-    Keyword arguments that are valid properties of the resulting artist are
-    passed through and take effect normally. A keyword argument that is not
-    a valid property makes Matplotlib's ``Artist.set()`` raise an
-    ``AttributeError`` whose ``name`` attribute identifies the offending
-    keyword (see :py:meth:`matplotlib.artist.Artist._update_props`). Such
-    keyword arguments are dropped one at a time, each triggering a
-    :py:class:`UserWarning`, and the call is retried with the remaining
-    keyword arguments until it succeeds.
+    * Keyword arguments that are valid properties of the resulting artist are
+    passed through and take effect normally.
+    * A keyword argument that is not a valid property triggers a :py:class:`UserWarning` and is subsequently ignored.
     """
+
     kwargs = dict(kwargs)
     while True:
         try:
@@ -60,9 +57,9 @@ def _robust_plot(plot_method, *args, **kwargs):
             bad_kwarg = getattr(error, "name", None)
             if bad_kwarg is None or bad_kwarg not in kwargs:
                 # Not a case of an unrecognized keyword argument: re-raise.
-                raise
+                raise error
             warnings.warn(
-                f"Ignoring keyword argument '{bad_kwarg}={kwargs[bad_kwarg]!r}': "
+                f"Ignoring keyword argument '{bad_kwarg}={kwargs[bad_kwarg]}': "
                 "not a valid property of the plotted artist.",
                 UserWarning,
             )
