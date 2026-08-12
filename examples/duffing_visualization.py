@@ -5,23 +5,8 @@ Demonstrates the visualization capabilities of SKHiPPR for periodic solutions us
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- Fourier configuration ---
-from skhippr.Fourier import Fourier
-
-# --- System function ---
-from skhippr.odes.nonautonomous import Duffing
-
 # --- HBM ---
 from skhippr.cycles.hbm import HBMSystem
-
-# --- Stability method ---
-from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
-
-# --- Solver ---
-from skhippr.solvers.newton import NewtonSolver
-
-# --- Continuation ---
-from skhippr.solvers.continuation import pseudo_arclength_continuator
 
 # --- Visualization ---
 from skhippr.visualization.cycles import (
@@ -33,12 +18,15 @@ from skhippr.visualization.cycles import (
     animate_floquet_exponents,
     plot_hill_matrix_blocks,
 )
+
 from skhippr.visualization.continuation import plot_continuation
 
 from skhippr.visualization.data_export import (
     save_png,
     save_pdf,
 )
+
+import examples.duffing_minimal
 
 
 def visualize_single_solution(hbm_sys: HBMSystem, save=False):
@@ -184,72 +172,9 @@ def animate_continuation_result(frc):
     )
 
 
-def main():
-
-    # --- FFT, stability method and Newton solver configuration ---
-    fourier = Fourier(N_HBM=30, L_DFT=300, n_dof=2, real_formulation=True)
-    stability_method = KoopmanHillSubharmonic(fourier, tol=1e-4)
-    solver = NewtonSolver(verbose=True)
-
-    # --- Setup parameters ---
-    omega = 0.3
-    F = 0.5
-
-    # --- Instantiation of the ODE at initial point ---
-    ode = Duffing(t=0, x=[1.0, 0.0], alpha=1, beta=2, delta=0.16, F=F, omega=omega)
-
-    # --- Initial guess in time and frequency domain ---
-    ts = fourier.time_samples(omega)
-    x0_samples = np.array([np.cos(ts * omega), -omega * np.sin(ts * omega)])
-    X0 = fourier.DFT(x0_samples)
-
-    # --- HBM equation system setup ---
-    hbm_sys = HBMSystem(
-        ode=ode,
-        omega=ode.omega,
-        fourier=fourier,
-        initial_guess=X0,
-        stability_method=stability_method,
-    )
-
-    # --- Solve initial point and visualize---
-    solver.solve(hbm_sys)
-    assert hbm_sys.solved
-
+if __name__ == "__main__":
+    hbm_sys, frc = examples.duffing_minimal.compute_frc()
     visualize_single_solution(hbm_sys, save=False)
-
-    # --- Continuation and visualize ---
-
-    # --- Preallocate the result of the FRC continuation ---
-    # BranchPoints (a subclass of EquationSystem) extend the initial EquationSystem with one added equation for the tangency condition.
-    frc = []
-
-    # it is a good idea to turn off the solver verbosity before starting a continuation
-    solver.verbose = False
-
-    # --- Iterate through the branch. ---
-    for branch_point in pseudo_arclength_continuator(
-        initial_system=hbm_sys,
-        solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 0.1),
-        continuation_parameter="omega",
-        initial_direction=1,
-        verbose=True,
-        num_steps=4000,
-    ):
-        frc.append(branch_point)
-
-        # break if omega exceeds maximum
-        if branch_point.omega > 2.5:
-            break
-
     visualize_continuation_result(frc)
     animations = animate_continuation_result(frc)
-
-    return animations
-
-
-if __name__ == "__main__":
-    animations = main()
     plt.show()
