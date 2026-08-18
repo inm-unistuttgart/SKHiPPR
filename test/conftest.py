@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 
 from skhippr.Fourier import Fourier
-from skhippr.odes.autonomous import Vanderpol, Truss, BlockOnBelt
+from skhippr.odes.autonomous import BlockOnBelt
 from skhippr.odes.nonautonomous import Duffing
 from skhippr.odes.ltp import (
     HillLTI,
@@ -59,8 +59,6 @@ def duffing_ode(request):
 @pytest.fixture(
     scope="session",
     params=[
-        "Vanderpol",
-        "Truss",
         "Blockonbelt",
         "DuffingPeriod1",
         "HillConst",
@@ -76,12 +74,6 @@ def ode_setting(request):
     x = np.random.rand(2)
 
     match request.param:
-        case "Vanderpol":
-            params = {"nu": 1.5}
-            return params, Vanderpol(x=x, **params)
-        case "Truss":
-            params = {"k": 100.0, "c": 0.5, "F": 1.0, "a": 0.1, "l_0": 1.0, "m": 1.0}
-            return params, Truss(x=x, **params)
         case "Blockonbelt":
             params = {"epsilon": 0.1, "k": 1, "m": 1, "Fs": 0.1, "vdr": 2, "delta": 0.5}
             return params, BlockOnBelt(x=x, **params)

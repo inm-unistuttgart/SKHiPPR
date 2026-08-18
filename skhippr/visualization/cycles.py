@@ -30,6 +30,7 @@ import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import PathCollection
 from matplotlib.colors import LogNorm
 from matplotlib.animation import FuncAnimation
 
@@ -47,11 +48,11 @@ from skhippr.visualization._helpers import (
 
 def plot_period(
     hbm: HBMEquation | EquationSystem,
-    ax=None,
-    idx=0,
+    ax: plt.Axes | None = None,
+    idx: int = 0,
     n_periods: float = 1.0,
     **plot_kwargs,
-):
+) -> plt.Axes:
     """
     Plot the time series of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation` over a given number of periods.
 
@@ -101,16 +102,16 @@ def plot_period(
 
 def animate_period(
     hbm_set: Iterable[HBMEquation | EquationSystem],
-    ax=None,
+    ax: plt.Axes | None = None,
     idx: int = 0,
     n_periods: float = 1.0,
     interval: int = 30,
     repeat: bool = True,
-    scaling=True,
-    anim_title=None,
-    scale_padding=1.05,
+    scaling: bool = True,
+    anim_title: str | None = None,
+    scale_padding: float = 1.05,
     **plot_kwargs,
-):
+) -> tuple[plt.Axes, FuncAnimation]:
     """
     Create an animated time series visualization for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances over a given number of periods.
 
@@ -130,6 +131,12 @@ def animate_period(
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
         Whether to repeat the animation. Default is ``True``.
+    scaling : bool, optional
+        If ``True`` (default), the axes limits are rescaled to the data range of each frame as the animation plays. If ``False``, the axes limits are instead fixed once, at creation time, to the range spanning all frames (only takes effect when a new axis is created, i.e. ``ax`` was ``None``).
+    anim_title : str, optional
+        If given, used as a title prefix for every frame; the current frame index is appended automatically. If ``None`` (default) and a new axis is created, a title of the form ``"time history x[{idx}]"`` is used.
+    scale_padding : float, optional
+        Multiplicative padding factor applied to the axes limits computed from the data range. Default is 1.05.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.plot()``.
 
@@ -187,10 +194,10 @@ def animate_period(
 
 def plot_phase(
     hbm: HBMEquation | EquationSystem,
-    ax=None,
+    ax: plt.Axes | None = None,
     idx: Sequence[int] = [0, 1],
     **plot_kwargs,
-):
+) -> plt.Axes:
     """
     Plot the phase of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`.
 
@@ -234,15 +241,15 @@ def plot_phase(
 
 def animate_phase(
     hbm_set: Iterable[HBMEquation | EquationSystem],
-    ax=None,
-    idx=(0, 1),
+    ax: plt.Axes | None = None,
+    idx: Sequence[int] = (0, 1),
     interval: int = 30,
     repeat: bool = True,
-    scaling=True,
-    anim_title=None,
-    scale_padding=1.05,
+    scaling: bool = True,
+    anim_title: str | None = None,
+    scale_padding: float = 1.05,
     **plot_kwargs,
-):
+) -> tuple[plt.Axes, FuncAnimation]:
     """
     Create an animated phase plane visualization for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances.
 
@@ -263,6 +270,12 @@ def animate_phase(
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
         Whether to repeat the animation loop. Default is ``True``.
+    scaling : bool, optional
+        If ``True`` (default), the axes limits are rescaled to the data range of each frame as the animation plays. If ``False``, the axes limits are instead fixed once, at creation time, to the range spanning all frames (only takes effect when a new axis is created, i.e. ``ax`` was ``None``).
+    anim_title : str, optional
+        If given, used as a title prefix for every frame; the current frame index is appended automatically. If ``None`` (default) and a new axis is created, a title of the form ``"phase plot x[{idx[0]}], x[{idx[1]}]"`` is used.
+    scale_padding : float, optional
+        Multiplicative padding factor applied to the axes limits computed from the data range. Default is 1.05.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.plot()``.
 
@@ -311,7 +324,9 @@ def animate_phase(
     return ax, animation
 
 
-def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_kwargs):
+def plot_floquet_multipliers(
+    hbm: HBMEquation | EquationSystem, ax: plt.Axes | None = None, **plot_kwargs
+) -> plt.Axes:
     """
     Plot the Floquet multipliers of the :py:class:`~skhippr.cycles.hbm.HBMEquation` solution.
 
@@ -365,15 +380,15 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
 
 def animate_floquet_multipliers(
     hbm_set: Iterable[HBMEquation | EquationSystem],
-    ax=None,
+    ax: plt.Axes | None = None,
     interval: int = 30,
     repeat: bool = True,
-    scaling=True,
-    show_unit_circle=True,
-    anim_title=None,
-    scale_padding=1.05,
+    scaling: bool = True,
+    show_unit_circle: bool = True,
+    anim_title: str | None = None,
+    scale_padding: float = 1.05,
     **plot_kwargs,
-):
+) -> tuple[plt.Axes, FuncAnimation]:
     """
     Create an animated visualization of Floquet multipliers for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances on the complex plane.
     Each frame displays the multipliers for one equation.
@@ -387,14 +402,18 @@ def animate_floquet_multipliers(
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``,
         a new :py:class:`~matplotlib.axes.Axes` instance will be created.
-    show_full_range : bool, optional
-        If ``True``, the axes limits are fixed from the start to the range spanning all Floquet
-        multipliers across every frame (padded so the unit circle stays visible). If ``False``
-        (default), the axes limits are fixed to ``[-1.2, 1.2]`` on both axes.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
         Whether to repeat the animation loop. Default is ``True``.
+    scaling : bool, optional
+        If ``True`` (default), the axes limits are rescaled to the data range of each frame as the animation plays (this can override the fixed ``[-1.2, 1.2]`` limits set when ``show_unit_circle`` is ``True``). If ``False``, the axes limits are instead fixed once, at creation time.
+    show_unit_circle : bool, optional
+        If ``True`` (default), draws the unit circle for reference and fixes the axes limits to ``[-1.2, 1.2]`` on both axes (reusing ``ax`` if given, otherwise creating a new axis). If ``False``, no unit circle is drawn.
+    anim_title : str, optional
+        If given, used as a title prefix for every frame; the current frame index is appended automatically. If ``None`` (default) and a new axis is created, the title ``"Floquet multipliers"`` is used.
+    scale_padding : float, optional
+        Multiplicative padding factor applied to the axes limits computed from the data range when ``scaling`` is used. Default is 1.05.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.scatter()``. Note that the
         default marker is set to 'x' unless overridden.
@@ -458,7 +477,9 @@ def animate_floquet_multipliers(
     return ax, animation
 
 
-def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kwargs):
+def plot_floquet_exponents(
+    hbm: HBMEquation | EquationSystem, ax: plt.Axes | None = None, **plot_kwargs
+) -> plt.Axes:
     """
     Calculate and plot the Floquet exponents of the :py:class:`~skhippr.cycles.hbm.HBMEquation` solution from the Floquet multipliers.
 
@@ -508,14 +529,14 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
 
 def animate_floquet_exponents(
     hbm_set: Iterable[HBMEquation | EquationSystem],
-    ax=None,
+    ax: plt.Axes | None = None,
     interval: int = 30,
     repeat: bool = True,
-    scaling=True,
-    anim_title=None,
-    scale_padding=1.05,
+    scaling: bool = True,
+    anim_title: str | None = None,
+    scale_padding: float = 1.05,
     **plot_kwargs,
-):
+) -> tuple[plt.Axes, FuncAnimation]:
     """
     Create an animated visualization of Floquet exponents for multiple solved :py:class:`~skhippr.cycles.hbm.HBMEquation` instances in the complex plane.
     Each frame displays the exponents for one equation.
@@ -528,12 +549,16 @@ def animate_floquet_exponents(
        The Floquet exponents of each :py:class:`~skhippr.cycles.hbm.HBMEquation` instance will be animated sequentially.
     ax : matplotlib.axes.Axes, optional
         The :py:class:`~matplotlib.axes.Axes` object on which to plot. If ``None``, a new :py:class:`~matplotlib.axes.Axes` instance will be created.
-    show_full_range: bool, optional
-        Whether to show the full data range. If ``False`` the axis limits are set to show the data range of the first :py:class:`~skhippr.cycles.hbm.HBMEquation`.
     interval : int, optional
         The delay between frames in milliseconds. Default is 30 ms.
     repeat : bool, optional
         Whether to repeat the animation loop. Default is ``True``.
+    scaling : bool, optional
+        If ``True`` (default), the axes limits are rescaled to the data range of each frame as the animation plays. If ``False``, the axes limits are instead fixed once, at creation time, to the range spanning all frames (only takes effect when a new axis is created, i.e. ``ax`` was ``None``).
+    anim_title : str, optional
+        If given, used as a title prefix for every frame; the current frame index is appended automatically. If ``None`` (default) and a new axis is created, the title ``"Floquet exponents"`` is used.
+    scale_padding : float, optional
+        Multiplicative padding factor applied to the axes limits computed from the data range. Default is 1.05.
     **plot_kwargs
         Additional keyword arguments passed to ``ax.scatter()``. Note that the
         default marker is set to 'x' unless overridden.
@@ -590,13 +615,13 @@ def animate_floquet_exponents(
 
 def plot_hill_matrix_blocks(
     hbm: HBMEquation | EquationSystem,
-    real_formulation=None,
-    ax=None,
-    logscale=False,
-    vmax=None,
-    vmin=None,
+    real_formulation: bool | None = None,
+    ax: plt.Axes | None = None,
+    logscale: bool = False,
+    vmax: float | None = None,
+    vmin: float | None = None,
     **plot_kwargs,
-):
+) -> plt.Axes:
     """
     Plot the Hill matrix as a grid of blocks, colored by the magnitude of each block.
     This function computes the Hill matrix of a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`,
@@ -669,13 +694,13 @@ def plot_hill_matrix_blocks(
 def plot_matrix_block_norm(
     matrix: np.ndarray,
     block_size: int,
-    ax=None,
-    index=None,
-    logscale=False,
-    vmax=None,
-    vmin=None,
+    ax: plt.Axes | None = None,
+    index: Sequence | None = None,
+    logscale: bool = False,
+    vmax: float | None = None,
+    vmin: float | None = None,
     **plot_kwargs,
-):
+) -> tuple[plt.Axes, PathCollection]:
     """
     Plot a square matrix as a grid of color-coded blocks, where each block's color corresponds to
     its 2-norm and its position reflects its placement within the matrix.

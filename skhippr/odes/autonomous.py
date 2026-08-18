@@ -1,3 +1,8 @@
+import numpy as np
+
+from skhippr.odes.AbstractODE import AbstractODE
+
+
 class BlockOnBelt(AbstractODE):
     """
     Smoothed Block-on-belt system as a subclass of :py:class:`~skhippr.odes.AbstractODE.AbstractODE`. A block with mass ``m`` is placed on a belt with constant velocity ``vdr``. The block is subject to a spring force ``Fs`` and smoothed coulomb friction with the belt. The equations of motion are ::

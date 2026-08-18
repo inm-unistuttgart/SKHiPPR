@@ -18,7 +18,12 @@ for plotting the Floquet multipliers and exponents over the continuation paramet
 """
 
 from collections.abc import Iterable, Callable
+from typing import Any
+
 import matplotlib.pyplot as plt
+from matplotlib.artist import Artist
+from matplotlib.lines import Line2D
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 import numpy as np
 
 from skhippr.solvers.continuation import BranchPoint
@@ -36,10 +41,10 @@ def plot_continuation(
     plot_fun: Callable[
         [BranchPoint], Iterable[float] | float
     ] = lambda bp: bp.vector_of_unknowns[0],
-    ax=None,
-    clean_legend=True,
-    **plot_kwargs,
-):
+    ax: plt.Axes | Axes3D | None = None,
+    clean_legend: bool = True,
+    **plot_kwargs: Any,
+) -> plt.Axes | Axes3D:
     """
     Plot the numerical continuation results stored in an :py:class:`~collections.abc.Iterable` of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects.
 
@@ -61,8 +66,8 @@ def plot_continuation(
         A :py:class:`collections.abc.Iterable` object containing :py:class:`~skhippr.solvers.continuation.BranchPoint` instances.
     plot_fun : Callable[[BranchPoint], Iterable[float] | float], optional
         A function that maps each :py:class:`~skhippr.solvers.continuation.BranchPoint` object to a plot measure.
-        Must return values accepted by :py:func:`~skhippr.visualization.continuation._to_array`. This means, ``plot_fun(:py:class:`~skhippr.solvers.continuation.BranchPoint`)`` must return values that ``np.squeeze(element)`` squeezes to the same length for each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
-        The default is ``lambda bp: bp.unknowns[0][0]``, which is the value of the first unknown of the first equation.
+        Must return values accepted by :py:func:`~skhippr.visualization.continuation.eval_plot_fun`. This means, ``plot_fun(:py:class:`~skhippr.solvers.continuation.BranchPoint`)`` must return values that ``np.squeeze(element)`` squeezes to the same length for each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
+        The default is ``lambda bp: bp.vector_of_unknowns[0]``, which is the first entry of the vector of unknowns.
     ax : matplotlib.axes.Axes | mpl_toolkits.mplot3d.axes3d.Axes3D, optional
         The :py:class:`~matplotlib.axes.Axes` or :py:class:`~mpl_toolkits.mplot3d.axes3d.Axes3D` object on which to plot. If ``plot_fun`` returns a vector of length 3, the given ``ax`` must be an instance of the class :py:class:`mpl_toolkits.mplot3d.axes3d.Axes3D`. If ``None``, a new instance will be created.
     clean_legend: bool, optional
@@ -74,8 +79,8 @@ def plot_continuation(
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
-        The :py:class:`~matplotlib.axes.Axes` object containing the continuation diagram.
+    ax : matplotlib.axes.Axes | mpl_toolkits.mplot3d.axes3d.Axes3D
+        The :py:class:`~matplotlib.axes.Axes` (or :py:class:`~mpl_toolkits.mplot3d.axes3d.Axes3D`, if ``plot_fun`` returns three values) object containing the continuation diagram.
 
     Notes
     -----
@@ -152,7 +157,24 @@ def plot_continuation(
     return ax
 
 
-def _plot_fcn_floquet(branch_point: BranchPoint, idx, exponents=False):
+def _plot_fcn_floquet(branch_point: BranchPoint, idx: int, exponents: bool = False) -> float:
+    """
+    Extract a single Floquet multiplier magnitude or Floquet exponent real part from a :py:class:`~skhippr.solvers.continuation.BranchPoint`.
+
+    Parameters
+    ----------
+    branch_point : BranchPoint
+        The branch point from which to extract the Floquet multiplier. Must contain a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+    idx : int
+        Index of the Floquet multiplier/exponent to extract.
+    exponents : bool, optional
+        If ``True``, return the real part of the Floquet exponent instead of the magnitude of the Floquet multiplier. Default is ``False``.
+
+    Returns
+    -------
+    value : float
+        ``np.real(np.log(floquet_multipliers[idx]) / T)`` if ``exponents`` is ``True``, else ``np.abs(floquet_multipliers[idx])``.
+    """
     hbm = extract_equation(branch_point, usable_class=HBMEquation)
     floquet_multipliers = hbm.eigenvalues
     if exponents:
@@ -163,8 +185,11 @@ def _plot_fcn_floquet(branch_point: BranchPoint, idx, exponents=False):
 
 
 def plot_floquet_continuation(
-    branch: Iterable[BranchPoint], ax=None, plot_exponents=False, **plot_kwargs
-):
+    branch: Iterable[BranchPoint],
+    ax: plt.Axes | None = None,
+    plot_exponents: bool = False,
+    **plot_kwargs: Any,
+) -> plt.Axes:
     """
     Plot the magnitude of all Floquet multipliers over the continuation parameter.
 
@@ -200,16 +225,37 @@ def plot_floquet_continuation(
 
         ax = plot_continuation(branch, plot_fun=plot_fcn, ax=ax, **plot_kwargs)
 
+    return ax
+
 
 def plot_floquet_multiplier_continuation(
-    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
-):
+    branch: Iterable[BranchPoint], ax: plt.Axes | None = None, **plot_kwargs: Any
+) -> plt.Axes:
+    """
+    Plot the magnitude of all Floquet multipliers over the continuation parameter.
+
+    Thin wrapper around :py:func:`~skhippr.visualization.continuation.plot_floquet_continuation` with ``plot_exponents=False``.
+
+    Parameters
+    ----------
+    branch : Iterable[BranchPoint]
+        Collection of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects from continuation analysis.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If ``None``, creates new subplot.
+    **plot_kwargs
+        Additional arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes containing the Floquet multiplier continuation plot.
+    """
     return plot_floquet_continuation(branch, ax=ax, plot_exponents=False, **plot_kwargs)
 
 
 def plot_floquet_exponent_continuation(
-    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
-):
+    branch: Iterable[BranchPoint], ax: plt.Axes | None = None, **plot_kwargs: Any
+) -> plt.Axes:
     """
     Plot the real part of Floquet exponents over the continuation parameter.
 
@@ -241,23 +287,23 @@ def plot_floquet_exponent_continuation(
 def eval_plot_fun(
     branch: Iterable[BranchPoint],
     plot_fun: Callable[[BranchPoint], object],
-):
+) -> tuple[np.ndarray, list[BranchPoint]]:
     """
-    Evaluate ``plot_fun`` across branch points
+    Evaluate ``plot_fun`` across branch points.
 
     Parameters
     ----------
     branch : Iterable[BranchPoint]
         Continuation branch containing instances of class :py:class:`~skhippr.solvers.continuation.BranchPoint`.
     plot_fun : Callable[[BranchPoint], object]
-        Measure function returning values accepted by :py:func:`~skhippr.visualization.continuation._to_array`.
+        Measure function mapping each :py:class:`~skhippr.solvers.continuation.BranchPoint` to either a scalar or a :py:class:`~collections.abc.Sequence` of scalar-like values that all squeeze (via ``np.squeeze``) to the same length across the branch.
 
     Returns
     -------
     values : numpy.ndarray
-        Shape ``(n_points, dim)`` array of normalized measure values
-    dim : int {1,2,3}
-        Dimensionality of measures returned by ``plot_fun``.
+        Shape ``(n_points, dim)`` array of the (squeezed) measure values, one row per :py:class:`~skhippr.solvers.continuation.BranchPoint` consumed from ``branch``.
+    branch_list : list[BranchPoint]
+        The :py:class:`~skhippr.solvers.continuation.BranchPoint` objects consumed from ``branch``, in iteration order (``branch_list[k]`` corresponds to ``values[k, :]``).
     """
 
     value_list = []
@@ -273,7 +319,7 @@ def eval_plot_fun(
     return np.array(value_list), list_branch
 
 
-def _get_handle_signature(handle):
+def _get_handle_signature(handle: Line2D | Artist) -> tuple[str, str, str, str]:
     """
     Extract a hashable tuple representing the visual characteristics of a legend handle.
     The signature includes color, linestyle, marker, and linewidth properties.
@@ -286,8 +332,8 @@ def _get_handle_signature(handle):
 
     Returns
     -------
-    signature : :py:class:`tuple` of :py:class:`str`
-        A 4-tuple containing string representations of the handle's visual properties in the order:
+    signature : tuple[str, str, str, str]
+        A 4-tuple ``(color, linestyle, marker, linewidth)`` containing string representations of the handle's visual properties, in that order.
     """
     color = handle.get_color()
     linestyle = handle.get_linestyle()
@@ -297,7 +343,7 @@ def _get_handle_signature(handle):
     return signature
 
 
-def _deduplicate_legend(ax):
+def _deduplicate_legend(ax: plt.Axes) -> None:
     """
     Remove duplicate legend entries based on visual signature and label.
 

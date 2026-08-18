@@ -26,10 +26,10 @@ from skhippr.visualization._helpers import (
 
 def plot_equilibrium(
     ode: AbstractODE | EquationSystem,
-    ax=None,
+    ax: plt.Axes | None = None,
     idx: Sequence[int] = [0, 1],
     **plot_kwargs,
-):
+) -> plt.Axes:
     """
     Plot the equilibrium of an ordinary differential equation.
 
@@ -68,9 +68,11 @@ def plot_equilibrium(
     return ax
 
 
-def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
+def plot_eigenvalues(
+    ode: AbstractODE | EquationSystem, ax: plt.Axes | None = None, **plot_kwargs
+) -> plt.Axes:
     """
-    Plot the eigenvalues of an ordinary differential equation. If no :py:class:`matplotlib.axes.Axes` object is passed, the function wil also plot the imaginary axis.
+    Plot the eigenvalues of an ordinary differential equation. If no :py:class:`matplotlib.axes.Axes` object is passed, the function will also plot the imaginary axis.
 
     Parameters
     ----------
@@ -84,10 +86,10 @@ def plot_eigenvalues(ode: AbstractODE | EquationSystem, ax=None, **plot_kwargs):
     Returns
     -------
     ax : matplotlib.axes.Axes
-        The :py:class:`~matplotlib.axes.Axes` object with the the plotted eigenvalues.
+        The :py:class:`~matplotlib.axes.Axes` object with the plotted eigenvalues.
     """
     default_args = {
-        "title": "Floquet exponents",
+        "title": "Eigenvalues",
         "xlabel": "Re($\\alpha$)",
         "ylabel": "Im($\\alpha$)",
         "marker": "x",

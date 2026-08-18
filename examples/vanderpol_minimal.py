@@ -82,22 +82,23 @@ class Vanderpol(AbstractODE):
 
 def compute_frc(nu_range=(0, 5), max_stepsize=0.1):
     """
-    Demonstration for creating a simple frequency response curve of a non-autonomous dynamical system with HBM.
+    Demonstration for creating a simple bifurcation diagram of an autonomous dynamical system with HBM.
 
     This function performs the following steps:
 
-    #. Creation of :py:class:`~skhippr.Fourier`, :py:class:`~skhippr.solvers.newton.NewtonSolver`, and :py:class:`~skhippr.stability.KoopmmanHillProjection.KoopmanHillSubharmonic` objects to collect method parameters
-    #. Instantiation of a :py:class:`~skhippr.odes.AbstractODE.AbstractODE` (here: :py:class:`~skhippr.odes.nonautonomous.Duffing`) object which contains the ODE
+    #. Creation of :py:class:`~skhippr.Fourier.Fourier`, :py:class:`~skhippr.solvers.newton.NewtonSolver`, and :py:class:`~skhippr.stability.KoopmanHillProjection.KoopmanHillSubharmonic` objects to collect method parameters
+    #. Instantiation of the :py:class:`Vanderpol` (an :py:class:`~skhippr.odes.AbstractODE.AbstractODE` subclass defined in this module) object which contains the ODE
     #. Setup of an initial guess
-    #. Setup and solution of the :py:class:`~skhippr.cycles.hbm.HBMEquation`, which formalizes the Harmonic Balance equations
-    #. Creation of an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` containing only the HBM equations as input to the continuation method
-    #. Continuation of the frequency response curve using :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` and collecting the branch points
+    #. Setup and solution of an :py:class:`~skhippr.cycles.hbm.HBMSystem`, which formalizes the Harmonic Balance equations together with the phase anchor equation required for autonomous systems
+    #. Continuation of the branch w.r.t. ``nu`` using :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and collecting the branch points
     #. Plotting the continuation curve from the collected :py:class:`~skhippr.solvers.continuation.BranchPoint` objects via SKHiPPR visualization tools.
 
     Returns
     -------
-
-    None
+    initial_system : HBMSystem
+        The initial :py:class:`~skhippr.cycles.hbm.HBMSystem`, containing the solved :py:class:`~skhippr.cycles.hbm.HBMEquation` at ``nu = nu_range[0]``.
+    frc : list[BranchPoint]
+        The collected :py:class:`~skhippr.solvers.continuation.BranchPoint` objects along the branch.
     """
 
     # --- Parameters and creation of ODE (Van der Pol oscillator) ---

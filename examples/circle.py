@@ -152,9 +152,9 @@ def main():
     #. Instantiating a :py:class:`~skhippr.solvers.newton.NewtonSolver` with the solver configuration
     #. Instantiating a :py:class:`Circle` object which contains the residual
     #. Demonstrating that the :py:class:`~skhippr.solvers.newton.NewtonSolver` can immediately solve the :py:class:`Circle` for the scalar unknown ``radius``, but not for the array unknown ``y``
-    #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
+    #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
     #. Constructing another :py:class:`~skhippr.equations.EquationSystem.EquationSystem` by appending an  second :py:class:`AngleEquation` and solving the resulting system directly for ``y``.
-    #. Using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
+    #. Using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
     #. Plotting the results with :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Returns

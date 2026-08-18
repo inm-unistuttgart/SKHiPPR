@@ -24,12 +24,15 @@ def main():
     """Demonstration of the continuation of the Van der Pol oscillator w.r.t. nu and animation of the resulting phase portrait.
     This function performs the following steps:
 
-    #. Setup of the :py:class:`~skhippr.odes.autonomous.Vanderpol` ODE
-    #. Setup of a :py:class:`~skhippr.cycles.hbm.HBMSystem` object with the :py:class:`~skhippr.odes.autonomous.Vanderpol` ode and a :py:class:`~skhippr.Fourier.Fourier` object, encoding both the HBM equations and the phase anchor.
-    #. Continuation of the HBM system w.r.t. nu using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and a :py:class:`~skhippr.solvers.newton.NewtonSolver`
-    #. Analysis of the resulting branch of solutions, extracting time series, amplitudes, Floquet multipliers, and stability
-    #. Visualization of the results, including an animation of the phase portrait and Floquet multipliers, as well as plots of amplitude and frequency w.r.t. nu
-    #. Saving the animation by passing a relative path as a string.
+    #. Continuation of the :py:class:`~skhippr.cycles.hbm.HBMSystem` for the ``Vanderpol`` ODE (defined in :py:mod:`examples.vanderpol_minimal`) w.r.t. ``nu``, via :py:func:`examples.vanderpol_minimal.compute_frc`, collecting the branch points.
+    #. Animation of the phase portrait, time series and Floquet multipliers along the branch using :py:func:`~skhippr.visualization.cycles.animate_phase`, :py:func:`~skhippr.visualization.cycles.animate_period` and :py:func:`~skhippr.visualization.cycles.animate_floquet_multipliers`.
+    #. A plot of ``omega`` over the continuation parameter ``nu`` using :py:func:`~skhippr.visualization.continuation.plot_continuation`.
+    #. A phase portrait overlaying every branch point, colored along the branch.
+
+    Returns
+    -------
+    animation0, animation1, animation2 : matplotlib.animation.FuncAnimation
+        The phase, period and Floquet multiplier animations. Each must be kept referenced to keep playing (see the respective ``animate_*`` docstrings).
     """
 
     hbm, branch = compute_frc(nu_range=(0, 10), max_stepsize=0.5)

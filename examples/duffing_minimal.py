@@ -146,13 +146,15 @@ def compute_frc():
     #. Setup of an initial guess
     #. Setup and solution of the :py:class:`~skhippr.cycles.hbm.HBMEquation`, which formalizes the Harmonic Balance equations
     #. Creation of an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` containing only the HBM equations as input to the continuation method
-    #. Continuation of the frequency response curve using :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` and collecting the branch points
+    #. Continuation of the frequency response curve using :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` and collecting the branch points
     #. Plotting the continuation curve from the collected :py:class:`~skhippr.solvers.continuation.BranchPoint` objects via SKHiPPR visualization tools.
 
     Returns
     -------
-
-    None
+    initial_system : EquationSystem
+        The initial (un-extended) :py:class:`~skhippr.equations.EquationSystem.EquationSystem`, containing the solved :py:class:`~skhippr.cycles.hbm.HBMEquation` at ``omega = 0.3``.
+    frc : list[BranchPoint]
+        The collected :py:class:`~skhippr.solvers.continuation.BranchPoint` objects along the frequency response curve.
     """
 
     # --- Parameters and creation of ODE (Duffing oscillator) ---
