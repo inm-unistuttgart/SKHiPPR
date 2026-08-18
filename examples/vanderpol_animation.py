@@ -90,7 +90,7 @@ def main():
     # Video formats require the user to have FFmpeg installed.
     # save_animation(animation0, "plots/vanderpol_animations/phase_animation.gif")
 
-    return animation0, animation1, animation2, animation3
+    return animation0, animation1, animation2
 
 
 def setup_hbm_system(ode: AbstractODE, solver: NewtonSolver = None, N_HBM=45):
