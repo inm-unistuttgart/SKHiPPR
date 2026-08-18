@@ -46,23 +46,35 @@ def animate(
     interval=30,
     repeat=True,
     scaling=True,
+    scale_padding=1.05,
     **kwargs,
 ):
+
+    ax_was_none = ax is None
     ax = parse_and_generate_axis(ax, **kwargs)
     (line,) = robust_plot(ax.plot, xdata[0], ydata[0], **kwargs)
 
     xdata = np.asarray(xdata)
     ydata = np.asarray(ydata)
 
-    if not scaling:
-        ax.set_xlim(np.min(xdata), np.max(xdata))
-        ax.set_ylim(np.min(ydata), np.max(ydata))
+    if ax_was_none and not scaling:
+        ax.set_xlim(scale_padding * np.nanmin(xdata), scale_padding * np.nanmax(xdata))
+        ax.set_ylim(scale_padding * np.nanmin(ydata), scale_padding * np.nanmax(ydata))
 
     def _update(frame):
         line.set_data(xdata[frame], ydata[frame])
         if scaling:
-            ax.set_xlim(np.min(xdata[frame]), np.max(xdata[frame]))
-            ax.set_ylim(np.min(ydata[frame]), np.max(ydata[frame]))
+            try:
+                ax.set_xlim(
+                    scale_padding * np.min(xdata[frame]),
+                    scale_padding * np.max(xdata[frame]),
+                )
+                ax.set_ylim(
+                    scale_padding * np.min(ydata[frame]),
+                    scale_padding * np.max(ydata[frame]),
+                )
+            except ValueError:
+                pass
         if anim_title is not None:
             ax.set_title(f"{anim_title} (frame {frame + 1}/{len(xdata)})")
         return (line,)
@@ -78,9 +90,7 @@ def animate(
     return ax, anim
 
 
-def parse_and_generate_axis(
-    ax: plt.Axes | None, ndim=2, **kwargs
-) -> tuple[bool, plt.Axes]:
+def parse_and_generate_axis(ax: plt.Axes | None, ndim=2, **kwargs):
     """
     Parse the input axis and generate a new one if necessary.
 
@@ -91,8 +101,6 @@ def parse_and_generate_axis(
 
     Returns
     -------
-    generated_ax : bool
-        True if a new axis was generated, False if the input axis was used.
     ax : matplotlib.axes.Axes
         The parsed or newly generated axis.
     """

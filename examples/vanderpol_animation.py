@@ -59,7 +59,7 @@ def main():
 
     # --- Continuation ---
     branch: list[BranchPoint] = []
-    nu_range = (ode.nu, 6)
+    nu_range = (ode.nu, 15)
     newton_solver.verbose = False
 
     for branch_point in pseudo_arclength_continuator(
@@ -78,13 +78,10 @@ def main():
             break
 
     # --- Create animations from the HBMEquations in the continuation branch ---
-    ax, animation0 = animate_phase(branch, scaling=False)
-    _, animation1 = animate_period(branch, scaling=False)
-    _, animation2 = animate_floquet_multipliers(branch, scaling="unit_circle")
-    _, animation3 = animate_floquet_exponents(branch, scaling="static")
-    plot_continuation(
-        branch=branch,
-        plot_fun=lambda point: np.max(point.equations[0].x_time()[0, :]),
+    _, animation0 = animate_phase(branch, scaling=False)
+    _, animation1 = animate_period(branch, scaling=True)
+    _, animation2 = animate_floquet_multipliers(
+        branch, show_unit_circle=True, scaling=False
     )
     plot_continuation(branch, plot_fun=lambda point: point.omega)
 

@@ -108,6 +108,7 @@ def animate_period(
     repeat: bool = True,
     scaling=True,
     anim_title=None,
+    scale_padding=1.05,
     **plot_kwargs,
 ):
     """
@@ -171,7 +172,15 @@ def animate_period(
         signals.append(x)
 
     ax, animation = animate(
-        times, signals, ax, anim_title, interval, repeat, scaling, **plot_kwargs
+        times,
+        signals,
+        ax,
+        anim_title,
+        interval,
+        repeat,
+        scaling,
+        scale_padding,
+        **plot_kwargs,
     )
     return ax, animation
 
@@ -231,6 +240,7 @@ def animate_phase(
     repeat: bool = True,
     scaling=True,
     anim_title=None,
+    scale_padding=1.05,
     **plot_kwargs,
 ):
     """
@@ -288,7 +298,15 @@ def animate_phase(
         ydata.append(x[idx[1], :])
 
     ax, animation = animate(
-        xdata, ydata, ax, anim_title, interval, repeat, scaling, **plot_kwargs
+        xdata,
+        ydata,
+        ax,
+        anim_title,
+        interval,
+        repeat,
+        scaling,
+        scale_padding,
+        **plot_kwargs,
     )
     return ax, animation
 
@@ -348,9 +366,12 @@ def plot_floquet_multipliers(hbm: HBMEquation | EquationSystem, ax=None, **plot_
 def animate_floquet_multipliers(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
-    show_full_range: bool = False,
     interval: int = 30,
     repeat: bool = True,
+    scaling=True,
+    show_unit_circle=True,
+    anim_title=None,
+    scale_padding=1.05,
     **plot_kwargs,
 ):
     """
@@ -390,78 +411,48 @@ def animate_floquet_multipliers(
     The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
     garbage collector from deleting it, causing the animation to stop.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
 
-    all_multipliers: list[np.ndarray] = []
-    for hbm in hbm_set:
-        equation = _get_equation_helper(hbm)
-        all_multipliers.append(np.asarray(equation.eigenvalues))
+    default_args = {
+        "xlabel": f"Re(\lambda)",
+        "ylabel": f"Im(\lambda)",
+        "marker": "x",
+        "linestyle": "none",
+    }
 
-    title = plot_kwargs.pop("title", "Floquet multipliers")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\lambda$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\lambda$)")
+    plot_kwargs = {**default_args, **plot_kwargs}
 
-    (sc,) = robust_plot(ax.plot, [], [], **plot_kwargs)
+    if ax is None and anim_title is None:
+        anim_title = f"Floquet multipliers"
 
-    if show_full_range:
-        min_real_value = np.real(all_multipliers).min()
-        max_real_value = np.real(all_multipliers).max()
-        min_imag_value = np.imag(all_multipliers).min()
-        max_imag_value = np.imag(all_multipliers).max()
-        ax.set_xlim(
-            min_real_value if min_real_value < -1.2 else -1.2,
-            max_real_value if max_real_value > 1.2 else 1.2,
-        )
-        ax.set_ylim(
-            min_imag_value if min_imag_value < -1.2 else -1.2,
-            max_imag_value if max_imag_value > 1.2 else 1.2,
-        )
-    else:
-        ax.set_ylim(-1.2, 1.2)
-        ax.set_xlim(-1.2, 1.2)
-
-    theta = np.linspace(0, 2 * np.pi, 400)
-    unit_x = np.cos(theta)
-    unit_y = np.sin(theta)
-
-    scatter_kwargs = {"marker": "x"}
-    scatter_kwargs.update(plot_kwargs)
-
-    sc = robust_plot(
-        ax.scatter,
-        np.real(all_multipliers[0]),
-        np.imag(all_multipliers[0]),
-        **scatter_kwargs,
-    )
-    ax.plot(unit_x, unit_y, "k-")
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    if show_unit_circle:
+        ax = parse_and_generate_axis(ax)
+        theta = np.linspace(0, 2 * np.pi, 400)
+        unit_x = np.cos(theta)
+        unit_y = np.sin(theta)
+        ax.plot(unit_x, unit_y, "k-")
         ax.set_aspect("equal", adjustable="datalim")
+        ax.set_xlim(-1.2, 1.2)
+        ax.set_ylim(-1.2, 1.2)
 
-    def _update(frame_idx: int):
-        current_multipliers = all_multipliers[frame_idx]
-        sc.set_offsets(
-            np.column_stack(
-                (np.real(current_multipliers), np.imag(current_multipliers))
-            )
-        )
-        ax.set_title(
-            f"Floquet multipliers - frame {frame_idx + 1}/{len(all_multipliers)}"
-        )
-        return (sc,)
+    xdata = []
+    ydata = []
 
-    animation = FuncAnimation(
-        ax.figure,
-        _update,
-        frames=len(all_multipliers),
-        repeat=repeat,
-        interval=interval,
+    for hbm in hbm_set:
+        equation = extract_equation(hbm, HBMEquation)
+        FMs = equation.eigenvalues
+        xdata.append(np.real(FMs))
+        ydata.append(np.imag(FMs))
+
+    ax, animation = animate(
+        xdata,
+        ydata,
+        ax,
+        anim_title,
+        interval,
+        repeat,
+        scaling,
+        scale_padding,
+        **plot_kwargs,
     )
 
     return ax, animation
@@ -518,9 +509,11 @@ def plot_floquet_exponents(hbm: HBMEquation | EquationSystem, ax=None, **plot_kw
 def animate_floquet_exponents(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
-    show_full_range: bool = True,
     interval: int = 30,
     repeat: bool = True,
+    scaling=True,
+    anim_title=None,
+    scale_padding=1.05,
     **plot_kwargs,
 ):
     """
@@ -558,62 +551,38 @@ def animate_floquet_exponents(
     garbage collector from deleting it, causing the animation to stop.
 
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    default_args = {
+        "xlabel": f"Re(\alpha)",
+        "ylabel": f"Im(\alpha)",
+        "marker": "x",
+        "linestyle": "none",
+    }
 
-    all_exponents: list[np.ndarray] = []
+    plot_kwargs = {**default_args, **plot_kwargs}
+
+    if ax is None and anim_title is None:
+        anim_title = f"Floquet exponents"
+
+    xdata = []
+    ydata = []
+
     for hbm in hbm_set:
-        equation = _get_equation_helper(hbm)
-        floquet_multipliers = equation.eigenvalues
-        lambdas = np.asarray(floquet_multipliers)
-        floquet_exponents = np.log(lambdas) / equation.T_solution
-        all_exponents.append(floquet_exponents)
-    title = plot_kwargs.pop("title", "Floquet exponents")
-    xlabel = plot_kwargs.pop("xlabel", "Re($\\alpha$)")
-    ylabel = plot_kwargs.pop("ylabel", "Im($\\alpha$)")
+        equation = extract_equation(hbm, HBMEquation)
+        FMs = equation.eigenvalues
+        FEs = np.log(FMs) / equation.T_solution
+        xdata.append(np.real(FEs))
+        ydata.append(np.imag(FEs))
 
-    scatter_kwargs = {"marker": "x"}
-    scatter_kwargs.update(plot_kwargs)
-
-    (sc,) = robust_plot(ax.plot, [], [], **plot_kwargs)
-
-    if show_full_range:
-        min_real_value = np.real(all_exponents).min()
-        max_real_value = np.real(all_exponents).max()
-        min_imag_value = np.imag(all_exponents).min()
-        max_imag_value = np.imag(all_exponents).max()
-        ax.set_xlim(
-            min_real_value if min_real_value < -1.2 else -1.2,
-            max_real_value if max_real_value > 1.2 else 1.2,
-        )
-        ax.set_ylim(
-            min_imag_value if min_imag_value < -1.2 else -1.2,
-            max_imag_value if max_imag_value > 1.2 else 1.2,
-        )
-    sc = robust_plot(
-        ax.scatter,
-        np.real(all_exponents[0]),
-        np.imag(all_exponents[0]),
-        **scatter_kwargs,
-    )
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-    def _update(frame_idx: int):
-        current_exponents = all_exponents[frame_idx]
-        sc.set_offsets(
-            np.column_stack((np.real(current_exponents), np.imag(current_exponents)))
-        )
-        ax.set_title(f"Floquet exponents - frame {frame_idx + 1}/{len(all_exponents)}")
-        return (sc,)
-
-    animation = FuncAnimation(
-        ax.figure, _update, frames=len(all_exponents), repeat=repeat, interval=interval
+    ax, animation = animate(
+        xdata,
+        ydata,
+        ax,
+        anim_title,
+        interval,
+        repeat,
+        scaling,
+        scale_padding,
+        **plot_kwargs,
     )
 
     return ax, animation
