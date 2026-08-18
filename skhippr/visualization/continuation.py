@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from skhippr.solvers.continuation import BranchPoint
+from skhippr.cycles.hbm import HBMEquation
 
 from skhippr.visualization._helpers import (
     parse_and_generate_axis,
@@ -151,8 +152,18 @@ def plot_continuation(
     return ax
 
 
-def plot_floquet_multiplier_continuation(
-    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
+def _plot_fcn_floquet(branch_point: BranchPoint, idx, exponents=False):
+    hbm = extract_equation(branch_point, usable_class=HBMEquation)
+    floquet_multipliers = hbm.eigenvalues
+    if exponents:
+        T = hbm.T_solution
+        return np.real(np.log(floquet_multipliers[idx]) / T)
+    else:
+        return np.abs(floquet_multipliers[idx])
+
+
+def plot_floquet_continuation(
+    branch: Iterable[BranchPoint], ax=None, plot_exponents=False, **plot_kwargs
 ):
     """
     Plot the magnitude of all Floquet multipliers over the continuation parameter.
@@ -170,6 +181,8 @@ def plot_floquet_multiplier_continuation(
         Collection of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects from continuation analysis
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If ``None``, creates new subplot.
+    plot_exponents : bool, optional
+        If ``True``, the real part of Floquet exponents is plotted instead of the magnitude of Floquet multipliers. Default is ``False``.
     **plot_kwargs
         Additional arguments passed to ax.plot()
 
@@ -178,89 +191,20 @@ def plot_floquet_multiplier_continuation(
     ax : matplotlib.axes.Axes
         The axes containing the Floquet multiplier continuation plot
     """
-    branch_list = list(branch)
 
-    if not branch_list:
-        raise ValueError("Branch cannot be empty")
+    branch = list(branch)
+    hbm = extract_equation(branch[0], usable_class=HBMEquation)
 
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
+    for idx in range(hbm.fourier.n_dof):
+        plot_fcn = lambda bp: _plot_fcn_floquet(bp, idx, exponents=plot_exponents)
 
-    all_magnitudes = []
+        ax = plot_continuation(branch, plot_fun=plot_fcn, ax=ax, **plot_kwargs)
 
-    for bp in branch_list:
-        multipliers = bp.equations[0].eigenvalues
-        mag = np.abs(multipliers)
-        all_magnitudes.append(mag)
 
-    all_magnitudes = np.array(all_magnitudes)
-    num_multipliers = len(all_magnitudes[-1])
-
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-
-    stable_col = plot_kwargs.pop("stable_color", "r")
-    unstable_col = plot_kwargs.pop("unstable_color", "b")
-    title = plot_kwargs.pop("title", "Floquet Multiplier Continuation")
-    xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
-    ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
-    alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
-
-    for i in range(num_multipliers):
-        magnitudes_i = all_magnitudes[:, i]
-        stability_i = magnitudes_i < 1.0
-
-        xs_stable = np.where(stability_i, parameter_values, np.nan)
-        xs_unstable = np.where(~stability_i, parameter_values, np.nan)
-        ys_stable = np.where(stability_i, magnitudes_i, np.nan)
-        ys_unstable = np.where(~stability_i, magnitudes_i, np.nan)
-
-        ax.plot(
-            xs_stable,
-            ys_stable,
-            color=stable_col,
-            alpha=alpha,
-            linewidth=1.5,
-            **plot_kwargs,
-        )
-        ax.plot(
-            xs_unstable,
-            ys_unstable,
-            color=unstable_col,
-            alpha=alpha,
-            linewidth=1.5,
-            **plot_kwargs,
-        )
-
-    ax.axhline(
-        y=1.0,
-        color="k",
-        linestyle="--",
-        linewidth=1.5,
-        alpha=0.8,
-        label="Stability boundary (|λ| = 1)",
-    )
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend(loc="best")
-        ax.grid(True, alpha=0.3)
-
-        y_min = max(0, all_magnitudes.min() * 0.9)
-        y_max = all_magnitudes.max() * 1.1 if all_magnitudes.max() > 1.0 else 1.2
-        ax.set_ylim(y_min, y_max)
-
-    return ax
+def plot_floquet_multiplier_continuation(
+    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
+):
+    return plot_floquet_continuation(branch, ax=ax, plot_exponents=False, **plot_kwargs)
 
 
 def plot_floquet_exponent_continuation(
@@ -291,134 +235,7 @@ def plot_floquet_exponent_continuation(
     ax : matplotlib.axes.Axes
         The axes containing the Floquet exponent continuation plot
     """
-    branch_list = list(branch)
-
-    if not branch_list:
-        raise ValueError("Branch cannot be empty")
-
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
-
-    all_exponents = []
-
-    for bp in branch_list:
-
-        multipliers = bp.equations[0].eigenvalues
-        T = bp.equations[0].T_solution
-
-        alphas = np.log(multipliers) / T
-        all_exponents.append(alphas)
-
-    num_exponents = len(all_exponents[-1])
-    all_exponents = np.array(all_exponents)
-
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-
-    stable_col = plot_kwargs.pop("stable_color", "r")
-    unstable_col = plot_kwargs.pop("unstable_color", "b")
-    title = plot_kwargs.pop("title", "Floquet Exponent Continuation")
-    xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
-    ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
-    alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
-
-    for i in range(num_exponents):
-        exponents_i = all_exponents[:, i]
-        real_part = np.real(exponents_i)
-        stability_i = real_part < 0.0
-
-        xs_stable = np.where(stability_i, parameter_values, np.nan)
-        xs_unstable = np.where(~stability_i, parameter_values, np.nan)
-        ys_stable = np.where(stability_i, real_part, np.nan)
-        ys_unstable = np.where(~stability_i, real_part, np.nan)
-
-        ax.plot(
-            xs_stable,
-            ys_stable,
-            color=stable_col,
-            alpha=alpha,
-            linewidth=1.5,
-            **plot_kwargs,
-        )
-        ax.plot(
-            xs_unstable,
-            ys_unstable,
-            color=unstable_col,
-            alpha=alpha,
-            linewidth=1.5,
-            **plot_kwargs,
-        )
-
-    ax.axhline(
-        y=0.0,
-        color="k",
-        linestyle="--",
-        linewidth=1.5,
-        alpha=0.8,
-        label="Stability boundary (Re($\\alpha$) = 0)",
-    )
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend(loc="best")
-        ax.grid(True, alpha=0.3)
-
-        real_parts = np.real(all_exponents)
-        y_min = (
-            real_parts.min() * 1.1 if real_parts.min() < 0 else real_parts.min() * 0.9
-        )
-        y_max = (
-            real_parts.max() * 1.1 if real_parts.max() > 0 else real_parts.max() * 0.9
-        )
-        y_min = min(y_min, -0.1)
-        y_max = max(y_max, 0.1)
-        ax.set_ylim(y_min, y_max)
-
-    return ax
-
-
-def _to_array(value: float | np.ndarray | Iterable):
-    """
-    Convert different numeric inputs into a flat :py:class:`numpy.ndarray`.
-    This function handles scalars, arrays, lists and tuples by squeezing each element individually when iterating over containers.
-    It succeeds when all elements in ``value`` squeeze to the same length using ``np.squeeze(element)``.
-
-    Parameters
-    ----------
-    value: float | np.ndarray | Iterable
-        Input to be converted to 1D array. It accepts:
-
-        * Scalars and arrays with dimension 0: ``1.0`` or ``1`` as well as ``np.array(1.0)``
-        * Single-element containers: ``[1.0]``, ``(1.0,)``, ``np.array([1.0])``, ``np.array([[1.0]])``
-        * Containers where all first level elements contained squeeze to the same length: ``[[1.0]]``, ``[(1.0,)]``, ``1.0``.
-
-    Returns
-    --------
-    arr : numpy.ndarray
-        1D :py:class:`numpy.ndarray` of shape ``(n,)`` where ``n`` is the common squeezed length of all input elements.
-
-    Notes
-    -----
-    ``value`` may contain different combinations of each for each element, as long as `np.squeeze(element)` always returns the same shape.
-
-    """
-    if np.isscalar(value):
-        return np.atleast_1d(value)
-    if isinstance(value, np.ndarray):
-        if value.ndim == 0:
-            return np.atleast_1d(value.item())
-        return np.ravel(value)
-    return np.array([np.squeeze(v) for v in value])
+    return plot_floquet_continuation(branch, ax=ax, plot_exponents=True, **plot_kwargs)
 
 
 def eval_plot_fun(

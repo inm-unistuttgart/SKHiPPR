@@ -19,7 +19,7 @@ from skhippr.visualization.cycles import (
     plot_hill_matrix_blocks,
 )
 
-from skhippr.visualization.continuation import plot_continuation
+from skhippr.visualization.continuation import plot_continuation, plot_floquet_multiplier_continuation, plot_floquet_exponent_continuation
 
 from skhippr.visualization.data_export import (
     save_png,
@@ -159,6 +159,15 @@ def visualize_continuation_result(frc):
         xlabel="omega",
         ylabel="max(x_0(t))",
         zlabel="X_1",
+    )
+
+    ax_fm = plot_floquet_multiplier_continuation(
+        frc,
+        title="Floquet multiplier continuation (Duffing)",
+    )
+    ax_fe = plot_floquet_exponent_continuation(
+        frc,
+        title="Floquet exponent continuation (Duffing)",
     )
 
 

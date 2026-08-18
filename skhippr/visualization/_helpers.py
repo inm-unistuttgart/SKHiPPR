@@ -38,6 +38,46 @@ def robust_plot(plot_method, *args, **kwargs):
             del kwargs[bad_kwarg]
 
 
+def animate(
+    xdata,
+    ydata,
+    ax=None,
+    anim_title=None,
+    interval=30,
+    repeat=True,
+    scaling=True,
+    **kwargs,
+):
+    ax = parse_and_generate_axis(ax, **kwargs)
+    (line,) = robust_plot(ax.plot, xdata[0], ydata[0], **kwargs)
+
+    xdata = np.asarray(xdata)
+    ydata = np.asarray(ydata)
+
+    if not scaling:
+        ax.set_xlim(np.min(xdata), np.max(xdata))
+        ax.set_ylim(np.min(ydata), np.max(ydata))
+
+    def _update(frame):
+        line.set_data(xdata[frame], ydata[frame])
+        if scaling:
+            ax.set_xlim(np.min(xdata[frame]), np.max(xdata[frame]))
+            ax.set_ylim(np.min(ydata[frame]), np.max(ydata[frame]))
+        if anim_title is not None:
+            ax.set_title(f"{anim_title} (frame {frame + 1}/{len(xdata)})")
+        return (line,)
+
+    anim = FuncAnimation(
+        ax.figure,
+        _update,
+        frames=len(xdata),
+        interval=interval,
+        repeat=repeat,
+    )
+
+    return ax, anim
+
+
 def parse_and_generate_axis(
     ax: plt.Axes | None, ndim=2, **kwargs
 ) -> tuple[bool, plt.Axes]:

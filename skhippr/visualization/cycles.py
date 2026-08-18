@@ -41,6 +41,7 @@ from skhippr.visualization._helpers import (
     robust_plot,
     parse_and_generate_axis,
     extract_equation,
+    animate,
 )
 
 
@@ -105,6 +106,8 @@ def animate_period(
     n_periods: float = 1.0,
     interval: int = 30,
     repeat: bool = True,
+    scaling=True,
+    anim_title=None,
     **plot_kwargs,
 ):
     """
@@ -142,58 +145,33 @@ def animate_period(
     garbage collector from deleting it, causing the animation to stop.
     """
 
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    default_args = {
+        "xlabel": "t",
+        "ylabel": f"x_{idx}",
+    }
+
+    plot_kwargs = {**default_args, **plot_kwargs}
+
+    if ax is None and anim_title is None:
+        anim_title = f"time history x[{idx}]"
 
     times = []
     signals = []
 
     for hbm in hbm_set:
-        equation = _get_equation_helper(hbm)
+        equation = extract_equation(hbm, HBMEquation)
         fourier = equation.fourier
         omega = equation.omega_solution
-        x_time = equation.x_time()
-        x_one_state = x_time[idx, :]
+        x_singleperiod = equation.x_time()[idx, :]
 
         t = fourier.time_samples(omega, n_periods)
         n_rep = int(np.ceil(n_periods))
-        x_tiled = np.tile(x_one_state, n_rep)[: t.size]
+        x = np.tile(x_singleperiod, n_rep)[: t.size]
         times.append(t)
-        signals.append(x_tiled)
+        signals.append(x)
 
-    all_times = np.concatenate([t for t in times])
-    all_signals = np.concatenate([s for s in signals])
-
-    title = plot_kwargs.pop(
-        "title",
-        (
-            "Animated time series - 1 period"
-            if n_periods == 1
-            else f"Animated time series - {n_periods} periods"
-        ),
-    )
-    xlabel = plot_kwargs.pop("xlabel", "t")
-    ylabel = plot_kwargs.pop("ylabel", "x")
-
-    (line,) = robust_plot(ax.plot, [], [], **plot_kwargs)
-
-    ax.set_xlim(all_times.min(), all_times.max())
-    ax.set_ylim(all_signals.min(), all_signals.max())
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-    def _update(frame_idx: int):
-        line.set_data(times[frame_idx], signals[frame_idx])
-        ax.set_title(f"Time series animation - frame {frame_idx+1}/{len(times)} ")
-        return (line,)
-
-    animation = FuncAnimation(
-        ax.figure, _update, frames=len(times), interval=interval, repeat=repeat
+    ax, animation = animate(
+        times, signals, ax, anim_title, interval, repeat, scaling, **plot_kwargs
     )
     return ax, animation
 
@@ -248,9 +226,11 @@ def plot_phase(
 def animate_phase(
     hbm_set: Iterable[HBMEquation | EquationSystem],
     ax=None,
-    idx: Sequence[int] = (0, 1),
+    idx=(0, 1),
     interval: int = 30,
     repeat: bool = True,
+    scaling=True,
+    anim_title=None,
     **plot_kwargs,
 ):
     """
@@ -288,48 +268,27 @@ def animate_phase(
     The returned :py:class:`~matplotlib.animation.FuncAnimation` object must be kept in a variable and not discarded to prevent Python's
     garbage collector from deleting it, causing the animation to stop.
     """
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    default_args = {
+        "xlabel": f"x_{idx[0]}",
+        "ylabel": f"x_{idx[1]}",
+    }
 
-    trajectories = []
+    plot_kwargs = {**default_args, **plot_kwargs}
+
+    if ax is None and anim_title is None:
+        anim_title = f"phase plot x[{idx[0]}], x[{idx[1]}]"
+
+    xdata = []
+    ydata = []
+
     for hbm in hbm_set:
-        equation = _get_equation_helper(hbm)
-        x_time = equation.x_time()
-        x_vals = x_time[idx[0], :]
-        y_vals = x_time[idx[1], :]
-        trajectories.append((x_vals, y_vals))
+        equation = extract_equation(hbm, HBMEquation)
+        x = equation.x_time()
+        xdata.append(x[idx[0], :])
+        ydata.append(x[idx[1], :])
 
-    all_x = np.concatenate([x for x, y in trajectories])
-    all_y = np.concatenate([y for x, y in trajectories])
-
-    title = plot_kwargs.pop("title", "Phase plot of solution")
-    xlabel = plot_kwargs.pop("xlabel", f"x_{idx[0]}")
-    ylabel = plot_kwargs.pop("ylabel", f"x_{idx[1]}")
-
-    (line,) = robust_plot(ax.plot, [], [], **plot_kwargs)
-
-    # Fix the axes limits to the full range spanned by all trajectories so that
-    # every frame of the animation stays within view.
-    x_range = _get_padded_limits(all_x)
-    y_range = _get_padded_limits(all_y)
-    ax.set_xlim(x_range[0], x_range[1])
-    ax.set_ylim(y_range[0], y_range[1])
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-    def _update(frame_idx: int):
-        x_vals, y_vals = trajectories[frame_idx]
-        line.set_data(x_vals, y_vals)
-        ax.set_title(f"Phase plot - frame {frame_idx + 1}/{len(trajectories)}")
-        return (line,)
-
-    animation = FuncAnimation(
-        ax.figure, _update, frames=len(trajectories), interval=interval, repeat=repeat
+    ax, animation = animate(
+        xdata, ydata, ax, anim_title, interval, repeat, scaling, **plot_kwargs
     )
     return ax, animation
 
