@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 
-from skhippr.odes.autonomous import Vanderpol
+from examples.vanderpol_minimal import Vanderpol
 from skhippr.cycles.hbm import HBMSystem
 from skhippr.stability.SinglePass import SinglePassRK4
 

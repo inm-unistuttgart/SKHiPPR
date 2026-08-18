@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from skhippr.solvers.newton import NewtonSolver, EquationSystem
 from skhippr.solvers.continuation import pseudo_arclength_continuator
-from skhippr.odes.autonomous import Truss
+from examples.truss import Truss
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.equations.Circle import CircleEquation
 
