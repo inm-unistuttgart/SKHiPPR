@@ -32,7 +32,6 @@ from skhippr.visualization.cycles import (
     animate_period,
     animate_floquet_multipliers,
     animate_phase,
-    animate_floquet_exponents,
 )
 from skhippr.visualization.continuation import plot_continuation
 from skhippr.visualization.data_export import save_animation
@@ -89,6 +88,11 @@ def main():
     # Animations can be saved as a .gif and as video files such as .mp4.
     # Video formats require the user to have FFmpeg installed.
     # save_animation(animation0, "plots/vanderpol_animations/phase_animation.gif")
+
+    # And, finally, a pretty phase plot
+    ax = None
+    for k, bp in enumerate(branch):
+        ax = plot_phase(bp, ax=ax, label=None, color=plt.cm.viridis(k / len(branch)))
 
     return animation0, animation1, animation2
 
