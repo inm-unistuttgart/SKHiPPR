@@ -627,7 +627,7 @@ def plot_hill_matrix_blocks(
     ax : matplotlib.axes.Axes
         The :py:class:`~matplotlib.axes.Axes` object with the plotted Hill matrix blocks.
     """
-    hbm = _get_equation_helper(hbm=hbm)
+    hbm = extract_equation(hbm, HBMEquation)
     H = hbm.hill_matrix(real_formulation=real_formulation, update=True)
     if real_formulation is None:
         real_formulation = hbm.fourier.real_formulation
@@ -796,38 +796,3 @@ def plot_matrix_block_norm(
         ax.set_title(title)
 
     return ax, sc
-
-
-def _get_equation_helper(hbm: HBMEquation | EquationSystem):
-    """
-    Helper function that returns a :py:class:`~skhippr.cycles.hbm.HBMEquation`.
-    Parameters
-    ----------
-    hbm : HBMEquation or EquationSystem
-        An equation or system of equations.
-
-    Returns
-    -------
-    equation : HBMEquation
-        The first valid :py:class:`~skhippr.cycles.hbm.HBMEquation` found.
-
-    Raises
-    ------
-    ValueError
-        If 'hbm' does not contain any usable :py:class:`~skhippr.cycles.hbm.HBMEquation` instance.
-    """
-    if isinstance(hbm, HBMEquation):
-        return hbm
-    if isinstance(hbm, EquationSystem):
-        for equation in hbm.equations:
-            if isinstance(equation, HBMEquation):
-                return equation
-    raise ValueError("hbm does not contain any usable HBMEquation instance")
-
-
-def _get_padded_limits(x, pad_multiplier=0.05):
-    x_min = np.nanmin(x)
-    x_max = np.nanmax(x)
-    x_range = x_max - x_min
-    x_pad = pad_multiplier * x_range
-    return [x_min - x_pad, x_max + x_pad]
