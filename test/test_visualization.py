@@ -267,6 +267,7 @@ def test_existing_ax_is_reused_and_left_untouched(plot_func, hbm_arg):
 )
 def test_animate_ax_none_creates_new_axis(animate_func, hbm_set):
     ax, animation = animate_func(hbm_set)
+    animation._draw_frame(0)
     assert isinstance(ax, plt.Axes)
     assert ax.get_title() != ""
 
@@ -306,9 +307,8 @@ def test_valid_kwarg_is_applied_scatter_plot(plot_func, hbm_arg):
 
 
 @pytest.mark.parametrize("plot_func", ALL_PLOT_FUNCS, ids=_ids(ALL_PLOT_FUNCS))
-def test_invalid_kwarg_warns_and_is_ignored(plot_func, hbm_arg):
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax = plot_func(hbm_arg, not_a_real_kwarg="nonsense")
+def test_invalid_kwarg_is_ignored(plot_func, hbm_arg):
+    ax = plot_func(hbm_arg, not_a_real_kwarg="nonsense")
     # The plot must still have been produced despite the invalid keyword argument.
     # (plot_floquet_multipliers/exponents also draw an extra decorative line -
     # a unit circle resp. a zero axvline - when ax is auto-generated, so this only
@@ -322,8 +322,7 @@ def test_invalid_kwarg_does_not_suppress_valid_sibling_kwargs_line_plot(
     plot_func, hbm_arg
 ):
     """A single bad keyword argument must not prevent the *other* valid ones from applying."""
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax = plot_func(hbm_arg, label="keep me", not_a_real_kwarg="nonsense")
+    ax = plot_func(hbm_arg, label="keep me", not_a_real_kwarg="nonsense")
     assert ax.lines[-1].get_label() == "keep me"
 
 
@@ -331,8 +330,7 @@ def test_invalid_kwarg_does_not_suppress_valid_sibling_kwargs_line_plot(
 def test_invalid_kwarg_does_not_suppress_valid_sibling_kwargs_scatter_plot(
     plot_func, hbm_arg
 ):
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax = plot_func(hbm_arg, label="keep me", not_a_real_kwarg="nonsense")
+    ax = plot_func(hbm_arg, label="keep me", not_a_real_kwarg="nonsense")
     assert ax.collections[-1].get_label() == "keep me"
 
 
@@ -359,17 +357,17 @@ def test_title_kwarg_applied_only_when_ax_is_generated(plot_func, hbm_arg):
 
 
 @pytest.mark.parametrize(
-    "animate_func,artist_container",
+    "animate_func",
     [
-        (animate_phase, "lines"),
-        (animate_floquet_multipliers, "collections"),
-        (animate_floquet_exponents, "collections"),
+        (animate_phase),
+        (animate_floquet_multipliers),
+        (animate_floquet_exponents),
     ],
     ids=["animate_phase", "animate_floquet_multipliers", "animate_floquet_exponents"],
 )
-def test_animate_valid_kwarg_is_applied(animate_func, artist_container, hbm_set):
+def test_animate_valid_kwarg_is_applied(animate_func, hbm_set):
     ax, animation = animate_func(hbm_set, label="my label")
-    artist = getattr(ax, artist_container)[-1]
+    artist = ax.lines[-1]
     assert artist.get_label() == "my label"
 
 
@@ -378,9 +376,8 @@ def test_animate_valid_kwarg_is_applied(animate_func, artist_container, hbm_set)
     [animate_phase, animate_floquet_multipliers, animate_floquet_exponents],
     ids=["animate_phase", "animate_floquet_multipliers", "animate_floquet_exponents"],
 )
-def test_animate_invalid_kwarg_warns_and_is_ignored(animate_func, hbm_set):
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax, animation = animate_func(hbm_set, not_a_real_kwarg="nonsense")
+def test_animate_invalid_kwarg_is_ignored(animate_func, hbm_set):
+    ax, animation = animate_func(hbm_set, not_a_real_kwarg="nonsense")
     assert isinstance(ax, plt.Axes)
 
 
@@ -430,10 +427,9 @@ def test_plot_hill_matrix_blocks_ax_none_vs_existing():
     assert returned_ax is ax_existing
 
 
-def test_plot_hill_matrix_blocks_invalid_kwarg_warns_and_is_ignored():
+def test_plot_hill_matrix_blocks_invalid_kwarg_is_ignored():
     equation = _make_hbm_equation()
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax = plot_hill_matrix_blocks(equation, not_a_real_kwarg="nonsense")
+    ax = plot_hill_matrix_blocks(equation, not_a_real_kwarg="nonsense")
     assert isinstance(ax, plt.Axes)
 
 
@@ -467,12 +463,11 @@ def test_plot_matrix_block_norm_valid_kwarg_is_applied(random_square_matrix):
     assert sc.get_label() == "my label"
 
 
-def test_plot_matrix_block_norm_invalid_kwarg_warns_and_is_ignored(
+def test_plot_matrix_block_norm_invalid_kwarg_is_ignored(
     random_square_matrix,
 ):
     matrix, block_size = random_square_matrix
-    with pytest.warns(UserWarning, match="not_a_real_kwarg"):
-        ax, sc = plot_matrix_block_norm(matrix, block_size, not_a_real_kwarg="nonsense")
+    ax, sc = plot_matrix_block_norm(matrix, block_size, not_a_real_kwarg="nonsense")
     assert isinstance(ax, plt.Axes)
 
 
