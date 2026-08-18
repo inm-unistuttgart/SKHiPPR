@@ -4,27 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tikzplotlib
 
-# ODE
-from skhippr.odes.autonomous import Vanderpol
-
-# FFT configuration
-from skhippr.Fourier import Fourier
-
-# HBM and stability
-from skhippr.cycles.hbm import HBMSystem
-from skhippr.stability.KoopmanHillProjection import KoopmanHillSubharmonic
-from skhippr.stability.ClassicalHill import HillContinuity, ClassicalHill
-
-# Solution procedure
-from skhippr.solvers.newton import NewtonSolver
-from skhippr.solvers.continuation import pseudo_arclength_continuator
-
-# only for type hinting
-from skhippr.equations.EquationSystem import EquationSystem
 from skhippr.odes.AbstractODE import AbstractODE
-from skhippr.solvers.continuation import BranchPoint
 
-from skhippr.visualization.cycles import plot_phase, plot_floquet_multipliers
+
+from examples.vanderpol_minimal import compute_frc
 
 # Visualization
 from skhippr.visualization.cycles import (
@@ -49,32 +32,7 @@ def main():
     #. Saving the animation by passing a relative path as a string.
     """
 
-    print("Van der Pol oscillator: continuation w.r.t. nu")
-
-    # --- Setup ---
-    newton_solver = NewtonSolver(verbose=True)
-    ode = Vanderpol(x=[2.0, 0.0], nu=0.1)
-    hbm_system: EquationSystem = setup_hbm_system(ode, newton_solver)
-
-    # --- Continuation ---
-    branch: list[BranchPoint] = []
-    nu_range = (ode.nu, 15)
-    newton_solver.verbose = False
-
-    for branch_point in pseudo_arclength_continuator(
-        initial_system=hbm_system,
-        solver=newton_solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 0.4),
-        initial_direction=1,
-        num_steps=1000,
-        continuation_parameter="nu",
-        verbose=True,
-    ):
-        branch.append(branch_point)
-
-        if not nu_range[0] <= branch_point.nu <= nu_range[1]:
-            break
+    hbm, branch = compute_frc(nu_range=(0, 10), max_stepsize=0.5)
 
     # --- Create animations from the HBMEquations in the continuation branch ---
     _, animation0 = animate_phase(branch, scaling=False)
@@ -82,7 +40,13 @@ def main():
     _, animation2 = animate_floquet_multipliers(
         branch, show_unit_circle=True, scaling=False
     )
-    plot_continuation(branch, plot_fun=lambda point: point.omega)
+    plot_continuation(
+        branch,
+        plot_fun=lambda point: point.omega,
+        xlabel="nu",
+        ylabel="omega",
+        title="Van der Pol continuation",
+    )
 
     # --- Export animations ---
     # Animations can be saved as a .gif and as video files such as .mp4.
@@ -95,33 +59,6 @@ def main():
         ax = plot_phase(bp, ax=ax, label=None, color=plt.cm.viridis(k / len(branch)))
 
     return animation0, animation1, animation2
-
-
-def setup_hbm_system(ode: AbstractODE, solver: NewtonSolver = None, N_HBM=45):
-
-    omega_0 = 1
-    fourier = Fourier(N_HBM=N_HBM, L_DFT=1000, n_dof=ode.n_dof, real_formulation=True)
-    stability_method = KoopmanHillSubharmonic(
-        fourier=fourier, tol=1e-4, autonomous=True
-    )
-    X0 = generate_initial_condition(fourier, omega_0)
-
-    hbm_system = HBMSystem(ode, omega_0, fourier, X0, stability_method=stability_method)
-    if solver:
-        solver.solve(hbm_system)
-        print(
-            f"Initial problem convergence: {hbm_system.solved}. omega = {hbm_system.omega}"
-        )
-    return hbm_system
-
-
-def generate_initial_condition(fourier, omega_0):
-    ts = fourier.time_samples(omega_0)
-    x0_samples = np.vstack(
-        (2 * np.cos(omega_0 * ts), -2 * omega_0 * np.sin(omega_0 * ts))
-    )
-    X0 = fourier.DFT(x0_samples)
-    return X0
 
 
 def plot_vanderpol_for_diss():

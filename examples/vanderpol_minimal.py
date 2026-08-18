@@ -80,7 +80,7 @@ class Vanderpol(AbstractODE):
                 )
 
 
-def compute_frc(nu_range=(0, 10)):
+def compute_frc(nu_range=(0, 5), max_stepsize=0.1):
     """
     Demonstration for creating a simple frequency response curve of a non-autonomous dynamical system with HBM.
 
@@ -133,8 +133,8 @@ def compute_frc(nu_range=(0, 10)):
     for branch_point in pseudo_arclength_continuator(
         initial_system=initial_system,
         solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 0.1),
+        stepsize=max_stepsize,
+        stepsize_range=(0.001, max_stepsize),
         continuation_parameter="nu",
         initial_direction=nu_range[1] - nu_range[0],
         verbose=True,
@@ -153,8 +153,8 @@ if __name__ == "__main__":
     _, frc = compute_frc()
     plot_continuation(
         frc,
-        plot_fun=lambda point: np.max(point.equations[0].x_time()[0, :]),
-        ylabel="max_t|x_1(t)|",
+        plot_fun=lambda point: np.max(point.equations[0].x_time()[1, :]),
+        ylabel="max_t|x_2(t)|",
         title="Van der Pol continuation",
     )
     plt.show()
