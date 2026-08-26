@@ -194,6 +194,42 @@ class PendulumODE(AbstractODE):
         return df_dx
 
 
+def init_hbm_system(
+    dae_formulation=True,
+    N_HBM=10,
+    L_DFT=1024,
+    initial_guess_time=None,
+    omega=1.15,
+    **kwargs_pendulum,
+):
+
+    if dae_formulation:
+        sys = PendulumDAE(omega=omega, **kwargs_pendulum)
+        class_hbm = HBMEquationDAE
+        class_stability = KoopmanHillDAE
+
+    else:
+        sys = PendulumODE(omega=omega, **kwargs_pendulum)
+        class_hbm = HBMEquation
+        class_stability = KoopmanHillSubharmonic
+
+    fourier = Fourier(N_HBM=N_HBM, L_DFT=L_DFT, n_dof=sys.n_dof, real_formulation=True)
+
+    if initial_guess_time is None:
+        initial_guess = np.zeros(fourier.n_dof * (2 * fourier.N_HBM + 1))
+    else:
+        initial_guess = fourier.DFT(initial_guess_time)
+
+    stabmethod = class_stability(fourier, tol=1e-4, autonomous=False)
+    hbm = class_hbm(
+        sys,
+        omega,
+        fourier=fourier,
+        initial_guess=initial_guess,
+        stability_method=stabmethod,
+    )
+
+
 def plot_single_solution():
 
     solver = NewtonSolver(tolerance=1e-8, max_iterations=50, verbose=True)
