@@ -11,7 +11,7 @@ from skhippr.cycles.hbm import HBMSystem
 from skhippr.cycles.shooting import ShootingSystem
 
 from skhippr.odes.nonautonomous import Duffing
-from skhippr.odes.autonomous import Vanderpol
+from examples.vanderpol_minimal import Vanderpol
 
 from skhippr.stability.KoopmanHillProjection import (
     KoopmanHillProjection,

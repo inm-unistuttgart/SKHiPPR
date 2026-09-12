@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.linalg import expm
 
-from skhippr.odes.AbstractODE import AbstractODE
+from skhippr.odes.AbstractODE import AbstractODE, AbstractDAE
 
 """Hill-type equations"""
 
@@ -15,7 +15,7 @@ class HillODE(AbstractODE):
 
     where ``g`` is a 2*pi-periodic function, e.g., a cosine or a rectangular wave."""
 
-    def __init__(self, t, x, g_fcn, a=0, b=1, omega=1, damping=0):
+    def __init__(self, t, x, g_fcn, a=0, b=1, omega=1, damping=0, forcing: float = 0.0):
         super().__init__(False, 2)
 
         self.g_fcn = g_fcn
@@ -26,6 +26,7 @@ class HillODE(AbstractODE):
         self.b = b
         self.omega = omega
         self.damping = damping
+        self.amp_forcing = forcing
 
     def dynamics(self, t=None, x=None):
         if x is None:
@@ -33,7 +34,7 @@ class HillODE(AbstractODE):
         if t is None:
             t = self.t
 
-        J = self.closed_form_derivative("x", x=x)
+        J = self.closed_form_derivative("x", x=x, t=t)
 
         if len(x.shape) > 1:
             f = np.zeros_like(x)
@@ -43,7 +44,13 @@ class HillODE(AbstractODE):
         else:
             f = J @ x
 
+        f[1, ...] += self.forcing(self.omega * t)
+
         return np.squeeze(f)
+
+    def forcing(self, tau):
+        """May be overridden in subclasses to have forcing terms. tau is normalized to have period 2*pi."""
+        return self.amp_forcing * np.sin(tau)
 
     def closed_form_derivative(self, variable, t=None, x=None):
         if t is None:
@@ -52,6 +59,7 @@ class HillODE(AbstractODE):
             x = self.x
         self.check_dimensions(t, x)
 
+        tau = self.omega * t
         match variable:
             case "x":
                 J = np.zeros((x.shape[0], *x.shape))
@@ -59,9 +67,20 @@ class HillODE(AbstractODE):
                 J[1, 1, ...] = -self.damping
                 J[1, 0, ...] = -self.a
 
-                tau = self.omega * t
-                J[1, 0, ...] -= self.b * self.g_fcn(tau)
+                J[1, 0, ...] -= np.squeeze(self.b * self.g_fcn(tau))
                 return J
+
+            case "b":
+                df_db = np.zeros_like(x)
+                df_db[1, ...] = -self.g_fcn(tau) * x[0, ...]
+
+                return df_db[:, np.newaxis, ...]
+
+            case "a":
+                df_da = np.zeros_like(x)
+                df_da[1, ...] = -x[0, ...]
+
+                return df_da[:, np.newaxis, ...]
 
             case _:
                 raise NotImplementedError(
@@ -168,8 +187,119 @@ class SmoothedMeissner(HillODE):
 class MathieuODE(SmoothedMeissner):
     """Subclass of :py:class:`~skhippr.odes.SmoothedMeissner` with ``smoothing = 1``. This corresponds to the Mathieu equation, which is a special case of the Hill equation with cosine forcing."""
 
-    def __init__(self, t, x, a=0, b=1, omega=1, damping=0):
+    def __init__(self, t, x, a=0, b=1, omega=1, damping=0, forcing: float = 0.0):
         super().__init__(t=t, x=x, smoothing=1, a=a, b=b, omega=omega, damping=damping)
+        self.amp_forcing = forcing
+
+    def forcing(self, tau):
+        return self.amp_forcing * np.sin(tau)
+
+
+class HillWithMass(AbstractDAE):
+    """Hill equation divided by time-dependent term.
+    1/g(omega*t) * x_ddot + d/g(omega*t)*x_dot + x = f*sin(omega*t)/g(omega*t)
+    """
+
+    def __init__(self, t, x, g_fun, omega=1, damping=0, forcing: float = 0.0):
+
+        super().__init__(
+            n_dof=2, autonomous=False, M_is_constant=False, invertible=True
+        )
+        self.t = t
+        self.x = x
+        self.omega = omega
+        self.damping = damping
+        self.amp_forcing = forcing
+        self.g_fun = g_fun
+
+    def g_inv(self, t=None):
+        if t is None:
+            t = self.t
+        g = self.g_fun(self.omega * t)
+
+        if np.any(np.abs(g) < 1e-7):
+            raise ValueError("g is singular at some time instances!")
+
+        return 1 / g
+
+    def M_small(self, t=None, x=None):
+
+        M = np.zeros((2, 2, *t.shape))
+        M[0, 0, ...] = 1
+        M[1, 1, ...] = self.g_inv(t=t)
+        return M
+
+    def dynamics(self, t=None, x=None):
+        if x is None:
+            x = self.x
+        if t is None:
+            t = self.t
+
+        f = np.zeros_like(x)
+        f[0, ...] = x[1, ...]
+        f[1, ...] = (
+            -self.damping * self.g_inv(t) * x[1, ...]
+            - x[0, ...]
+            + self.amp_forcing * np.sin(t) * self.g_inv(t)
+        )
+
+        return f
+
+    def closed_form_derivative(self, variable, t=None, x=None):
+        if t is None:
+            t = self.t
+        if x is None:
+            x = self.x
+        self.check_dimensions(t, x)
+
+        match variable:
+            case "x":
+                J = np.zeros((x.shape[0], *x.shape))
+                J[0, 1, ...] = 1
+                J[1, 1, ...] = -self.damping * self.g_inv(t)
+                J[1, 0, ...] = -1
+                return J
+
+            case _:
+                raise NotImplementedError(
+                    f"Derivative w.r.t {variable} not implemented in closed form."
+                )
+
+
+class HillWithMassInverted(HillWithMass):
+
+    def __init__(self, t, x, g_fun, omega=1, damping=0, forcing=0):
+        super().__init__(t, x, g_fun, omega, damping, forcing)
+
+    def M_small(self, t=None, x=None):
+        return np.eye(self.n_dof)
+
+    def dynamics(self, t=None, x=None):
+        if len(x.shape) > 1:
+            result = np.zeros_like(x)
+            for k in range(x.shape[1]):
+                M = super().M_small(t[k], x[:, k, ...])
+                f = super().dynamics(t[k], x[:, k, ...])
+                result[:, k, ...] = np.linalg.solve(M, f)
+        else:
+            M = super().M_small(t, x)
+            f = super().dynamics(t, x)
+            result = np.linalg.solve(M, f)
+
+        return result
+
+    def closed_form_derivative(self, variable, t=None, x=None):
+
+        match variable:
+            case "x":
+                M = super().M_small(t, x)
+                J = super().closed_form_derivative(variable, t, x)
+                return np.linalg.solve(M, J)
+
+            case _:
+                raise NotImplementedError(
+                    f"Derivative w.r.t {variable} not implemented in closed form."
+                )
 
 
 class TruncatedMeissner(HillODE):

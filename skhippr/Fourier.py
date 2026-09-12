@@ -24,6 +24,7 @@ class Fourier:
     * :py:func:`~skhippr.Fourier.Fourier.matrix_inv_DFT`
     * :py:func:`~skhippr.Fourier.Fourier.derivative_coeffs`
     * :py:func:`~skhippr.Fourier.Fourier.differentiate`
+    * :py:func:`~skhippr.Fourier.Fourier.resize_coefficients`
     * :py:func:`~skhippr.Fourier.Fourier.__replace__`
 
     Notes
@@ -587,3 +588,100 @@ class Fourier:
             changes["real_formulation"] = self.real_formulation
 
         return Fourier(**changes)
+
+    def resize_coefficients(self, X: np.ndarray) -> np.ndarray:
+        """Resize Fourier coefficients to match the current harmonic truncation.
+
+        The input coefficients may correspond to a different harmonic truncation
+        ``N_other`` than :attr:`N_HBM`. If ``N_other`` is larger than the current
+        truncation, the highest-frequency coefficients are discarded. If
+        ``N_other`` is smaller, the missing coefficients are padded with zeros.
+
+        The method accepts either a flattened coefficient vector of length
+        ``n_dof * (2 * N_other + 1)`` or a 2-D array with ``n_dof`` rows and
+        ``2 * N_other + 1`` columns and correspondingly returns either a flattened or a 2-D result.
+        The coefficient ordering is preserved in the
+        current formulation:
+
+        * real formulation: ``[const, cos_1, ..., cos_N, sin_1, ..., sin_N]``
+        * complex formulation: ``[X_{-N}, ..., X_0, ..., X_N]``
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Fourier coefficients to be resized. The first dimension must match
+            :attr:`n_dof` if ``X`` is 2-D, or the total length must be divisible
+            by :attr:`n_dof` if ``X`` is 1-D.
+
+        Returns
+        -------
+        np.ndarray
+            Fourier coefficients resized to the current :attr:`N_HBM`. The
+            returned array has the same dimensionality as the input ``X``.
+
+        Raises
+        ------
+        ValueError
+            If ``X`` does not have a compatible shape or does not contain an
+            odd number of coefficients per degree of freedom.
+        """
+
+        X = np.asarray(X)
+        input_is_vector = X.ndim == 1
+
+        if input_is_vector:
+            if X.size % self.n_dof != 0:
+                raise ValueError(
+                    f"Input length {X.size} is not divisible by n_dof={self.n_dof}."
+                )
+            X = np.reshape(X, (self.n_dof, -1), order="F")
+        elif X.ndim == 2:
+            if X.shape[0] != self.n_dof:
+                raise ValueError(
+                    f"Expected X to have {self.n_dof} rows, got shape {X.shape}."
+                )
+        else:
+            raise ValueError("X must be a 1-D or 2-D numpy array.")
+
+        n_coeffs = X.shape[1]
+        if n_coeffs % 2 != 1:
+            raise ValueError(
+                f"Expected an odd number of coefficients (2*N_HBM_old + 1) per DOF, got {n_coeffs}."
+            )
+
+        N_other = (n_coeffs - 1) // 2
+        X_resized = np.zeros((self.n_dof, 2 * self.N_HBM + 1), dtype=X.dtype)
+
+        n_keep = min(self.N_HBM, N_other)
+
+        if self.real_formulation:
+            # Constant term.
+            X_resized[:, 0] = X[:, 0]
+
+            # Cosine coefficients.
+            X_resized[:, 1 : n_keep + 1] = X[:, 1 : n_keep + 1]
+
+            # Sine coefficients.
+            X_resized[:, self.N_HBM + 1 : self.N_HBM + n_keep + 1] = X[
+                :, N_other + 1 : N_other + n_keep + 1
+            ]
+        else:
+            # Complex formulation stores frequencies symmetrically around zero.
+            start_old = N_other - n_keep
+            end_old = N_other + n_keep + 1
+            start_new = self.N_HBM - n_keep
+            end_new = self.N_HBM + n_keep + 1
+            X_resized[:, start_new:end_new] = X[:, start_old:end_old]
+
+        if input_is_vector:
+            return X_resized.reshape(-1, order="F")
+        return X_resized
+
+
+def round_to_significant_digits(value, significant_digits):
+    # reference: https://gist.github.com/ttamg/3f65227fd580b3d8dc8ba91e01507280
+    if abs(value) == 0:
+        return value
+
+    round_digits = -int(np.floor(np.log10(np.abs(value)))) + significant_digits - 1
+    return np.round(value, round_digits)

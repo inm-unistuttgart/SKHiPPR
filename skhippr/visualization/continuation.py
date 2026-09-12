@@ -18,10 +18,22 @@ for plotting the Floquet multipliers and exponents over the continuation paramet
 """
 
 from collections.abc import Iterable, Callable
+from typing import Any
+
 import matplotlib.pyplot as plt
+from matplotlib.artist import Artist
+from matplotlib.lines import Line2D
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 import numpy as np
 
 from skhippr.solvers.continuation import BranchPoint
+from skhippr.cycles.hbm import HBMEquation
+
+from skhippr.visualization._helpers import (
+    parse_and_generate_axis,
+    robust_plot,
+    extract_equation,
+)
 
 
 def plot_continuation(
@@ -29,10 +41,10 @@ def plot_continuation(
     plot_fun: Callable[
         [BranchPoint], Iterable[float] | float
     ] = lambda bp: bp.vector_of_unknowns[0],
-    ax=None,
-    clean_legend=True,
-    **plot_kwargs
-):
+    ax: plt.Axes | Axes3D | None = None,
+    clean_legend: bool = True,
+    **plot_kwargs: Any,
+) -> plt.Axes | Axes3D:
     """
     Plot the numerical continuation results stored in an :py:class:`~collections.abc.Iterable` of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects.
 
@@ -54,8 +66,8 @@ def plot_continuation(
         A :py:class:`collections.abc.Iterable` object containing :py:class:`~skhippr.solvers.continuation.BranchPoint` instances.
     plot_fun : Callable[[BranchPoint], Iterable[float] | float], optional
         A function that maps each :py:class:`~skhippr.solvers.continuation.BranchPoint` object to a plot measure.
-        Must return values accepted by :py:func:`~skhippr.visualization.continuation._to_array`. This means, ``plot_fun(:py:class:`~skhippr.solvers.continuation.BranchPoint`)`` must return values that ``np.squeeze(element)`` squeezes to the same length for each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
-        The default is ``lambda bp: bp.unknowns[0][0]``, which is the value of the first unknown of the first equation.
+        Must return values accepted by :py:func:`~skhippr.visualization.continuation.eval_plot_fun`. This means, ``plot_fun(:py:class:`~skhippr.solvers.continuation.BranchPoint`)`` must return values that ``np.squeeze(element)`` squeezes to the same length for each :py:class:`~skhippr.solvers.continuation.BranchPoint`.
+        The default is ``lambda bp: bp.vector_of_unknowns[0]``, which is the first entry of the vector of unknowns.
     ax : matplotlib.axes.Axes | mpl_toolkits.mplot3d.axes3d.Axes3D, optional
         The :py:class:`~matplotlib.axes.Axes` or :py:class:`~mpl_toolkits.mplot3d.axes3d.Axes3D` object on which to plot. If ``plot_fun`` returns a vector of length 3, the given ``ax`` must be an instance of the class :py:class:`mpl_toolkits.mplot3d.axes3d.Axes3D`. If ``None``, a new instance will be created.
     clean_legend: bool, optional
@@ -67,97 +79,76 @@ def plot_continuation(
 
     Returns
     -------
-    ax : matplotlib.axes.Axes
-        The :py:class:`~matplotlib.axes.Axes` object containing the continuation diagram.
+    ax : matplotlib.axes.Axes | mpl_toolkits.mplot3d.axes3d.Axes3D
+        The :py:class:`~matplotlib.axes.Axes` (or :py:class:`~mpl_toolkits.mplot3d.axes3d.Axes3D`, if ``plot_fun`` returns three values) object containing the continuation diagram.
 
     Notes
     -----
     - When making plots without a continuation parameter, ``plot_fun`` must return the plotting coordinates explicitly.
     - An example for a ``plot_fun`` with outputs of different shapes that all squeeze to the same length can be found in :py:func:`examples.duffing_3d.plot_all_responses`.
     """
-    branch_list = list(branch)
 
-    stability_defined = True
-    for bp in branch_list:
-        if (
-            getattr(bp, "equation_determining_stability", None) is None
-            or bp.equation_determining_stability.stability_method is None
-            or bp.stable is None
-        ):
-            stability_defined = False
-            break
+    default_kwargs = {
+        "title": "Continuation Plot",
+        "xlabel": "measure[0]",
+        "ylabel": "measure[1]",
+        "zlabel": "measure[2]",
+        "stable_color": "r",
+        "unstable_color": "b",
+        "color": "k",
+        "stable_label": "stable",
+        "unstable_label": "unstable",
+    }
 
-    values, dim = _get_values_and_dimension(branch_list, plot_fun)
-    if dim not in (1, 2, 3):
+    values, branch_list = eval_plot_fun(branch, plot_fun)
+
+    # analyze dimension
+    ndim = values.shape[1]
+    if ndim not in (1, 2, 3):
         raise ValueError(
             "plot_fun must return a scalar or a numpy array of size 2 or 3."
         )
 
-    generated_ax = False
-    if ax is None:
-        if dim == 3:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection="3d")
-        else:
-            _, ax = plt.subplots(1, 1)
-        generated_ax = True
+    if ndim == 1:
+        # add parameter values as x axis
+        parameter_values = np.array([bp.vector_of_unknowns[-1] for bp in branch_list])
+        values = np.concatenate([parameter_values[:, np.newaxis], values], axis=1)
+        default_kwargs["xlabel"] = branch_list[0].unknowns[-1]
 
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
+    plot_kwargs = {**default_kwargs, **plot_kwargs}
+
+    # handle stability
+
+    bp = branch_list[0]
+    stability_defined = not (
+        getattr(bp, "equation_determining_stability", None) is None
+        or bp.equation_determining_stability.stability_method is None
+        or bp.stable is None
+    )
 
     if stability_defined:
         stable_flags = np.array([bp.stable for bp in branch_list])
     else:
         stable_flags = np.full(len(branch_list), True)
+        plot_kwargs["stable_color"] = plot_kwargs["color"]
+        plot_kwargs["stable_label"] = ""
 
-    stable_col = plot_kwargs.pop("stable_color", "r" if stability_defined else "k")
-    stable_col = plot_kwargs.pop("color", stable_col)
-    unstable_col = plot_kwargs.pop("unstable_color", "b" if stability_defined else "k")
-    stable_label = plot_kwargs.pop(
-        "stable_label", "stable" if stability_defined else None
-    )
-    unstable_label = plot_kwargs.pop(
-        "unstable_label", "unstable" if stability_defined else None
-    )
+    vals_stable = np.where(stable_flags[:, np.newaxis], values, np.nan)
+    vals_unstable = np.where(~stable_flags[:, np.newaxis], values, np.nan)
 
-    title = plot_kwargs.pop("title", "Continuation Plot")
-    xlabel = plot_kwargs.pop("xlabel", parameter if dim == 1 else "measure[0]")
-    ylabel = plot_kwargs.pop("ylabel", "measure[1]")
-    zlabel = plot_kwargs.pop("zlabel", "measure[2]")
-
-    if dim == 1:
-        xs, ys = parameter_values, values[:, 0]
-    elif dim == 2:
-        xs, ys = values[:, 0], values[:, 1]
-    elif dim == 3:
-        xs, ys, zs = values[:, 0], values[:, 1], values[:, 2]
-    xs_stable = np.where(stable_flags, xs, np.nan)
-    xs_unstable = np.where(~stable_flags, xs, np.nan)
-
-    if dim == 3:
-        ax.plot3D(
-            xs_stable, ys, zs, color=stable_col, label=stable_label, **plot_kwargs
-        )
-        ax.plot3D(
-            xs_unstable, ys, zs, color=unstable_col, label=unstable_label, **plot_kwargs
-        )
+    ax = parse_and_generate_axis(ax, ndim=ndim, **plot_kwargs)
+    if ndim == 3:
+        plot_method = ax.plot3D
     else:
-        ax.plot(xs_stable, ys, color=stable_col, label=stable_label, **plot_kwargs)
-        ax.plot(
-            xs_unstable, ys, color=unstable_col, label=unstable_label, **plot_kwargs
-        )
+        plot_method = ax.plot
 
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        if dim == 3:
-            ax.set_zlabel(zlabel)
+    plot_kwargs["color"] = plot_kwargs.pop("stable_color")
+    plot_kwargs["label"] = plot_kwargs.pop("stable_label")
+    robust_plot(plot_method, *vals_stable.T, **plot_kwargs)
+
+    plot_kwargs["color"] = plot_kwargs.pop("unstable_color")
+    plot_kwargs["label"] = plot_kwargs.pop("unstable_label")
+    robust_plot(plot_method, *vals_unstable.T, **plot_kwargs)
 
     if stability_defined:
         ax.legend()
@@ -166,9 +157,39 @@ def plot_continuation(
     return ax
 
 
-def plot_floquet_multiplier_continuation(
-    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
-):
+def _plot_fcn_floquet(branch_point: BranchPoint, idx: int, exponents: bool = False) -> float:
+    """
+    Extract a single Floquet multiplier magnitude or Floquet exponent real part from a :py:class:`~skhippr.solvers.continuation.BranchPoint`.
+
+    Parameters
+    ----------
+    branch_point : BranchPoint
+        The branch point from which to extract the Floquet multiplier. Must contain a solved :py:class:`~skhippr.cycles.hbm.HBMEquation`.
+    idx : int
+        Index of the Floquet multiplier/exponent to extract.
+    exponents : bool, optional
+        If ``True``, return the real part of the Floquet exponent instead of the magnitude of the Floquet multiplier. Default is ``False``.
+
+    Returns
+    -------
+    value : float
+        ``np.real(np.log(floquet_multipliers[idx]) / T)`` if ``exponents`` is ``True``, else ``np.abs(floquet_multipliers[idx])``.
+    """
+    hbm = extract_equation(branch_point, usable_class=HBMEquation)
+    floquet_multipliers = hbm.eigenvalues
+    if exponents:
+        T = hbm.T_solution
+        return np.real(np.log(floquet_multipliers[idx]) / T)
+    else:
+        return np.abs(floquet_multipliers[idx])
+
+
+def plot_floquet_continuation(
+    branch: Iterable[BranchPoint],
+    ax: plt.Axes | None = None,
+    plot_exponents: bool = False,
+    **plot_kwargs: Any,
+) -> plt.Axes:
     """
     Plot the magnitude of all Floquet multipliers over the continuation parameter.
 
@@ -185,6 +206,8 @@ def plot_floquet_multiplier_continuation(
         Collection of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects from continuation analysis
     ax : matplotlib.axes.Axes, optional
         Axes object to plot on. If ``None``, creates new subplot.
+    plot_exponents : bool, optional
+        If ``True``, the real part of Floquet exponents is plotted instead of the magnitude of Floquet multipliers. Default is ``False``.
     **plot_kwargs
         Additional arguments passed to ax.plot()
 
@@ -193,96 +216,46 @@ def plot_floquet_multiplier_continuation(
     ax : matplotlib.axes.Axes
         The axes containing the Floquet multiplier continuation plot
     """
-    branch_list = list(branch)
 
-    if not branch_list:
-        raise ValueError("Branch cannot be empty")
+    branch = list(branch)
+    hbm = extract_equation(branch[0], usable_class=HBMEquation)
 
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
+    for idx in range(hbm.fourier.n_dof):
+        plot_fcn = lambda bp: _plot_fcn_floquet(bp, idx, exponents=plot_exponents)
 
-    all_magnitudes = []
-
-    for bp in branch_list:
-        multipliers = bp.equations[0].eigenvalues
-        mag = np.abs(multipliers)
-        all_magnitudes.append(mag)
-
-    all_magnitudes = np.array(all_magnitudes)
-    num_multipliers = len(all_magnitudes[-1])
-
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-
-    stable_col = plot_kwargs.pop("stable_color", "r")
-    unstable_col = plot_kwargs.pop("unstable_color", "b")
-    title = plot_kwargs.pop("title", "Floquet Multiplier Continuation")
-    xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
-    ylabel = plot_kwargs.pop("ylabel", "|$\\lambda$|")
-    alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
-
-    for i in range(num_multipliers):
-        magnitudes_i = all_magnitudes[:, i]
-        stability_i = magnitudes_i < 1.0
-
-        xs_stable = np.where(stability_i, parameter_values, np.nan)
-        xs_unstable = np.where(~stability_i, parameter_values, np.nan)
-        ys_stable = np.where(stability_i, magnitudes_i, np.nan)
-        ys_unstable = np.where(~stability_i, magnitudes_i, np.nan)
-
-        ax.plot(
-            xs_stable,
-            ys_stable,
-            color=stable_col,
-            alpha=alpha,
-            linestyle=linestyle,
-            linewidth=1.5,
-            **plot_kwargs
-        )
-        ax.plot(
-            xs_unstable,
-            ys_unstable,
-            color=unstable_col,
-            alpha=alpha,
-            linestyle=linestyle,
-            linewidth=1.5,
-            **plot_kwargs
-        )
-
-    ax.axhline(
-        y=1.0,
-        color="k",
-        linestyle="--",
-        linewidth=1.5,
-        alpha=0.8,
-        label="Stability boundary (|λ| = 1)",
-    )
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend(loc="best")
-        ax.grid(True, alpha=0.3)
-
-        y_min = max(0, all_magnitudes.min() * 0.9)
-        y_max = all_magnitudes.max() * 1.1 if all_magnitudes.max() > 1.0 else 1.2
-        ax.set_ylim(y_min, y_max)
+        ax = plot_continuation(branch, plot_fun=plot_fcn, ax=ax, **plot_kwargs)
 
     return ax
 
 
+def plot_floquet_multiplier_continuation(
+    branch: Iterable[BranchPoint], ax: plt.Axes | None = None, **plot_kwargs: Any
+) -> plt.Axes:
+    """
+    Plot the magnitude of all Floquet multipliers over the continuation parameter.
+
+    Thin wrapper around :py:func:`~skhippr.visualization.continuation.plot_floquet_continuation` with ``plot_exponents=False``.
+
+    Parameters
+    ----------
+    branch : Iterable[BranchPoint]
+        Collection of :py:class:`~skhippr.solvers.continuation.BranchPoint` objects from continuation analysis.
+    ax : matplotlib.axes.Axes, optional
+        Axes object to plot on. If ``None``, creates new subplot.
+    **plot_kwargs
+        Additional arguments passed to ``ax.plot()``.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes containing the Floquet multiplier continuation plot.
+    """
+    return plot_floquet_continuation(branch, ax=ax, plot_exponents=False, **plot_kwargs)
+
+
 def plot_floquet_exponent_continuation(
-    branch: Iterable[BranchPoint], ax=None, **plot_kwargs
-):
+    branch: Iterable[BranchPoint], ax: plt.Axes | None = None, **plot_kwargs: Any
+) -> plt.Axes:
     """
     Plot the real part of Floquet exponents over the continuation parameter.
 
@@ -308,166 +281,45 @@ def plot_floquet_exponent_continuation(
     ax : matplotlib.axes.Axes
         The axes containing the Floquet exponent continuation plot
     """
-    branch_list = list(branch)
-
-    if not branch_list:
-        raise ValueError("Branch cannot be empty")
-
-    parameter = branch_list[0].equations[-1].continuation_parameter
-    if parameter is not None:
-        parameter_values = np.array(
-            [np.squeeze(getattr(bp, parameter)) for bp in branch_list]
-        )
-    else:
-        parameter_values = np.arange(len(branch_list))
-
-    all_exponents = []
-
-    for bp in branch_list:
-
-        multipliers = bp.equations[0].eigenvalues
-        T = bp.equations[0].T_solution
-
-        alphas = np.log(multipliers) / T
-        all_exponents.append(alphas)
-
-    num_exponents = len(all_exponents[-1])
-    all_exponents = np.array(all_exponents)
-
-    generated_ax = False
-    if ax is None:
-        _, ax = plt.subplots(1, 1)
-        generated_ax = True
-
-    stable_col = plot_kwargs.pop("stable_color", "r")
-    unstable_col = plot_kwargs.pop("unstable_color", "b")
-    title = plot_kwargs.pop("title", "Floquet Exponent Continuation")
-    xlabel = plot_kwargs.pop("xlabel", parameter if parameter else "Parameter")
-    ylabel = plot_kwargs.pop("ylabel", "Re($\\alpha$)")
-    alpha = plot_kwargs.pop("alpha", 0.9)
-    linestyle = plot_kwargs.pop("linestyle", "dotted")
-
-    for i in range(num_exponents):
-        exponents_i = all_exponents[:, i]
-        real_part = np.real(exponents_i)
-        stability_i = real_part < 0.0
-
-        xs_stable = np.where(stability_i, parameter_values, np.nan)
-        xs_unstable = np.where(~stability_i, parameter_values, np.nan)
-        ys_stable = np.where(stability_i, real_part, np.nan)
-        ys_unstable = np.where(~stability_i, real_part, np.nan)
-
-        ax.plot(
-            xs_stable,
-            ys_stable,
-            color=stable_col,
-            alpha=alpha,
-            linestyle=linestyle,
-            linewidth=1.5,
-            **plot_kwargs
-        )
-        ax.plot(
-            xs_unstable,
-            ys_unstable,
-            color=unstable_col,
-            alpha=alpha,
-            linestyle=linestyle,
-            linewidth=1.5,
-            **plot_kwargs
-        )
-
-    ax.axhline(
-        y=0.0,
-        color="k",
-        linestyle="--",
-        linewidth=1.5,
-        alpha=0.8,
-        label="Stability boundary (Re($\\alpha$) = 0)",
-    )
-
-    if generated_ax:
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend(loc="best")
-        ax.grid(True, alpha=0.3)
-
-        real_parts = np.real(all_exponents)
-        y_min = (
-            real_parts.min() * 1.1 if real_parts.min() < 0 else real_parts.min() * 0.9
-        )
-        y_max = (
-            real_parts.max() * 1.1 if real_parts.max() > 0 else real_parts.max() * 0.9
-        )
-        y_min = min(y_min, -0.1)
-        y_max = max(y_max, 0.1)
-        ax.set_ylim(y_min, y_max)
-
-    return ax
+    return plot_floquet_continuation(branch, ax=ax, plot_exponents=True, **plot_kwargs)
 
 
-def _to_array(value: float | np.ndarray | Iterable):
-    """
-    Convert different numeric inputs into a flat :py:class:`numpy.ndarray`.
-    This function handles scalars, arrays, lists and tuples by squeezing each element individually when iterating over containers.
-    It succeeds when all elements in ``value`` squeeze to the same length using ``np.squeeze(element)``.
-
-    Parameters
-    ----------
-    value: float | np.ndarray | Iterable
-        Input to be converted to 1D array. It accepts:
-
-        * Scalars and arrays with dimension 0: ``1.0`` or ``1`` as well as ``np.array(1.0)``
-        * Single-element containers: ``[1.0]``, ``(1.0,)``, ``np.array([1.0])``, ``np.array([[1.0]])``
-        * Containers where all first level elements contained squeeze to the same length: ``[[1.0]]``, ``[(1.0,)]``, ``1.0``.
-
-    Returns
-    --------
-    arr : numpy.ndarray
-        1D :py:class:`numpy.ndarray` of shape ``(n,)`` where ``n`` is the common squeezed length of all input elements.
-
-    Notes
-    -----
-    ``value`` may contain different combinations of each for each element, as long as `np.squeeze(element)` always returns the same shape.
-
-    """
-    if np.isscalar(value):
-        return np.atleast_1d(value)
-    if isinstance(value, np.ndarray):
-        if value.ndim == 0:
-            return np.atleast_1d(value.item())
-        return np.ravel(value)
-    return np.array([np.squeeze(v) for v in value])
-
-
-def _get_values_and_dimension(
+def eval_plot_fun(
     branch: Iterable[BranchPoint],
     plot_fun: Callable[[BranchPoint], object],
-):
+) -> tuple[np.ndarray, list[BranchPoint]]:
     """
-    Evaluate ``plot_fun`` across branch points and validate consistent dimensionality
+    Evaluate ``plot_fun`` across branch points.
 
     Parameters
     ----------
     branch : Iterable[BranchPoint]
         Continuation branch containing instances of class :py:class:`~skhippr.solvers.continuation.BranchPoint`.
     plot_fun : Callable[[BranchPoint], object]
-        Measure function returning values accepted by :py:func:`~skhippr.visualization.continuation._to_array`.
+        Measure function mapping each :py:class:`~skhippr.solvers.continuation.BranchPoint` to either a scalar or a :py:class:`~collections.abc.Sequence` of scalar-like values that all squeeze (via ``np.squeeze``) to the same length across the branch.
 
     Returns
     -------
     values : numpy.ndarray
-        Shape ``(n_points, dim)`` array of normalized measure values
-    dim : int {1,2,3}
-        Dimensionality of measures returned by ``plot_fun``.
+        Shape ``(n_points, dim)`` array of the (squeezed) measure values, one row per :py:class:`~skhippr.solvers.continuation.BranchPoint` consumed from ``branch``.
+    branch_list : list[BranchPoint]
+        The :py:class:`~skhippr.solvers.continuation.BranchPoint` objects consumed from ``branch``, in iteration order (``branch_list[k]`` corresponds to ``values[k, :]``).
     """
-    branch = list(branch)
-    value_list = [_to_array(plot_fun(bp)) for bp in branch]
-    dim = value_list[0].size
-    return np.array(value_list), dim
+
+    value_list = []
+    list_branch = []
+    for bp in branch:
+        value = plot_fun(bp)
+        if np.isscalar(value):
+            value_list.append(np.atleast_1d(value))
+        else:
+            value_list.append([np.squeeze(value[k]) for k in range(len(value))])
+
+        list_branch.append(bp)
+    return np.array(value_list), list_branch
 
 
-def _get_handle_signature(handle):
+def _get_handle_signature(handle: Line2D | Artist) -> tuple[str, str, str, str]:
     """
     Extract a hashable tuple representing the visual characteristics of a legend handle.
     The signature includes color, linestyle, marker, and linewidth properties.
@@ -480,8 +332,8 @@ def _get_handle_signature(handle):
 
     Returns
     -------
-    signature : :py:class:`tuple` of :py:class:`str`
-        A 4-tuple containing string representations of the handle's visual properties in the order:
+    signature : tuple[str, str, str, str]
+        A 4-tuple ``(color, linestyle, marker, linewidth)`` containing string representations of the handle's visual properties, in that order.
     """
     color = handle.get_color()
     linestyle = handle.get_linestyle()
@@ -491,7 +343,7 @@ def _get_handle_signature(handle):
     return signature
 
 
-def _deduplicate_legend(ax):
+def _deduplicate_legend(ax: plt.Axes) -> None:
     """
     Remove duplicate legend entries based on visual signature and label.
 

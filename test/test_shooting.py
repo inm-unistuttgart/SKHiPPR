@@ -3,7 +3,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
-from skhippr.odes.autonomous import Vanderpol
+from examples.vanderpol_minimal import Vanderpol
 from skhippr.odes.nonautonomous import Duffing
 from skhippr.cycles.shooting import ShootingBVP, ShootingSystem
 from skhippr.solvers.newton import NewtonSolver

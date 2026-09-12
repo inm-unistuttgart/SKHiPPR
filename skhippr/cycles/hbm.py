@@ -4,7 +4,7 @@ import numpy as np
 
 from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.cycles.AbstractCycleEquation import AbstractCycleEquation
-from skhippr.odes.AbstractODE import AbstractODE
+from skhippr.odes.AbstractODE import AbstractODE, AbstractDAE
 from skhippr.Fourier import Fourier
 from skhippr.equations.EquationSystem import EquationSystem
 
@@ -124,17 +124,20 @@ class HBMEquation(AbstractCycleEquation):
 
         try:
             Js = self.ode.closed_form_derivative(variable="x", t=ts, x=x_samp)
-        except NotImplementedError:
-            # use finite differences
-            self.ode.t = ts
-            self.ode.x = x_samp
-            Js = self.ode.derivative(variable="x")
+        except NotImplementedError as ni:
+            raise ni  # enforce finite difference for the whole derivative of Hill mat
+        #     # use finite differences
+        #     self.ode.t = ts
+        #     self.ode.x = x_samp
+        #     Js = self.ode.derivative(variable="x")
         except:
             # Vectorization not working, determine sample by sample
             Js = np.zeros((x_samp.shape[0], *x_samp.shape))
             for k, t in enumerate(ts):
-                Js[:, :, k, ...] = self.ode.closed_form_derivative(
-                    "x", t, np.squeeze(x_samp[:, k])
+                self.ode.t = t
+                self.ode.x = np.squeeze(x_samp[:, k])
+                Js[:, :, k, ...] = self.ode.derivative(
+                    "x", t=t, x=np.squeeze(x_samp[:, k])
                 )
 
         derivative = self.fourier.matrix_DFT(Js)
@@ -150,6 +153,23 @@ class HBMEquation(AbstractCycleEquation):
             / self.period_k
             * X[self.fourier.idx_derivative]
         )
+
+        if getattr(self.ode, "has_nontrivial_omega_derivative", False):
+            ts = self.fourier.time_samples(self.omega_solution)
+            x_samp = self.fourier.inv_DFT(X)
+
+            try:
+                derivatives_time = self.ode.nontrivial_omega_derivative(t=ts, x=x_samp)
+            except NotImplementedError as ni:
+                raise ni  # enforce finite difference for the whole derivative of Hill mat
+            except:
+                # Vectorization not working, determine sample by sample
+                derivatives_time = np.zeros_like(x_samp)
+                for k, t in enumerate(ts):
+                    derivatives_time[:, k, ...] = self.ode.nontrivial_omega_derivative(
+                        t=t, x=np.squeeze(x_samp[:, k])
+                    )
+            dR_dom += self.fourier.DFT(derivatives_time)
         return dR_dom[:, np.newaxis]
 
     def dR_dvar(self, variable, X=None):
@@ -167,9 +187,13 @@ class HBMEquation(AbstractCycleEquation):
             )
         except NotImplementedError:
             # use finite differences
-            self.ode.t = ts
-            self.ode.x = x_samp
-            derivatives_time = self.ode.derivative(variable=variable, update=True)
+            derivatives_time = np.zeros_like(x_samp)
+            for k, t in enumerate(ts):
+                self.ode.t = t
+                self.ode.x = np.squeeze(x_samp[:, k, ...])
+                derivatives_time[:, k, ...] = np.squeeze(
+                    self.ode.derivative(variable=variable, update=True)
+                )
         except:
             # Vectorization not working, determine sample by sample
             derivatives_time = np.zeros_like(x_samp)
@@ -177,10 +201,14 @@ class HBMEquation(AbstractCycleEquation):
                 derivatives_time[:, k, ...] = self.ode.closed_form_derivative(
                     variable, t, np.squeeze(x_samp[:, k])
                 )
+        result = self.fourier.DFT(derivatives_time)
+        if len(result.shape) < 2:
+            result = np.atleast_2d(result).T
+        return result
 
-        return self.fourier.DFT(derivatives_time)
-
-    def hill_matrix(self, real_formulation: bool = None, update=False) -> np.ndarray:
+    def hill_matrix(
+        self, real_formulation: bool = None, update: bool = True
+    ) -> np.ndarray:
         """Return the Hill matrix, which is the derivative of the HBM equations w.r.t. ``X``.
 
         Parameters
@@ -188,6 +216,9 @@ class HBMEquation(AbstractCycleEquation):
         real_formulation : bool, optional
             If True, returns the Hill matrix in real formulation, otherwise in complex formulation.
             If None, uses the value of ``self.fourier.real_formulation``.
+
+        update : bool, optional
+            If True, updates the derivative before returning it. Defaults to True.
 
         """
 
@@ -361,14 +392,18 @@ class HBMEquation(AbstractCycleEquation):
         # Ensure that ||J_k|| decays below threshold within available N_HBM range
         if norm_J > threshold:
             warnings.warn(
-                f"||J_k|| did not decay below threshold {threshold} within N_HBM={self.fourier.N_HBM}. Consider increasing N_HBM for accurate determination of exponential decay."
+                f"||J_k|| did not decay below threshold {threshold} within N_HBM={self.fourier.N_HBM}. Final norm is {norm_J}. Consider increasing N_HBM for accurate determination of exponential decay."
             )
 
         # Find enveloping lines: a' + b'*k >= log(norms)
         lines = find_linear_envelopes(ks, np.log(norms), 0.1 * threshold)
 
-        lines[:, 0] = np.exp(lines[:, 0])  # a = exp(a')
-        lines[:, 1] = -lines[:, 1]  # b = -b'
+        if lines.size == 0:
+            raise ValueError("No exponential decay could be fitted.")
+
+        if len(lines) > 0:
+            lines[:, 0] = np.exp(lines[:, 0])  # a = exp(a')
+            lines[:, 1] = -lines[:, 1]  # b = -b'
 
         return lines
 
@@ -434,6 +469,76 @@ class HBMEquation(AbstractCycleEquation):
             E_bound = np.minimum(E_bound, E_bound_next)
 
         return E_bound
+
+
+class HBMEquationDAE(HBMEquation):
+    """This subclass of :py:class:`~skhippr.cycles.hbm.HBMEquation` is specifically designed to handle DAEs.
+
+    It extends the differential part of the harmonic balance equations to account for the possibly non-invertible matrix M.
+    Reference: Legrand2024 (TODO proper reference)
+    """
+
+    def __init__(
+        self,
+        dae: AbstractDAE,
+        omega: float,
+        fourier: Fourier,
+        initial_guess: np.ndarray = None,
+        period_k: float = 1,
+        stability_method=None,
+    ):
+        """
+        Initialize the HBM equations for DAEs.
+        """
+        super().__init__(
+            ode=dae,
+            omega=omega,
+            fourier=fourier,
+            initial_guess=initial_guess,
+            period_k=period_k,
+            stability_method=stability_method,
+        )
+
+    def M(self):
+        if self.ode.M_is_constant:
+            return np.kron(np.eye(2 * self.fourier.N_HBM + 1), self.ode.M_small())
+        else:
+            M_samples = np.zeros((self.ode.n_dof, self.ode.n_dof, self.fourier.L_DFT))
+            for k, (t, x) in enumerate(
+                zip(self.fourier.time_samples(self.omega_solution), self.x_time().T)
+            ):
+                M_samples[:, :, k] = self.ode.M_small(t, x)
+            return self.fourier.matrix_DFT(M_samples)
+
+    def aft(self, X=None) -> np.ndarray:
+        """
+        Overwrite the HBM residual computation to account for the weight matrix M in DAEs.
+        """
+
+        R = super().aft(X)
+        deriv = self.fourier.derivative_coeffs(X, self.omega_solution)
+        # Remove the effect of direct differentiation and add the effect of M
+        R += deriv - self.M() @ deriv
+
+        return R
+
+    def dR_domega(self, X=None):
+        return self.M() @ super().dR_domega(X)
+
+    def dR_dX(self, X=None):
+        """
+        Overwrite the HBM Jacobian to account for the weight matrix M in DAEs.
+        """
+        derivative = super().dR_dX(X)
+        derivative += self.omega_solution * (
+            self.fourier.derivative_matrix - self.M() @ self.fourier.derivative_matrix
+        )
+        return derivative
+
+    def error_bound_fundamental_matrix(self, t=None, _as=None, bs=None):
+        raise NotImplementedError(
+            "Error bounds for the fundamental matrix not applicable to DAEs."
+        )
 
 
 class HBMSystem(EquationSystem):
@@ -561,13 +666,19 @@ def find_linear_envelopes(x_vals, y_vals, tolerance: float = 0) -> np.array:
     Returns
     -------
     np.ndarray
-        A numpy array with a in the first column and b in the second column,
+        A numpy array with ``a`` in the first column and ``b`` in the second column,
         where each pair defines an upperbounding line y(x) = a + b*x.
     """
 
     results = []
     y_vals = np.atleast_1d(y_vals)
     x_vals = np.atleast_1d(x_vals)
+
+    #  Ensure correct inputs - y_vals and x_vals must be of same length >= 2
+    if x_vals.shape != y_vals.shape or x_vals.shape[0] < 2:
+        raise ValueError(
+            f"x_vals (shape: {x_vals.shape}) and y_vals (shape: {y_vals.shape}) are expected to be equal and contain at least 2 data pairs"
+        )
 
     for l, (x_1, y_1) in enumerate(zip(x_vals, y_vals)):
         for x_2, y_2 in zip(x_vals[l + 1 :], y_vals[l + 1 :]):
@@ -581,4 +692,4 @@ def find_linear_envelopes(x_vals, y_vals, tolerance: float = 0) -> np.array:
                 continue
             results.append([a, b])
 
-    return np.array(results)
+    return np.atleast_2d(results)

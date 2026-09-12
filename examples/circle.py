@@ -1,10 +1,12 @@
-"""Demonstrates the complete the pseudo-arclength continuation workflow on a nonlinear equation.
+"""Demonstrates the complete pseudo-arclength continuation workflow on a nonlinear equation.
 
 * Use of the :py:class:`~skhippr.equations.Circle.Circle` class as a concrete subclass of :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` for a problem formulation
 * Illustrates how (one or multiple) multiple :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` objects are collected into an :py:class:`~skhippr.equations.EquationSystem.EquationSystem`
 * Continuation of a solution branch emerging from the :py:class:`~skhippr.equations.EquationSystem.EquationSystem` with and without an explicit continuation parameter
 * Visualizing the continuation using SKHiPPR internal methods.
 """
+
+from typing import override
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +15,7 @@ import matplotlib.pyplot as plt
 from skhippr.solvers.newton import NewtonSolver
 
 # --- Equations ---
-from skhippr.equations.Circle import CircleEquation, AngleEquation
+from skhippr.equations.AbstractEquation import AbstractEquation
 from skhippr.equations.EquationSystem import EquationSystem
 
 # --- Continuation ---
@@ -23,6 +25,124 @@ from skhippr.solvers.continuation import pseudo_arclength_continuator, BranchPoi
 from skhippr.visualization.continuation import plot_continuation
 
 
+# --- Define the equations as classes with attributes as (possible) unknowns. Abstract methods residual_function and closed_form_derivative must be implemented. ---
+class CircleEquation(AbstractEquation):
+    """Has attributes ``y`` and ``radius``.
+    The residual function::
+
+        self.y[0] ** 2 + self.y[1] ** 2 - self.radius**2
+
+    is zero when the point ``y`` lies on the circle with radius ``radius``.
+    """
+
+    def __init__(self, y: np.ndarray, radius=1):
+        super().__init__(None)
+        self.y = y
+        self.radius = radius
+
+    @override
+    def residual_function(self):
+        return np.atleast_1d(self.y[0] ** 2 + self.y[1] ** 2 - self.radius**2)
+
+    @override
+    def closed_form_derivative(self, variable):
+        match variable:
+            case "y":
+                return np.atleast_2d(np.array([2 * self.y[0], 2 * self.y[1]]))
+            case "radius":
+                return np.atleast_2d(-2 * self.radius)
+            case _:
+                return np.atleast_2d(0)
+
+
+class AngleEquation(AbstractEquation):
+    """Has attributes ``y`` and ``theta``. If ``y`` encloses the angle ``theta`` with the positive x axis, then
+    the residual function::
+
+
+        self.y[1] * np.cos(self.theta) - self.y[0] * np.sin(self.theta)
+
+
+    vanishes.
+    """
+
+    def __init__(self, y: np.ndarray, theta=1):
+        super().__init__(None)
+        self.y = y
+        self.theta = theta
+
+    def residual_function(self):
+        return np.atleast_1d(
+            self.y[1] * np.cos(self.theta) - self.y[0] * np.sin(self.theta)
+        )
+
+    def closed_form_derivative(self, variable):
+        match variable:
+            case "y":
+                return np.atleast_2d(
+                    [
+                        -np.sin(np.squeeze(self.theta)),
+                        np.cos(np.squeeze(self.theta)),
+                    ]
+                )
+            case "theta":
+                return np.atleast_2d(
+                    -self.y[1] * np.sin(self.theta) - self.y[0] * np.cos(self.theta)
+                )
+            case _:
+                return np.atleast_2d(0)
+
+
+# --- And now both together as one equation ---
+class CircleWithPhase(AbstractEquation):
+    def __init__(self, x, radius, theta, other):
+        super().__init__(stability_method=None)
+        self.x = x
+        self.radius = radius
+        self.theta = theta
+        self.other = other
+
+    def residual_function(self):
+        return np.squeeze(
+            np.array(
+                [
+                    self.x[0] ** 2 + self.x[1] ** 2 - self.radius**2,
+                    self.x[1] * np.cos(self.theta) - self.x[0] * np.sin(self.theta),
+                ]
+            )
+        )
+
+    def closed_form_derivative(self, variable):
+        match variable:
+            case "x":
+                return np.array(
+                    [
+                        [2 * self.x[0], 2 * self.x[1]],
+                        [
+                            -np.sin(np.squeeze(self.theta)),
+                            np.cos(np.squeeze(self.theta)),
+                        ],
+                    ]
+                )
+            case "radius":
+                radius = np.atleast_1d(self.radius)
+                return np.array([-2 * radius, [0]])
+            case "theta":
+                return np.array(
+                    [
+                        [0],
+                        -self.x[1] * np.sin(self.theta)
+                        - self.x[0] * np.cos(self.theta),
+                    ]
+                )
+            case "other":
+                return self.other
+            case "other2":
+                return self.other[2]
+            case _:
+                raise NotImplementedError
+
+
 def main():
     """
     Runs a demonstration of pseudo-arclength continuation for solving a nonlinear problem
@@ -30,11 +150,11 @@ def main():
     The process includes:
 
     #. Instantiating a :py:class:`~skhippr.solvers.newton.NewtonSolver` with the solver configuration
-    #. Instantiating a :py:class:`~skhippr.equations.Circle.Circle` object which contains the residual
-    #. Demonstrating that the :py:class:`~skhippr.solvers.newton.NewtonSolver` can immediately solve the :py:class:`~skhippr.equations.Circle.Circle` for the scalar unknown ``radius``, but not for the array unknown ``y``
-    #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
-    #. Constructing another :py:class:`~skhippr.equations.EquationSystem.EquationSystem` by appending a second :py:class:`~skhippr.equations.AbstractEquation.AbstractEquation` subclass and solving it directly for ``y``.
-    #. Using the :py:func:`~skhippr.cycles.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
+    #. Instantiating a :py:class:`Circle` object which contains the residual
+    #. Demonstrating that the :py:class:`~skhippr.solvers.newton.NewtonSolver` can immediately solve the :py:class:`Circle` for the scalar unknown ``radius``, but not for the array unknown ``y``
+    #. Constructing an :py:class:`~skhippr.equations.EquationSystem.EquationSystem` for the unknown ``y`` and using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` to iterate along the solution branch.
+    #. Constructing another :py:class:`~skhippr.equations.EquationSystem.EquationSystem` by appending an  second :py:class:`AngleEquation` and solving the resulting system directly for ``y``.
+    #. Using the :py:func:`~skhippr.solvers.continuation.pseudo_arclength_continuator` to iterate along the solution branch with the extended :py:class:`~skhippr.equations.EquationSystem.EquationSystem` and the explicit continuation parameter ``theta``
     #. Plotting the results with :py:func:`~skhippr.visualization.continuation.plot_continuation`.
 
     Returns
@@ -172,14 +292,7 @@ def continuation_and_plot(equ_sys, solver, continuation_parameter=None, param_ma
 
         y1_prev = branch_point.y[1]
 
-    plot_continuation(
-        branch=branch,
-        plot_fun=lambda point: point.y,
-        ax=ax,
-        linestyle="dotted"
-    )
-
-    # Make sure the plots are perfectly circular
+    plot_continuation(branch=branch, plot_fun=lambda point: point.y, ax=ax)
     plt.axis("equal")
 
 

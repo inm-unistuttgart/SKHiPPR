@@ -8,7 +8,7 @@ from skhippr.cycles.hbm import HBMEquation, HBMSystem
 from skhippr.cycles.shooting import ShootingBVP, ShootingSystem
 from skhippr.Fourier import Fourier
 from skhippr.odes.nonautonomous import Duffing
-from skhippr.odes.autonomous import Vanderpol
+from examples.vanderpol_minimal import Vanderpol
 from skhippr.solvers.newton import NewtonSolver
 
 
