@@ -1,11 +1,6 @@
 """Van der Pol oscillator: continuation w.r.t. nu and animation of the resulting phase portrait."""
 
 import matplotlib.pyplot as plt
-import numpy as np
-import tikzplotlib
-
-from skhippr.odes.AbstractODE import AbstractODE
-
 
 from examples.vanderpol_minimal import compute_frc
 
@@ -17,7 +12,6 @@ from skhippr.visualization.cycles import (
     animate_phase,
 )
 from skhippr.visualization.continuation import plot_continuation
-from skhippr.visualization.data_export import save_animation
 
 
 def main():
@@ -64,100 +58,6 @@ def main():
     return animation0, animation1, animation2
 
 
-def plot_vanderpol_for_diss():
-    nus = [1.0, 5.5]
-    systems = []
-
-    # setup
-    solver = NewtonSolver(verbose=False)
-    ax_phase, ax_FM_before = (
-        None,
-        None,
-    )
-
-    _, ax_FM_after = plt.subplots(1, 1)
-    phis = np.linspace(0, 2 * np.pi)
-    ax_FM_after.plot(np.cos(phis), np.sin(phis), color="gray")
-    ax_FM_after.set_aspect("equal")
-    ax_FM_after.set_xlabel("Re")
-    ax_FM_after.set_ylabel("Im")
-
-    nus_all = []
-    errors = [[], [], [], []]
-
-    hbm_system = setup_hbm_system(
-        Vanderpol(x=np.array([2.0, 0]), nu=nus[0], t=0), solver=solver
-    )
-    for branch_point in pseudo_arclength_continuator(
-        initial_system=hbm_system,
-        solver=solver,
-        stepsize=0.1,
-        stepsize_range=(0.001, 0.1),
-        initial_direction=1,
-        num_steps=1000,
-        continuation_parameter="nu",
-        verbose=True,
-    ):
-        nus_all.append(branch_point.nu)
-
-        # FOP multiplier is lambdas[1]
-        lambdas = np.sort(branch_point.eigenvalues)
-        errors[0].append(np.abs(lambdas[1] - 1))
-
-        # Obtain monodromy matrix
-        Phi_T = branch_point.equations[0].stability_method.fundamental_matrix(
-            t_over_period=1, hbm=branch_point.equations[0]
-        )
-        x0 = branch_point.equations[0].x_time()[:, 0]
-        v = branch_point.equations[0].ode.dynamics(x=x0)
-        errors[1].append(np.linalg.norm(v - Phi_T @ v))
-
-        # Wielandt deflation
-        Phi_shift = Phi_T - ((v[:, np.newaxis] * v[np.newaxis, :]) / (sum(v * v)))
-        lambdas_after, _ = np.linalg.eig(Phi_shift)
-
-        # Sort to have least-magnitude FM at index 1
-        idx_sort = np.lexsort((np.angle(lambdas_after), np.abs(lambdas_after)))
-        lambdas_after = lambdas_after[idx_sort[::-1]]
-
-        errors[2].append(np.abs(lambdas_after[1]))
-        errors[3].append(np.abs(lambdas[0] - lambdas_after[0]))
-
-        # Plot if desired
-
-        if branch_point.nu > nus[0]:
-            nus.pop(0)
-            print(f"nu = {branch_point.nu}")
-
-            # Phase plot
-            ax_phase = plot_phase(branch_point, ax_phase, label=f"nu={branch_point.nu}")
-
-            # FMs before
-            ax_FM_before = plot_floquet_multipliers(branch_point, ax=ax_FM_before)
-            print(branch_point.eigenvalues)
-
-            # FMs after
-            ax_FM_after.plot(np.real(lambdas_after), np.imag(lambdas_after), "x")
-
-            if len(nus) == 0:
-                break
-
-    ax_phase.legend()
-
-    _, ax_nu = plt.subplots(1, 1)
-    ax_nu.semilogy(nus_all, errors[0], label="lambda_1 - 1")
-    ax_nu.semilogy(nus_all, errors[1], label="eigvec error")
-    ax_nu.semilogy(nus_all, errors[2], label="lambda_0")
-    ax_nu.semilogy(nus_all, errors[3], label="lambda_2 - lambda_2,shift")
-    ax_nu.legend()
-
-    for k in range(4):
-        tikzplotlib.save(f"plots/vanderpol_{k}.tikz")
-        plt.close()
-
-
 if __name__ == "__main__":
-    # animation = main()
     animations = main()
-    # plot_vanderpol_for_diss()
     plt.show()
