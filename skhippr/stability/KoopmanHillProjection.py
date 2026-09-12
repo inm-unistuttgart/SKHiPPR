@@ -582,66 +582,7 @@ class KoopmanHillDAESubharmonic(KoopmanHillSubharmonic):
         return np.real(funda_mat)
 
 
-def drazin(A, tol=0, ax_plot=None, x_value=None):
-    """Compute the Drazin inverse of a matrix A using the Schur decomposition.
-
-    Parameters
-    ----------
-    A : np.ndarray
-        The input square matrix.
-    tol : float, optional
-        Tolerance for determining the rank (default is 0).
-    x_value: float, optional
-        x value(s) to plot the eigenvalues at, if multiple cases are to be compared in one plot.
-        If None (default), the eigenvalues are plotted at their index
-    Returns
-    -------
-    np.ndarray
-        The Drazin inverse of the matrix A.
-    """
-    return drazin_schur_2(A, tol, ax_plot=ax_plot, x_value=x_value)
-
-    if ax_plot is not None:
-        eigenvalues = np.diag(T)
-
-        if x_value is None:
-            x_vals = np.arange(len(eigenvalues))
-        else:
-            x_vals = x_value * np.ones_like(eigenvalues)
-        # eigenvalues_plot = np.zeros_like(eigenvalues)
-        # for k, eigenvalue in enumerate(eigenvalues):
-        #     eigenvalues_plot[k] = round_to_significant_digits(eigenvalue, 2)
-
-        # _, idx_unique = np.unique(eigenvalues_plot, return_index=True)
-        ax_plot.semilogy(
-            x_vals,
-            np.abs(eigenvalues),  # [idx_unique]),
-            "x",
-        )
-
-    R = T[:n_cutoff, :n_cutoff]
-    N = T[n_cutoff:, n_cutoff:]
-    C = T[:n_cutoff, n_cutoff:]
-
-    W = np.eye(n, dtype=complex)
-
-    if np.linalg.norm(C, np.inf) > tol:
-        print(
-            "Drazin inverse computation: Non-zero coupling block detected. Using Sylvester."
-        )
-
-        W_nz = solve_sylvester(R, -N, -C)
-        W[:n_cutoff, n_cutoff:] = W_nz
-
-    # if np.max(np.abs(np.linalg.eig(N)[0])) > tol:
-    #     warnings.warn(
-    #         "Drazin inverse computation: Non-nilpotent block detected. Results may be inaccurate."
-    #     )
-
-    # if np.linalg.norm(Z @ Z.T.conj
-
-
-def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
+def drazin_schur(A, tol=0, ax_plot=None, x_value=None):
     """Compute the Drazin inverse of a matrix A.
 
     Parameters
@@ -650,6 +591,8 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
         The input square matrix.
     tol : float, optional
         Tolerance for determining the rank (default is 0).
+    ax_plot : matplotlib.axes.Axes, optional
+        If provided, the eigenvalues of A are plotted on this axis. By default, nothing is plotted.
     x_value: float, optional
         x value(s) to plot the eigenvalues at, if multiple cases are to be compared in one plot.
         If None (default), the eigenvalues are plotted at their index
@@ -687,9 +630,9 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     W = np.eye(n, dtype=complex)
 
     if np.linalg.norm(C, np.inf) > tol:
-        print(
-            "Drazin inverse computation: Non-zero coupling block detected. Using Sylvester."
-        )
+        # print(
+        #     "Drazin inverse computation: Non-zero coupling block detected. Using Sylvester."
+        # )
 
         W_nz = solve_sylvester(R, -N, -C)
         W[:n_cutoff, n_cutoff:] = W_nz
@@ -710,112 +653,6 @@ def drazin_schur_2(A, tol=0, ax_plot=None, x_value=None):
     )
 
     return Z @ W @ drazin_schur @ solve_triangular(W, Z.T.conj()), n - n_cutoff
-
-
-def drazin_ord2(
-    A,
-    tol=0,
-    ax_plot=None,
-    x_value=None,
-):
-    A_i = 0.00005 * A
-    while np.linalg.norm(A_i - A_i @ A @ A_i, 2) > np.linalg.norm(A, 2):
-        A_i = 0.5 * A_i
-        if np.linalg.norm(A_i, 2) < 1e-12:
-            raise RuntimeError("Drazin inverse computation: Did not find suitable  A_0")
-    converged = False
-    while not converged:
-        A_i_next = A_i + A_i @ (np.eye(A_i.shape[0]) - A @ A_i)
-        print(np.linalg.norm(A_i_next - A_i, 2))
-        if np.linalg.norm(A_i_next - A_i, 2) < tol:
-            converged = True
-        A_i = A_i_next
-
-    return A_i
-
-
-def drazin_ord9(
-    A,
-    tol=1e-8,
-    ax_plot=None,
-    x_value=None,
-    verbose=False,
-):
-    """Drazin inverse computation of 9-th order convergence, as proposed by Soleymani2013 (Algorithm 3).
-
-    Reference: F. Soleymani and P.S. Stanimirovic, 2013, "A higher order iterative method for computing the Drazin inverse", The Scientific World Journal,  https://doi.org/10.1155/2013/708647
-    """
-
-    # Multiples of the identity matrix, needed later
-    I = np.eye(A.shape[0])
-    I5 = -5 * I
-    I6 = 6 * I
-    I7 = -7 * I
-    I9 = 9 * I
-    I12 = 12 * I
-
-    # brute-force search for index:
-    # see if iteration converges - if not increase the index
-
-    k = 0  # k is the algebraic index of the matrix, 0 when the matrix is regular
-    A_k = I  #  A ** k
-    A_kp1 = A  # A ** (k+1)
-    W = A / (np.linalg.norm(A, np.inf) ** 2)  # initial guess for regular A: Eq. (2)
-
-    while k < A.shape[0]:
-        num_iter = 0
-        delta = 1
-
-        while delta < 1e9 and num_iter < 15 or delta < 1:
-            num_iter += 1
-            if delta < tol:
-                # converged
-                return W, k
-
-            # iteration step: Eq. (13) of paper
-            W_prev = W
-            psi = A @ W
-            chi = I7 + psi @ (I9 + psi @ (I5 + psi))
-            theta = psi @ chi
-            W = -0.125 * W @ chi @ (I12 + theta @ (I6 + theta))
-            delta = np.linalg.norm(W - W_prev, np.inf)
-            if verbose:
-                print(f"k = {k}, {num_iter}-th it., delta = {delta}")
-
-        # diverged at current index, increase index and try again
-        k += 1
-        A_k = A_kp1
-        A_kp1 = A @ A_kp1
-        W = 2 / np.linalg.trace(A_kp1) * A_k
-
-    # did not converge for any index
-    raise RuntimeError("Drazin inverse computation did not converge.")
-
-
-def compute_index(A):
-    """Compute the algebraic index of a matrix A, i.e., the smallest integer k such that rank(A^k) = rank(A^(k+1))."""
-    A_k = np.eye(A.shape[0])
-    A_kp1 = A
-    k = 0
-    while np.linalg.matrix_rank(A_k) != np.linalg.matrix_rank(A_kp1):
-        A_k = A_kp1
-        A_kp1 = A @ A_kp1
-        k += 1
-        if k > A.shape[0]:
-            raise RuntimeError("Matrix index computation did not converge.")
-    return k, A_k, A_kp1
-
-
-def drazin_example_matrix():
-    raise NotImplementedError(
-        "drazin_example_matrix has been moved to the test suite; import it from tests instead"
-    )
-
-
-def drazin_example_result():
-    raise NotImplementedError(
-        "drazin_example_result has been moved to the test suite; import it from tests instead"
-    )
 
 
 def generalized_exponential(
@@ -851,154 +688,9 @@ def generalized_exponential(
     pencil_lu = lu_factor(a * M - hill_matrix)
     pencil_H = lu_solve(pencil_lu, hill_matrix)
     pencil_M = lu_solve(pencil_lu, M)
-    pencil_drazin, ratio = drazin(pencil_M, tol_drazin)
+    pencil_drazin, ratio = drazin_schur(pencil_M, tol_drazin)
 
     P_0 = pencil_drazin @ pencil_M
     exp = expm((pencil_drazin @ pencil_H) * t)
 
     return exp @ P_0, P_0, a
-
-
-def drazin_rothblum(A, tol=1e-8):
-    """Not wuite working"""
-    A_i = A
-    B_i = np.eye(A.shape[0])
-
-    for k in range(A_i.shape[0]):
-        Q, R, p = qr(A_i, pivoting=True)
-        # count zero rows of R
-        zero_rows = np.where(np.abs(R.diagonal()) < tol)[0]
-        # apply the same operations to B_i
-        B_bar = Q.T @ B_i[:, p]
-        if len(zero_rows) == 0:
-            break
-
-        A_i[zero_rows, :] = B_i[zero_rows, :]
-        B_i[zero_rows, :] = 0
-
-    # k is now the index of A and A_i is an identity matrix
-    A_D = np.linalg.matrix_power(A_i, k + 1) @ np.linalg.matrix_power(A, k)
-    return A_D, k
-
-
-def drazin_rothblum_custom(A, tol=1e-8):
-    """Rothblum's algorithm with custom Gauss-Jordan elimination.
-
-    Reference:
-    K.M. Anstreicher and U.G. Rothblum,
-    Using Gauss-Jordan elimination to compute the Index, generalized nullspaces and Drazin inverse,
-    Linear Algebra Appl., 85(1987), 221-239,
-    doi: https://doi.org/10.1016/0024-3795(87)90219-9
-    """
-
-    A_orig = A
-    A = A.copy()
-    n = A.shape[0]
-    B = np.eye(n)
-
-    for k in range(n):
-        A_bar, B_bar = row_reduced_echelon_form(A, B, tol=tol, in_place=False)
-        idx_zero = np.where(np.sum(np.abs(A_bar), axis=1) < tol)[0]
-        m = n - len(idx_zero)
-
-        if m == n:
-            # A_bar is nonsingular, terminal condition satisfied
-            break
-
-        # shuffle step
-        A = A_bar
-        A[idx_zero, :] = B_bar[idx_zero, :]
-
-        B = B_bar
-        B[idx_zero, :] = 0
-
-    # k is now the index of A.
-    # Make A_bar the identity matrix, then B_bar becomes A_hat
-    eye, A_hat = back_substitution(A_bar, B_bar, tol=tol, in_place=True)
-
-    # Verify that eye is indeed the identity matrix
-    if np.linalg.norm(eye - np.eye(n), np.inf) > tol:
-        raise RuntimeError(
-            "Drazin inverse computation: Back substitution did not yield identity matrix."
-        )
-
-    # Drazin inverse formula
-    A_D = np.linalg.matrix_power(A_hat, k + 1) @ np.linalg.matrix_power(A_orig, k)
-    return A_D, k
-
-
-def row_reduced_echelon_form(A, B=None, tol=1e-8, in_place=False):
-    """Bring matrix A to row-reduced echelon form by Gauss-Jordan elimination.
-    Apply the same procedures also to B if provided."""
-
-    if not in_place:
-        A = A.copy()
-        if B is not None:
-            B = B.copy()
-
-    n_rows, n_cols = A.shape
-
-    idx_row = 0
-    for idx_col in range(n_cols):
-
-        # Find the pivot row: remaining row with largest element in the current column
-        pivot_row = np.argmax(np.abs(A[idx_row:, idx_col])) + idx_row
-        if np.abs(A[pivot_row, idx_col]) < tol:
-            # only zeros in the remaining rows of this column
-            # set everyting to exactly zero and move on without increasing the row index
-            A[idx_row:, idx_col] = 0
-            continue
-
-        # Swap the current row with the pivot row
-        A[[idx_row, pivot_row]] = A[[pivot_row, idx_row]]
-        if B is not None:
-            B[[idx_row, pivot_row]] = B[[pivot_row, idx_row]]
-
-        # Normalize the pivot row
-        pivot = A[idx_row, idx_col]
-        if abs(1 / pivot) > 1e2:
-            print(1 / pivot)
-        if B is not None:
-            B[idx_row] /= pivot
-        A[idx_row] /= pivot
-
-        # Eliminate the current column in the rows below
-        for r in range(idx_row + 1, n_rows):
-            factor = A[r, idx_col]
-            A[r] -= factor * A[idx_row]
-            if B is not None:
-                B[r] -= factor * B[idx_row]
-
-        idx_row += 1
-    return A, B
-
-
-def back_substitution(A, B=None, tol=1e-8, in_place=False):
-    """Perform back-substitution on a matrix in row-reduced echelon form to make it contain only ones and zeros.
-    Apply the same operations also to B."""
-    if not in_place:
-        A = A.copy()
-        if B is not None:
-            B = B.copy()
-
-    n_rows, n_cols = A.shape
-    idx_col = n_cols - 1
-
-    for idx_row in range(n_rows - 1, -1, -1):
-        if abs(A[idx_row, idx_col]) < tol:
-            continue
-
-        # eliminate the current column in the rows above
-        for r in range(idx_row - 1, -1, -1):
-            factor = A[r, idx_col]
-            A[r] -= factor * A[idx_row]
-            if B is not None:
-                B[r] -= factor * B[idx_row]
-        idx_col -= 1
-    return A, B
-
-
-if __name__ == "__main__":
-    print(
-        "KoopmanHillProjection module; run tests with pytest to validate Drazin implementations."
-    )
