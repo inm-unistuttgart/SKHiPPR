@@ -10,6 +10,32 @@ dynamics.
 
 ## Running it
 
+### On Google Colab (nothing to install)
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/inm-unistuttgart/SKHiPPR/blob/main/tutorial/skhippr_tutorial.ipynb)
+
+Click the badge (also at the top of the notebook itself), or open it manually at:
+
+```
+https://colab.research.google.com/github/inm-unistuttgart/SKHiPPR/blob/main/tutorial/skhippr_tutorial.ipynb
+```
+
+**This only works once `tutorial/` is merged into `main` and pushed to the public repository**
+(`github.com/inm-unistuttgart/SKHiPPR`) — the notebook uses APIs (`PendulumDAE`,
+`BlockOnBelt`, the current `plot_continuation`/`plot_hill_matrix_blocks` signatures, ...) that
+are not yet on `main` as of this writing. Until you push, either run the notebook locally
+(below), or replace `main` in the URL with whatever branch you are testing on and use that link
+instead.
+
+The first code cell (§ 0) detects Colab automatically and installs `skhippr` straight from
+GitHub with `%pip install`. There is no separate setup step. It also asserts that the runtime
+has **Python 3.12 or newer** (SKHiPPR uses `typing.override` internally); if Colab's default
+runtime is older, the cell's error message gives a one-line fix using
+[`condacolab`](https://github.com/conda-incubator/condacolab) — re-running the cell afterwards
+proceeds normally.
+
+### Locally
+
 From the repository root:
 
 ```bash
@@ -17,10 +43,11 @@ pip install jupyterlab      # not part of the SKHiPPR dependencies
 jupyter lab tutorial/skhippr_tutorial.ipynb
 ```
 
-The first cell puts the repository root on `sys.path`, so the notebook works whether you start
-Jupyter from the repository root or from inside `tutorial/`, and it takes precedence over any
-editable install of `skhippr` that points at a different checkout. The cell prints which
-`skhippr` it ended up using — check that line before reporting an import problem.
+The same first cell detects that it is *not* on Colab and instead puts the repository root on
+`sys.path`, so the notebook works whether you start Jupyter from the repository root or from
+inside `tutorial/`, and it takes precedence over any editable install of `skhippr` that points
+at a different checkout. The cell prints which `skhippr` it ended up using — check that line
+before reporting an import problem.
 
 Requirements beyond SKHiPPR's own (`numpy`, `scipy`, `matplotlib`): none. The notebook ships
 without stored outputs on purpose; every figure is meant to appear as the participant runs it.
