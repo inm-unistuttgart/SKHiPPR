@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 name = "skhippr"
-version = "2.1"
+version = "2.2"
 author = "Fabia Bayer"
 author_email = "skhippr@inm.uni-stuttgart.de"
 url = "SKHiPPR <https://github.com/f-bayer/SKHiPPR>"
@@ -24,5 +24,5 @@ setup(
         "pytest",
     ],
     packages=find_packages(),
-    python_requires=">=3.12",
+    python_requires=">=3.13",
 )
